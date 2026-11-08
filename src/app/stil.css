@@ -1,0 +1,203 @@
+@import '@fontsource/nunito/600.css';
+@import '@fontsource/nunito/800.css';
+@import '@fontsource/nunito/900.css';
+
+:root {
+  --himmel: #8fd3f7;
+  --himmel-hell: #d6f0fd;
+  --markise: #e23a4e;
+  --markise-dunkel: #b52437;
+  --senf: #ffc62b;
+  --senf-dunkel: #e0a400;
+  --tinte: #1f2a6b;
+  --tinte-weich: #4a5394;
+  --wiese: #3fae6a;
+  --wiese-dunkel: #2b8550;
+  --holz: #b9763f;
+  --holz-dunkel: #87521f;
+  --papier: #fffdf7;
+  --grau: #9aa0b8;
+  --bronze: #c98a4b;
+  --silber: #a9b4c4;
+  --gold: #f2b705;
+
+  /* Stellenwerte: feste Farben, immer zusammen mit Buchstaben (T, H, Z, E) */
+  --stelle-t: #7b5ea7;
+  --stelle-h: #e23a4e;
+  --stelle-z: #3c78d8;
+  --stelle-e: #2b8550;
+
+  --schrift: 'Nunito', ui-rounded, system-ui, sans-serif;
+  --rand: max(16px, env(safe-area-inset-left));
+  --rand-r: max(16px, env(safe-area-inset-right));
+  --oben: max(10px, env(safe-area-inset-top));
+  --unten: max(12px, env(safe-area-inset-bottom));
+
+  font-family: var(--schrift);
+  font-weight: 600;
+  color: var(--tinte);
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-schrift='gross'] {
+  font-size: 112.5%;
+}
+html[data-schrift='sehrGross'] {
+  font-size: 125%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--himmel);
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+
+#app {
+  height: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: 0.005em;
+}
+
+p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 3px dashed var(--tinte);
+  outline-offset: 3px;
+}
+
+/* Eintrittskarte: Knopf mit gestanzten Kerben links und rechts */
+.ticket {
+  --farbe: var(--senf);
+  --kerbe: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 52px;
+  min-width: 44px;
+  padding: 0.7em 1.6em;
+  border: 0;
+  border-radius: 6px;
+  background: var(--farbe);
+  color: var(--tinte);
+  font-weight: 900;
+  font-size: 1.15rem;
+  -webkit-mask:
+    radial-gradient(circle var(--kerbe) at 0 50%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--kerbe) at 100% 50%, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--kerbe) at 0 50%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--kerbe) at 100% 50%, #0000 97%, #000) right / 51% 100% no-repeat;
+  box-shadow: inset 0 -4px 0 rgb(0 0 0 / 0.14);
+  transition: transform 0.08s;
+}
+.ticket:active {
+  transform: translateY(2px);
+}
+.ticket:focus-visible {
+  outline: 3px dashed var(--tinte);
+  outline-offset: -8px;
+}
+.ticket[disabled] {
+  --farbe: #d7dae6;
+  color: #6b7191;
+  cursor: default;
+}
+.ticket.rot {
+  --farbe: var(--markise);
+  color: #fff;
+}
+.ticket.gruen {
+  --farbe: var(--wiese);
+  color: #fff;
+}
+.ticket.hell {
+  --farbe: #f1e4c8;
+}
+
+/* Runder Symbolknopf (Zurück, Vorlesen, Schloss) */
+.rund {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--tinte);
+  background: var(--papier);
+  color: var(--tinte);
+  font-weight: 900;
+  font-size: 1.2rem;
+  flex: none;
+}
+.rund svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Markise: gestreifter Kopf für Tafeln und Dialoge */
+.markise {
+  height: 26px;
+  background: repeating-linear-gradient(90deg, var(--markise) 0 28px, #fff 28px 56px);
+  -webkit-mask: radial-gradient(14px at 14px 100%, #0000 98%, #000) 0 0 / 28px 100%;
+  mask: radial-gradient(14px at 14px 100%, #0000 98%, #000) 0 0 / 28px 100%;
+}
+
+.tafel {
+  background: var(--papier);
+  border-radius: 14px;
+  border: 3px solid var(--tinte);
+  overflow: hidden;
+}
+
+.nur-leser {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Bewegung reduzieren: Einstellung der App oder des Systems */
+html[data-ruhig='1'] *,
+html[data-ruhig='1'] *::before,
+html[data-ruhig='1'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

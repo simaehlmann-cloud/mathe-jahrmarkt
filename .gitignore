@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+ios/App/App/public/
+android/app/src/main/assets/public/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+ios/App/build/
+ios/DerivedData/
+e2e-bilder/

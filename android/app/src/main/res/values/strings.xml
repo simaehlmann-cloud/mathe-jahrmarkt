@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mathe-Jahrmarkt</string>
+    <string name="title_activity_main">Mathe-Jahrmarkt</string>
+    <string name="package_name">de.maehlmann.mathejahrmarkt</string>
+    <string name="custom_url_scheme">de.maehlmann.mathejahrmarkt</string>
+</resources>
