@@ -293,6 +293,8 @@ describe('Andenkenstand', () => {
     const e = dekoKaufen(p, 'wimpel');
     expect(e.ok && e.profil.taler).toBe(5);
     expect(e.ok && dekoKaufen(e.profil, 'wimpel')).toEqual({ ok: false, grund: 'schonDa' });
+    const hut = dekoKaufen({ ...profil(), taler: 40 }, 'hut');
+    expect(hut.ok && hut.profil.aussehen.extra).toBe('strohhut');
   });
 });
 

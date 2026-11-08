@@ -53,6 +53,24 @@ describe('Speicher', () => {
     expect(b.profile[0]?.taler).toBe(p.taler);
   });
 
+  it('migriert Version 1 auf 2: Figur bekommt Aussehen, gekaufter Strohhut bleibt auf', () => {
+    const alt = { ...mitFortschritt(), deko: ['hut'] } as Record<string, unknown>;
+    delete alt.aussehen;
+    const ohneHut = { ...mitFortschritt(), id: 'p2' } as Record<string, unknown>;
+    delete ohneHut.aussehen;
+    const b = migriere({ schema: 1, profile: [alt, ohneHut], einstellungen: {}, paket: { gekauft: false } });
+    expect(b.schema).toBe(2);
+    expect(b.profile[0]?.aussehen).toEqual({ fell: 0, tuch: 'keins', extra: 'strohhut' });
+    expect(b.profile[1]?.aussehen).toEqual({ fell: 0, tuch: 'keins', extra: 'keins' });
+    expect(b.profile[0]?.fortschritt).toEqual(alt.fortschritt);
+  });
+
+  it('Strohhut ohne Kauf wird nicht übernommen, ungültige Werte werden ersetzt', () => {
+    const p = { ...mitFortschritt(), aussehen: { fell: 9, tuch: 'pink', extra: 'strohhut' } };
+    const b = migriere({ schema: 2, profile: [p] });
+    expect(b.profile[0]?.aussehen).toEqual({ fell: 0, tuch: 'keins', extra: 'keins' });
+  });
+
   it('repariert unvollständige und falsche Felder', () => {
     const b = migriere({
       schema: 1,
