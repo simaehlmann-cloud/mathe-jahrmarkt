@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GASSEN, STUFEN, STUFEN_NAME, budeInfo, type Stufe } from '../../domain/buden';
+  import { STUFEN, STUFEN_NAME, budeInfo, type Stufe } from '../../domain/buden';
   import { budenZustand, istGeschafft, stufenStand } from '../../domain/fortschritt/fortschritt';
   import { stufeFreigabe } from '../../domain/fortschritt/kaufgrenze';
   import Icon from '../components/Icon.svelte';
@@ -11,7 +11,6 @@
 
   let { bude }: { bude: string } = $props();
   let info = $derived(budeInfo(bude));
-  let gasse = $derived(GASSEN.find((g) => g.id === info.gasse));
   let p = $derived(app.profil);
 
   // Vorgewählt: die höchste freie, noch nicht geschaffte Stufe
@@ -63,7 +62,7 @@
   <Kopfzeile titel={info.name} zurueck={() => app.zeige({ name: 'gasse', gasse: info.gasse })} />
   <div class="vorplatz">
     <div class="bild">
-      <BudeStand zustand={budenZustand(p, bude)} farbe={gasse?.farbe} besitzer={bude === 'dartbude'} />
+      <BudeStand {bude} zustand={budenZustand(p, bude)} besitzer={bude === 'dartbude'} />
     </div>
 
     <div class="tafel seite">
@@ -102,7 +101,7 @@
             <ol>
               {#each bestenliste as e (e.p.id)}
                 <li class:ich={e.p.id === p.id}>
-                  <Figur figur={e.p.figur} groesse={28} hut={e.p.deko.includes('hut')} />
+                  <Figur figur={e.p.figur} groesse={28} aussehen={e.p.aussehen} />
                   <span class="wer">{e.p.name}</span>
                   <span class="punkte">{e.rekord}</span>
                 </li>

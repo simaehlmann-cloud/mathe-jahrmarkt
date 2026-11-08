@@ -61,14 +61,14 @@
             {@const mitKatze = b.id === 'dartbude' && istGeschafft(p, b.id, 'bronze')}
             <div class="stand">
               <button class="bude-knopf" onclick={() => app.zeige({ name: 'bude', bude: b.id })} aria-label="{b.name} öffnen">
-                <BudeStand {zustand} farbe={info.farbe} besitzer={b.id === 'dartbude'} katze={mitKatze} />
+                <BudeStand bude={b.id} {zustand} besitzer={b.id === 'dartbude'} katze={mitKatze} />
               </button>
               {#if mitKatze}
                 <button class="katze-knopf" onclick={katzeEntdeckt} aria-label="Katze auf dem Dach"></button>
               {/if}
             </div>
           {:else}
-            <div class="bude-knopf zu"><BudeStand zustand="zu" farbe={info.farbe} /></div>
+            <div class="bude-knopf zu"><BudeStand bude={b.id} zustand="zu" /></div>
           {/if}
           <div class="schild">
             <span class="name">{b.name}</span>
@@ -139,10 +139,10 @@
   }
   .katze-knopf {
     position: absolute;
-    left: 63%;
-    top: -5%;
-    width: 26%;
-    height: 16%;
+    left: 62%;
+    top: 5%;
+    width: 25%;
+    height: 15%;
     border: 0;
     background: transparent;
     border-radius: 12px;

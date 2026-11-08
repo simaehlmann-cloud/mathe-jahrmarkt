@@ -27,8 +27,9 @@
       <div class="markise"></div>
       <div class="inhalt">
         <div class="wer">
-          <Figur figur={p.figur} groesse={52} hut={p.deko.includes('hut')} />
+          <Figur figur={p.figur} groesse={52} aussehen={p.aussehen} />
           <h2>{p.name}</h2>
+          <button class="ticket hell gestalten" onclick={() => app.zeige({ name: 'figur' })}>Figur gestalten</button>
         </div>
         <ul class="balken">
           {#each sichtbar as k (k)}
@@ -111,6 +112,13 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
+  }
+  .gestalten {
+    margin-left: auto;
+    font-size: 1rem;
+    min-height: 44px;
+    padding: 0.4em 1.2em;
   }
   .balken {
     list-style: none;
