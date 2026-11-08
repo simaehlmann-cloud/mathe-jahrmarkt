@@ -20,7 +20,7 @@
   <div class="rechts">
     {#if p}
       <button class="figur" onclick={() => app.zeige({ name: 'start' })} aria-label="Profil wechseln, angemeldet als {p.name}">
-        <Figur figur={p.figur} groesse={40} hut={p.deko.includes('hut')} />
+        <Figur figur={p.figur} groesse={40} aussehen={p.aussehen} />
         <span class="name">{p.name}</span>
       </button>
       <span class="taler" aria-label="{p.taler} Taler"><Icon name="taler" groesse={26} />{p.taler}</span>
