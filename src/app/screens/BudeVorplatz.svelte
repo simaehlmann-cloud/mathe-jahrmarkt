@@ -93,8 +93,6 @@
           {/each}
         </div>
 
-        <button class="ticket rot spielen" onclick={spielen}>{STUFEN_NAME[gewaehlt]} spielen</button>
-
         {#if bestenliste.length > 0}
           <div class="familie">
             <h2>Familien-Bestenliste {STUFEN_NAME[gewaehlt]}</h2>
@@ -120,6 +118,10 @@
       </div>
     </div>
   </div>
+  <!-- Feste Leiste: Der Spielen-Knopf ist auf jedem Bildschirm sofort sichtbar -->
+  <div class="aktion">
+    <button class="ticket rot spielen" onclick={spielen}>{STUFEN_NAME[gewaehlt]} spielen</button>
+  </div>
   {#if app.flinka}
     <Sprechblase saetze={app.flinka} onfertig={() => (app.flinka = null)} />
   {/if}
@@ -132,7 +134,7 @@
     overflow: auto;
     display: grid;
     gap: 14px;
-    padding: 4px var(--rand-r) var(--unten) var(--rand);
+    padding: 4px var(--rand-r) 8px var(--rand);
     position: relative;
     z-index: 1;
     align-content: start;
@@ -144,9 +146,22 @@
     }
   }
   .bild {
-    width: min(100%, 300px);
+    width: min(62vw, 30vh, 300px);
     justify-self: center;
-    padding-top: 24px;
+    padding-top: 18px;
+  }
+  @media (orientation: landscape) and (min-width: 700px) {
+    .bild {
+      width: min(100%, 42vh, 320px);
+    }
+  }
+  .aktion {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    padding: 10px var(--rand-r) var(--unten) var(--rand);
+    background: linear-gradient(180deg, rgb(159 216 168 / 0) 0, #9fd8a8 40%);
   }
   .seite {
     width: min(100%, 32rem);
@@ -216,8 +231,9 @@
     white-space: nowrap;
   }
   .spielen {
-    justify-self: stretch;
-    font-size: 1.3rem;
+    width: min(100%, 32rem);
+    font-size: 1.35rem;
+    min-height: 60px;
   }
   h2 {
     font-size: 1rem;

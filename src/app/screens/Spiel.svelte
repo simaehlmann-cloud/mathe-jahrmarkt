@@ -163,7 +163,20 @@
       });
   });
 
+  // Zurück-Taste: Runde wie mit dem Zurück-Knopf beenden (Antworten werden verbucht).
+  // Während der Hilfe nach Fehlern wird der Druck ignoriert, damit die Hilfe nicht verloren geht.
+  app.zurueckAbfangen = () => {
+    if (hilfe) return true;
+    if (ende) {
+      app.zeige({ name: 'bude', bude });
+      return true;
+    }
+    zurueck();
+    return true;
+  };
+
   onDestroy(() => {
+    app.zurueckAbfangen = null;
     zerstoert = true;
     szene?.zerstoere();
     void app.sprache.stopp();

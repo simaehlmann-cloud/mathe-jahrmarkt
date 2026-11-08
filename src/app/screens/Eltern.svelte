@@ -8,6 +8,7 @@
   import { SUBTRAKTION_NAMEN, type Schrift, type Subtraktionsverfahren } from '../../services/datenbestand';
   import { PREIS_ANZEIGE } from '../../services/kauf';
   import { sicherungEinspielen, sicherungErstellen } from '../../services/sicherung';
+  import type { Stimme } from '../../services/sprache';
   import Elternsperre from '../components/Elternsperre.svelte';
   import Icon from '../components/Icon.svelte';
   import { app } from '../zustand.svelte';
@@ -31,6 +32,7 @@
   const VIER_WOCHEN = 28 * 24 * 3600 * 1000;
 
   let preis = $state(PREIS_ANZEIGE);
+  let stimmen = $state<Stimme[]>([]);
   let kaufLaeuft = $state(false);
   let sicherungText = $state('');
   let einspielText = $state('');
@@ -38,6 +40,7 @@
 
   $effect(() => {
     if (offen) void app.kauf.preis().then((p) => (preis = p));
+    if (offen) void app.sprache.stimmen().then((l) => (stimmen = l));
   });
 
   function vorher(k: KompetenzId) {
@@ -222,9 +225,9 @@
         </section>
       {:else if reiter === 'einstellungen'}
         <section class="einstellungen">
-          <h2>Ton und Sprache</h2>
-          {#each [['lautEffekte', 'Klänge'], ['lautSprache', 'Vorlesen']] as [schluessel, name] (schluessel)}
-            {@const s = schluessel as 'lautEffekte' | 'lautSprache'}
+          <h2>Musik und Klänge</h2>
+          {#each [['lautMusik', 'Musik'], ['lautEffekte', 'Klänge']] as [schluessel, name] (schluessel)}
+            {@const s = schluessel as 'lautMusik' | 'lautEffekte'}
             <label class="regler">
               <span>{name}</span>
               <input
@@ -237,6 +240,48 @@
               />
             </label>
           {/each}
+          <label class="schalter">
+            <input type="checkbox" checked={app.einstellungen.musikImSpiel} onchange={(e) => app.aendereEinstellungen({ musikImSpiel: (e.target as HTMLInputElement).checked })} />
+            Musik auch beim Rechnen
+          </label>
+          <p class="hinweis">„Flinkas Walzer“ ist eine eigene Komposition für diese App und wird im Gerät erzeugt.</p>
+
+          <h2>Vorlesen</h2>
+          <label class="regler">
+            <span>Lautstärke</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={app.einstellungen.lautSprache}
+              oninput={(e) => app.aendereEinstellungen({ lautSprache: Number((e.target as HTMLInputElement).value) })}
+            />
+          </label>
+          <label class="regler">
+            <span>Tempo</span>
+            <input
+              type="range"
+              min="0.8"
+              max="1.5"
+              step="0.05"
+              value={app.einstellungen.sprechtempo}
+              oninput={(e) => app.aendereEinstellungen({ sprechtempo: Number((e.target as HTMLInputElement).value) })}
+            />
+          </label>
+          <label class="wahl">
+            Stimme
+            <select value={app.einstellungen.stimme} onchange={(e) => app.aendereEinstellungen({ stimme: (e.target as HTMLSelectElement).value })}>
+              <option value="">Automatisch (beste deutsche Stimme)</option>
+              {#each stimmen as st (st.uri)}<option value={st.uri}>{st.name}</option>{/each}
+            </select>
+          </label>
+          <button class="ticket hell" onclick={() => app.sprich('Hallo! Ich bin Flinka. Was ist sieben mal acht?')}>Probehören</button>
+          {#if stimmen.length === 0}
+            <p class="hinweis">Auf diesem Gerät wurde keine deutsche Stimme ohne Internet gefunden. In den Android-Einstellungen unter „Sprachausgabe“ lässt sich eine deutsche Stimme herunterladen.</p>
+          {:else}
+            <p class="hinweis">Es werden nur Stimmen angeboten, die ohne Internet sprechen. So verlassen keine Texte das Gerät.</p>
+          {/if}
           <label class="schalter">
             <input type="checkbox" checked={app.einstellungen.automatischVorlesen} onchange={(e) => app.aendereEinstellungen({ automatischVorlesen: (e.target as HTMLInputElement).checked })} />
             Aufgaben automatisch vorlesen

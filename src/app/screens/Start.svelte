@@ -42,6 +42,9 @@
                 <Figur figur={p.figur} groesse={56} aussehen={p.aussehen} />
                 <span>{p.name}</span>
               </button>
+              <button class="aendern" onclick={() => app.profilWaehlen(p.id, { name: 'figur' })} aria-label="Figur von {p.name} gestalten">
+                Figur gestalten
+              </button>
             </li>
           {/each}
         </ul>
@@ -128,6 +131,19 @@
     background: #fff;
     font-weight: 900;
     font-size: 1.1rem;
+  }
+  .profile li {
+    display: grid;
+    gap: 6px;
+  }
+  .aendern {
+    border: 2px solid var(--tinte);
+    border-radius: 10px;
+    background: var(--papier);
+    font-weight: 800;
+    font-size: 0.95rem;
+    padding: 8px 6px;
+    min-height: 44px;
   }
   input#name {
     font: inherit;
