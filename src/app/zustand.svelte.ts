@@ -124,9 +124,9 @@ class AppZustand {
     return true;
   }
 
-  profilWaehlen(id: string): void {
+  profilWaehlen(id: string, ziel: Bildschirm = { name: 'jahrmarkt' }): void {
     this.aendere((b) => ({ ...b, aktiv: id }));
-    this.zeige({ name: 'jahrmarkt' });
+    this.zeige(ziel);
   }
 
   profilLoeschen(id: string): void {

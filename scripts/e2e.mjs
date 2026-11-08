@@ -154,10 +154,32 @@ try {
     await page.getByRole('button', { name: 'Mein Mathe-Profil' }).click();
     await foto('15-mathe-profil');
 
+    // Figuren-Baukasten: Eule mit Brille und blauem Tuch
+    await page.getByRole('button', { name: 'Figur gestalten' }).click();
+    await page.getByText('Eule', { exact: true }).click();
+    await page.getByText('Brille', { exact: true }).click();
+    await page.getByText('Blau', { exact: true }).click();
+    await foto('16-baukasten');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await page.getByRole('heading', { name: 'Mein Mathe-Profil' }).waitFor();
+
     // Daten überstehen das Neuladen
     await page.reload();
     await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
     pruefe(await page.getByText('1 von 24').isVisible(), `${name}: Fortschritt bleibt nach Neustart erhalten`);
+    const gespeichert = await page.evaluate(() => {
+      const roh = localStorage.getItem('CapacitorStorage.mathe-jahrmarkt.daten');
+      return roh ? JSON.parse(roh).profile[0] : null;
+    });
+    pruefe(gespeichert?.figur === 'eule' && gespeichert?.aussehen?.extra === 'brille' && gespeichert?.aussehen?.tuch === 'blau', `${name}: Figur aus dem Baukasten bleibt gespeichert`);
+
+    // Baukasten ist auch direkt vom Startbildschirm aus erreichbar
+    await page.locator('header button.figur').click();
+    await page.getByRole('heading', { name: 'Wer spielt?' }).waitFor();
+    await foto('17-wer-spielt');
+    await page.getByRole('button', { name: /^Figur von .* gestalten$/ }).first().click();
+    await page.getByRole('button', { name: 'Speichern' }).waitFor();
+    pruefe(true, `${name}: Figur gestalten vom Startbildschirm erreichbar`);
 
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
