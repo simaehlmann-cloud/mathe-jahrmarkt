@@ -9,13 +9,39 @@
   import MatheProfil from './screens/MatheProfil.svelte';
   import Spiel from './screens/Spiel.svelte';
   import Start from './screens/Start.svelte';
+  import { erstelleMusik } from '../services/musik';
   import { app } from './zustand.svelte';
 
+  const musik = erstelleMusik();
+
   onMount(() => {
+    // Zurück-Taste von Android: Navigation innerhalb der App statt Beenden
+    let abmelden: (() => void) | undefined;
+    void import('@capacitor/core').then(async ({ Capacitor }) => {
+      if (Capacitor.getPlatform() !== 'android') return;
+      const { App } = await import('@capacitor/app');
+      const h = await App.addListener('backButton', () => void app.zurueck());
+      abmelden = () => void h.remove();
+    });
     void app.starte().catch(() => {
       app.bildschirm = { name: 'start' };
       app.melde('Die App konnte ihre Daten nicht laden.');
     });
+    // Ton erst nach der ersten Berührung (Vorgabe der Browser und Systeme)
+    const entsperren = () => musik.entsperren();
+    document.addEventListener('pointerdown', entsperren, { once: true });
+    return () => {
+      abmelden?.();
+      document.removeEventListener('pointerdown', entsperren);
+    };
+  });
+
+  // Musik: auf dem Jahrmarkt an, beim Rechnen nur wenn eingestellt, im Elternbereich aus
+  $effect(() => {
+    const name = app.bildschirm.name;
+    const e = app.einstellungen;
+    const spielen = name !== 'laden' && name !== 'eltern' && (name !== 'spiel' || e.musikImSpiel);
+    musik.stelle(spielen, e.lautMusik);
   });
 
   $effect(() => {
