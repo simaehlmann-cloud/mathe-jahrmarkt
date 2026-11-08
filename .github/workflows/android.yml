@@ -1,0 +1,67 @@
+name: Android Test-APK
+
+# Baut bei jedem Push eine installierbare Test-APK (Debug-Signatur) und legt sie
+# unter „Releases“ als Vorabversion „test-apk“ ab. Auf dem Handy: Release öffnen,
+# app-debug.apk antippen, Installation aus unbekannter Quelle einmal erlauben.
+# Nicht für den Play Store – dafür braucht es später eine signierte Release-Version.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: npm ci
+      - name: Web-App bauen und prüfen
+        run: npm run verify
+      - name: In das Android-Projekt kopieren
+        run: npx cap sync android
+
+      - name: APK bauen
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: APK umbenennen
+        run: |
+          STAND=$(date -u +%Y-%m-%d)-${GITHUB_SHA::7}
+          cp android/app/build/outputs/apk/debug/app-debug.apk "mathe-jahrmarkt-test-$STAND.apk"
+          echo "STAND=$STAND" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mathe-jahrmarkt-test-apk
+          path: mathe-jahrmarkt-test-*.apk
+
+      - name: Als Vorabversion „test-apk“ veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete test-apk --yes --cleanup-tag || true
+          gh release create test-apk mathe-jahrmarkt-test-*.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Test-APK $STAND" \
+            --notes "Automatisch gebaute Testversion für Android (Debug-Signatur, nicht für den Play Store). Stand: Commit ${GITHUB_SHA::7}."
