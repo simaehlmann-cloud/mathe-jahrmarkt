@@ -1,4 +1,4 @@
-# Code-Review Version 0.1.0
+# Code-Review Version 0.2.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -18,6 +18,15 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | Ablauftest scheiterte auf GitHub (langsame Rechner ohne Grafikkarte) | längere Wartezeiten, Drosselung lokal nachstellbar mit `DROSSEL=6 npm run e2e`, Foto bei Abbruch |
 | Verbesserung | „etwa 1 Minuten“ im Wochenbericht, fehlende Leerzeichen in der Hilfe, Musik-Regler ohne Musik | korrigiert bzw. entfernt |
 
+## Neu in 0.2.0 geprüft
+
+| Bereich | Prüfung |
+| --- | --- |
+| Speicher | Schema 2 mit Migration: vorhandene Profile bekommen ein Aussehen, ein schon gekaufter Strohhut bleibt auf; Tests für Migration und ungültige Werte |
+| Kaufgrenze im Baukasten | Strohhut nur nach Kauf im Andenkenstand, auch beim Einspielen einer Sicherung |
+| Datenschutz | Baukasten ohne Kamera und Fotos |
+| Android | fester Debug-Schlüssel, damit Test-APKs sich überschreiben lassen, ohne den Spielstand zu löschen |
+
 ## Offen
 
 | Stufe | Befund | Vorschlag |
@@ -30,7 +39,7 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 
 ## Prüfstand
 
-- 46 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
+- 48 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
 - Typprüfung ohne Fehler und Warnungen (`svelte-check --fail-on-warnings`)
 - 45 Store-Regel-Prüfungen
-- Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Neustart mit Fortschritt, keine Konsolenfehler
+- Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Figuren-Baukasten, Neustart mit Fortschritt und Figur, keine Konsolenfehler

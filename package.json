@@ -1,7 +1,7 @@
 {
   "name": "mathe-jahrmarkt",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mathe-Jahrmarkt – Fit für Klasse 5. Spielerische Vorbereitung auf den Übergang zur weiterführenden Schule.",
   "type": "module",
   "scripts": {

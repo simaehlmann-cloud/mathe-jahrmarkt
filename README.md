@@ -4,15 +4,17 @@ Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die 
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.1.0)
+## Stand dieser Version (0.2.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android.
 
 | Bereich | Stand |
 | --- | --- |
 | Jahrmarkt-Welt | Riesenrad als Fortschritt, fünf Gassen, Zahlengasse begehbar, die anderen „wird aufgebaut“ |
 | Geschichte | Flinka mit Intro, Gassen-Begrüßung, Lob bei jeder neuen Stufe |
 | Dartbude | Bronze, Silber, Gold, Probewurf, Hilfe nach Fehlern, Nochmal-Aufgabe, Rekord, Familien-Bestenliste, Verlaufskurve |
+| Figur | Baukasten: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
+| Buden | vier Dachformen (Markise, Zirkuszelt, Kuppel, Holzgiebel), eigene Farben und ein Motiv je Bude, auch auf dem Rollladen noch nicht gebauter Buden |
 | Lebendige Welt | Buden grau → Licht → Farbe → Fest, Bruno winkt, Katze als Entdeckung, Deko aus dem Andenkenstand sichtbar |
 | Lernprofil | Protokoll jeder Antwort, Fehlerursachen, Einschätzung ab 20 Aufgaben an 2 Tagen, Elternsätze, Verdichtung alter Daten |
 | Elternbereich | Elternsperre, Wochenbericht, Lernprofil mit Tipps, Zusatzpaket, Einstellungen, Profile, Sicherung als Text |
@@ -29,6 +31,18 @@ npm run e2e          # Ablauftest in Chrome (vorher npm run build), Fotos in e2e
 ```
 
 Node 22 oder neuer. Für `npm run e2e` muss Chrome installiert sein (`CHROME_PFAD` setzen, falls nicht unter `/usr/bin/google-chrome`).
+
+## Test-APK für Android
+
+Bei jedem Push auf `main` baut GitHub eine installierbare Test-APK (Workflow „Android Test-APK“). Sie liegt danach auf GitHub unter **Releases → Test-APK** (Vorabversion) und zusätzlich als Artefakt im Workflow-Lauf.
+
+Auf dem Smartphone:
+
+1. Im Browser auf github.com anmelden, das Repository öffnen, **Releases → Test-APK** wählen und die `.apk`-Datei antippen.
+2. Android fragt einmalig, ob der Browser Apps installieren darf: erlauben.
+3. Installieren. Neuere Test-APKs lassen sich darüber installieren, der Spielstand bleibt erhalten (fester Debug-Schlüssel in `android/app/debug.keystore`).
+
+Die Test-APK ist nicht für den Play Store gedacht. Dafür braucht es später eine signierte Release-Version mit eigenem, geheimem Schlüssel, der nie ins Repository gehört.
 
 ## Auf dem Gerät
 
