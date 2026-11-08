@@ -13,7 +13,7 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Jahrmarkt-Welt | Riesenrad als Fortschritt, fünf Gassen, Zahlengasse begehbar, die anderen „wird aufgebaut“ |
 | Geschichte | Flinka mit Intro, Gassen-Begrüßung, Lob bei jeder neuen Stufe |
 | Dartbude | Bronze, Silber, Gold, Probewurf, Hilfe nach Fehlern, Nochmal-Aufgabe, Rekord, Familien-Bestenliste, Verlaufskurve |
-| Figur | Baukasten: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
+| Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
 | Buden | vier Dachformen (Markise, Zirkuszelt, Kuppel, Holzgiebel), eigene Farben und ein Motiv je Bude, auch auf dem Rollladen noch nicht gebauter Buden |
 | Lebendige Welt | Buden grau → Licht → Farbe → Fest, Bruno winkt, Katze als Entdeckung, Deko aus dem Andenkenstand sichtbar |
 | Lernprofil | Protokoll jeder Antwort, Fehlerursachen, Einschätzung ab 20 Aufgaben an 2 Tagen, Elternsätze, Verdichtung alter Daten |
