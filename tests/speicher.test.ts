@@ -127,3 +127,41 @@ describe('Sicherungsdatei', () => {
     expect(() => sicherungEinspielen(leererBestand(), '{"profile":[]}')).toThrow(/keine Sicherung/);
   });
 });
+
+import { stimmenWert, waehleStimmen } from '../src/services/sprache';
+
+describe('Stimmenwahl', () => {
+  const v = (name: string, lang = 'de-DE', localService = true, def = false) => ({ name, voiceURI: name, lang, localService, default: def });
+  it('nimmt nur deutsche Stimmen, die ohne Internet laufen', () => {
+    expect(stimmenWert(v('en-us-x-sfg-local', 'en-US'))).toBeLessThan(0);
+    expect(stimmenWert(v('de-de-x-nfh-network'))).toBeLessThan(0);
+    expect(stimmenWert(v('Anna', 'de-DE', false))).toBeLessThan(0);
+    expect(stimmenWert(v('de-de-x-deb-local'))).toBeGreaterThanOrEqual(0);
+  });
+  it('bevorzugt hochwertige Stimmen vor kompakten', () => {
+    const liste = waehleStimmen([v('Anna (kompakt)'), v('Anna (Enhanced)'), v('de-de-x-nfh-network'), v('Thomas', 'fr-FR')]);
+    expect(liste.map((s) => s.name)).toEqual(['Anna (Enhanced)', 'Anna (kompakt)']);
+    expect(liste[0]?.index).toBe(1);
+  });
+  it('alte Einstellungen bekommen Tempo und Stimme', () => {
+    const b = migriere({ schema: 2, profile: [], einstellungen: { lautSprache: 0.5 } });
+    expect(b.einstellungen.sprechtempo).toBe(1.1);
+    expect(b.einstellungen.stimme).toBe('');
+    expect(b.einstellungen.lautSprache).toBe(0.5);
+  });
+});
+
+import { FLINKAS_WALZER, SCHLAEGE_PRO_TAKT, frequenz } from '../src/services/musik';
+
+describe('Flinkas Walzer', () => {
+  it('jeder Takt hat genau drei Schläge und spielbare Töne', () => {
+    expect(FLINKAS_WALZER).toHaveLength(16);
+    for (const t of FLINKAS_WALZER) {
+      expect(t.melodie.reduce((s, [, l]) => s + l, 0)).toBe(SCHLAEGE_PRO_TAKT);
+      for (const [m] of t.melodie) expect(m).toBeGreaterThanOrEqual(60);
+      expect(t.akkord).toHaveLength(3);
+    }
+    expect(frequenz(69)).toBe(440);
+    expect(Math.round(frequenz(60))).toBe(262);
+  });
+});

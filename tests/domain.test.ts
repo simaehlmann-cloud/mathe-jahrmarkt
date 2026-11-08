@@ -304,3 +304,17 @@ describe('Budenanmeldung', () => {
     expect(Object.keys(BUDEN_DEFINITIONEN).sort()).toEqual(spielbar);
   });
 });
+
+import { zurueckZiel } from '../src/app/navigation';
+
+describe('Zurück-Taste', () => {
+  it('führt Schritt für Schritt zurück und schließt nie direkt', () => {
+    expect(zurueckZiel({ name: 'spiel', bude: 'dartbude', stufe: 'bronze' }, true)).toEqual({ name: 'bude', bude: 'dartbude' });
+    expect(zurueckZiel({ name: 'bude', bude: 'dartbude' }, true)).toEqual({ name: 'gasse', gasse: 'zahlengasse' });
+    expect(zurueckZiel({ name: 'gasse', gasse: 'zahlengasse' }, true)).toEqual({ name: 'jahrmarkt' });
+    expect(zurueckZiel({ name: 'figur' }, true)).toEqual({ name: 'profil' });
+    expect(zurueckZiel({ name: 'eltern' }, false)).toEqual({ name: 'start' });
+    expect(zurueckZiel({ name: 'jahrmarkt' }, true)).toBe('jahrmarktVerlassen');
+    expect(zurueckZiel({ name: 'laden' }, true)).toBe('nichts');
+  });
+});
