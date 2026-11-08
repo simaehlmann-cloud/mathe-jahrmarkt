@@ -1,7 +1,7 @@
 {
   "name": "mathe-jahrmarkt",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Mathe-Jahrmarkt – Fit für Klasse 5. Spielerische Vorbereitung auf den Übergang zur weiterführenden Schule.",
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.6.0",
     "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.6.0",

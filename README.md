@@ -4,9 +4,9 @@ Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die 
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.2.0)
+## Stand dieser Version (0.3.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar.
 
 | Bereich | Stand |
 | --- | --- |
@@ -19,7 +19,14 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Lernprofil | Protokoll jeder Antwort, Fehlerursachen, Einschätzung ab 20 Aufgaben an 2 Tagen, Elternsätze, Verdichtung alter Daten |
 | Elternbereich | Elternsperre, Wochenbericht, Lernprofil mit Tipps, Zusatzpaket, Einstellungen, Profile, Sicherung als Text |
 | Barrierefreiheit | Vorlesen, Schriftgröße, Bewegung reduzieren, Antwortknöpfe für Bildschirmleser, Farben nie allein |
-| Noch nicht | übrige 23 Buden, Jahrmarkt-Check, Abendmarkt, nativer Kauf, Musik, App-Symbol und Startbild |
+| Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
+| Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
+| Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
+| Noch nicht | übrige 23 Buden, Jahrmarkt-Check, Abendmarkt, nativer Kauf |
+
+## App-Symbol und Startbild
+
+Die Zeichnungen liegen als SVG in `grafik-quellen/`. `node scripts/symbole.mjs` erzeugt daraus alle PNG-Größen für Android und iOS.
 
 ## Schnellstart
 
