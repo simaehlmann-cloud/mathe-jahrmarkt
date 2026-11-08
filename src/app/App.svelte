@@ -3,6 +3,7 @@
   import Andenken from './screens/Andenken.svelte';
   import BudeVorplatz from './screens/BudeVorplatz.svelte';
   import Eltern from './screens/Eltern.svelte';
+  import FigurGestalten from './screens/FigurGestalten.svelte';
   import Gasse from './screens/Gasse.svelte';
   import Jahrmarkt from './screens/Jahrmarkt.svelte';
   import MatheProfil from './screens/MatheProfil.svelte';
@@ -46,6 +47,8 @@
     <MatheProfil />
   {:else if b.name === 'andenken'}
     <Andenken />
+  {:else if b.name === 'figur'}
+    <FigurGestalten />
   {:else if b.name === 'eltern'}
     <Eltern />
   {/if}

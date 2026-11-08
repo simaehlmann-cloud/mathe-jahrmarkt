@@ -1,5 +1,6 @@
 import type { GasseId, Stufe } from '../domain/buden';
 import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
+import type { Aussehen } from '../domain/aussehen';
 import { MAX_PROFILE, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
 import { randomSeed } from '../domain/rng';
 import { leererBestand, type Datenbestand, type Einstellungen } from '../services/datenbestand';
@@ -17,6 +18,7 @@ export type Bildschirm =
   | { name: 'spiel'; bude: string; stufe: Stufe; n?: number }
   | { name: 'profil' }
   | { name: 'andenken' }
+  | { name: 'figur' }
   | { name: 'eltern' };
 
 /** Zentraler Zustand. Jede Änderung am Bestand läuft über `aendere`, damit sie gespeichert wird. */
@@ -81,9 +83,10 @@ class AppZustand {
     return this.plan?.sofort() ?? Promise.resolve();
   }
 
-  profilAnlegen(name: string, figur: FigurId): boolean {
+  profilAnlegen(name: string, figur: FigurId, aussehen?: Aussehen): boolean {
     if (this.bestand.profile.length >= MAX_PROFILE) return false;
-    const p = neuesProfil(`p${Date.now().toString(36)}${randomSeed().toString(36)}`, name, figur, Date.now());
+    const neu = neuesProfil(`p${Date.now().toString(36)}${randomSeed().toString(36)}`, name, figur, Date.now());
+    const p = aussehen ? { ...neu, aussehen: { ...aussehen, extra: aussehen.extra === 'strohhut' ? 'keins' as const : aussehen.extra } } : neu;
     if (!p.name) return false;
     this.aendere((b) => ({ ...b, profile: [...b.profile, p], aktiv: p.id }));
     return true;
