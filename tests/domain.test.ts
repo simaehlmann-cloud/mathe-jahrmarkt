@@ -293,6 +293,8 @@ describe('Andenkenstand', () => {
     const e = dekoKaufen(p, 'wimpel');
     expect(e.ok && e.profil.taler).toBe(5);
     expect(e.ok && dekoKaufen(e.profil, 'wimpel')).toEqual({ ok: false, grund: 'schonDa' });
+    const hut = dekoKaufen({ ...profil(), taler: 40 }, 'hut');
+    expect(hut.ok && hut.profil.aussehen.extra).toBe('strohhut');
   });
 });
 
@@ -300,5 +302,19 @@ describe('Budenanmeldung', () => {
   it('jede spielbare Bude ist angemeldet und umgekehrt', () => {
     const spielbar = BUDEN.filter((b) => b.spielbar).map((b) => b.id).sort();
     expect(Object.keys(BUDEN_DEFINITIONEN).sort()).toEqual(spielbar);
+  });
+});
+
+import { zurueckZiel } from '../src/app/navigation';
+
+describe('Zurück-Taste', () => {
+  it('führt Schritt für Schritt zurück und schließt nie direkt', () => {
+    expect(zurueckZiel({ name: 'spiel', bude: 'dartbude', stufe: 'bronze' }, true)).toEqual({ name: 'bude', bude: 'dartbude' });
+    expect(zurueckZiel({ name: 'bude', bude: 'dartbude' }, true)).toEqual({ name: 'gasse', gasse: 'zahlengasse' });
+    expect(zurueckZiel({ name: 'gasse', gasse: 'zahlengasse' }, true)).toEqual({ name: 'jahrmarkt' });
+    expect(zurueckZiel({ name: 'figur' }, true)).toEqual({ name: 'profil' });
+    expect(zurueckZiel({ name: 'eltern' }, false)).toEqual({ name: 'start' });
+    expect(zurueckZiel({ name: 'jahrmarkt' }, true)).toBe('jahrmarktVerlassen');
+    expect(zurueckZiel({ name: 'laden' }, true)).toBe('nichts');
   });
 });

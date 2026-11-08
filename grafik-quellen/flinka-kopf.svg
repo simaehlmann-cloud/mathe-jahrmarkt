@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- Kopf von Flinka (Koordinaten wie in src/app/grafik/Flinka.svelte), Mitte der sicheren Zone -->
+  <g transform="translate(54 60) scale(0.74) translate(-53 -45)">
+    <path d="M30 40 L25 16 L42 33 Z" fill="#d9672a"/>
+    <path d="M25 16 L22 9 L29 15 Z" fill="#9b4318"/>
+    <path d="M70 40 L75 16 L58 33 Z" fill="#d9672a"/>
+    <path d="M75 16 L78 9 L71 15 Z" fill="#9b4318"/>
+    <circle cx="50" cy="56" r="25" fill="#e8833a"/>
+    <path d="M26 46 C25 27 73 25 75 44 C64 40 38 40 26 46 Z" fill="#1f2a6b"/>
+    <path d="M60 41 Q82 38 88 45 Q74 49 58 46 Z" fill="#2c3a8c"/>
+    <circle cx="50" cy="29" r="3" fill="#2c3a8c"/>
+    <ellipse cx="50" cy="67" rx="11" ry="8" fill="#fce3c2"/>
+    <circle cx="41" cy="56" r="4" fill="#1f2a6b"/>
+    <circle cx="59" cy="56" r="4" fill="#1f2a6b"/>
+    <circle cx="42.4" cy="54.6" r="1.4" fill="#fff"/>
+    <circle cx="60.4" cy="54.6" r="1.4" fill="#fff"/>
+    <ellipse cx="50" cy="63.5" rx="3.2" ry="2.4" fill="#3b2314"/>
+    <path d="M45 68 Q50 73 55 68" fill="none" stroke="#3b2314" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="34" cy="65" r="4" fill="#f48c8c" opacity="0.55"/>
+    <circle cx="66" cy="65" r="4" fill="#f48c8c" opacity="0.55"/>
+  </g>
+</svg>

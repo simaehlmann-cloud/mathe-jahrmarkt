@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="himmel" cx="0.5" cy="0.62" r="0.75">
+      <stop offset="0" stop-color="#fff6d6"/>
+      <stop offset="0.45" stop-color="#9fdcff"/>
+      <stop offset="1" stop-color="#3f9be0"/>
+    </radialGradient>
+  </defs>
+  <rect width="108" height="108" fill="url(#himmel)"/>
+  <!-- Lichtstrahlen -->
+  <g fill="#ffffff" opacity="0.22">
+    <path d="M54 66 L20 108 L36 108 Z"/><path d="M54 66 L72 108 L88 108 Z"/>
+    <path d="M54 66 L0 74 L0 90 Z"/><path d="M54 66 L108 74 L108 90 Z"/>
+    <path d="M54 66 L0 40 L0 52 Z"/><path d="M54 66 L108 40 L108 52 Z"/>
+  </g>
+  <!-- Markise oben -->
+  <g>
+    <rect x="0" y="0" width="108" height="20" fill="#e23b3b"/>
+    <g fill="#ffffff">
+      <rect x="9" y="0" width="9" height="20"/><rect x="27" y="0" width="9" height="20"/>
+      <rect x="45" y="0" width="9" height="20"/><rect x="63" y="0" width="9" height="20"/>
+      <rect x="81" y="0" width="9" height="20"/><rect x="99" y="0" width="9" height="20"/>
+    </g>
+    <g>
+      <circle cx="4.5" cy="20" r="4.5" fill="#e23b3b"/><circle cx="13.5" cy="20" r="4.5" fill="#ffffff"/>
+      <circle cx="22.5" cy="20" r="4.5" fill="#e23b3b"/><circle cx="31.5" cy="20" r="4.5" fill="#ffffff"/>
+      <circle cx="40.5" cy="20" r="4.5" fill="#e23b3b"/><circle cx="49.5" cy="20" r="4.5" fill="#ffffff"/>
+      <circle cx="58.5" cy="20" r="4.5" fill="#e23b3b"/><circle cx="67.5" cy="20" r="4.5" fill="#ffffff"/>
+      <circle cx="76.5" cy="20" r="4.5" fill="#e23b3b"/><circle cx="85.5" cy="20" r="4.5" fill="#ffffff"/>
+      <circle cx="94.5" cy="20" r="4.5" fill="#e23b3b"/><circle cx="103.5" cy="20" r="4.5" fill="#ffffff"/>
+    </g>
+  </g>
+  <!-- Wiese -->
+  <ellipse cx="54" cy="112" rx="70" ry="18" fill="#6cc04a"/>
+</svg>

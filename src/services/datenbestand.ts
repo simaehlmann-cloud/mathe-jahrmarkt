@@ -1,3 +1,4 @@
+import { pruefeAussehen } from '../domain/aussehen';
 import { STUFEN } from '../domain/buden';
 import { FIGUREN, MAX_PROFILE, bereinigeName, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
 import type { Ereignis, Wochenwert } from '../domain/lernprofil/lernprofil';
@@ -26,6 +27,12 @@ export interface Einstellungen {
   schrift: Schrift;
   subtraktion: Subtraktionsverfahren;
   automatischVorlesen: boolean;
+  /** Sprechtempo, 1 = normal. */
+  sprechtempo: number;
+  /** Kennung der gewählten Stimme, '' = automatisch die beste. */
+  stimme: string;
+  /** Musik auch während der Aufgaben (Standard: aus, damit das Kind sich konzentrieren kann). */
+  musikImSpiel: boolean;
 }
 
 export interface Datenbestand {
@@ -36,7 +43,7 @@ export interface Datenbestand {
   paket: { gekauft: boolean; seit?: number | undefined };
 }
 
-export const SCHEMA = 1;
+export const SCHEMA = 2;
 
 export const standardEinstellungen = (): Einstellungen => ({
   lautMusik: 0.4,
@@ -46,6 +53,9 @@ export const standardEinstellungen = (): Einstellungen => ({
   schrift: 'normal',
   subtraktion: 'abziehen-entbuendeln',
   automatischVorlesen: true,
+  sprechtempo: 1.1,
+  stimme: '',
+  musikImSpiel: false,
 });
 
 export const leererBestand = (): Datenbestand => ({
@@ -109,13 +119,15 @@ function pruefeProfil(x: unknown): Profil | undefined {
     }
   }
   const gesehen = istObjekt(x.gesehen) ? x.gesehen : {};
+  const deko = liste(x.deko, (d) => (typeof d === 'string' ? d : undefined));
   return {
     id: x.id,
     name,
     figur,
     erstellt: zahl(x.erstellt, 0),
     taler: zahl(x.taler, 0, 0),
-    deko: liste(x.deko, (d) => (typeof d === 'string' ? d : undefined)),
+    deko,
+    aussehen: pruefeAussehen(x.aussehen, deko),
     abzeichen: liste(x.abzeichen, (a): Abzeichen | undefined =>
       istObjekt(a) && typeof a.id === 'string' ? { id: a.id as Abzeichen['id'], bezug: text(a.bezug), am: zahl(a.am, 0) } : undefined,
     ),
@@ -158,6 +170,9 @@ export function pruefeEinstellungen(x: unknown): Einstellungen {
     schrift: (['normal', 'gross', 'sehrGross'].includes(text(x.schrift)) ? x.schrift : s.schrift) as Schrift,
     subtraktion: (Object.keys(SUBTRAKTION_NAMEN).includes(text(x.subtraktion)) ? x.subtraktion : s.subtraktion) as Subtraktionsverfahren,
     automatischVorlesen: bool(x.automatischVorlesen, s.automatischVorlesen),
+    sprechtempo: zahl(x.sprechtempo, s.sprechtempo, 0.7, 1.6),
+    stimme: text(x.stimme, s.stimme).slice(0, 200),
+    musikImSpiel: bool(x.musikImSpiel, s.musikImSpiel),
   };
 }
 
@@ -186,6 +201,17 @@ export function pruefeBestand(x: unknown): Datenbestand {
 export const MIGRATIONEN: Readonly<Record<number, (alt: Record<string, unknown>) => Record<string, unknown>>> = {
   // 0: Entwicklungsstand ohne Schema-Feld (nur Profile) → 1
   0: (alt) => ({ ...alt, schema: 1, einstellungen: alt.einstellungen ?? {}, paket: alt.paket ?? { gekauft: false } }),
+  // 1 → 2: Figuren-Baukasten. Wer den Strohhut schon gekauft hatte, trug ihn automatisch – das bleibt so.
+  1: (alt) => ({
+    ...alt,
+    profile: Array.isArray(alt.profile)
+      ? alt.profile.map((p: unknown) =>
+          istObjekt(p) && p.aussehen === undefined
+            ? { ...p, aussehen: { fell: 0, tuch: 'keins', extra: Array.isArray(p.deko) && p.deko.includes('hut') ? 'strohhut' : 'keins' } }
+            : p,
+        )
+      : alt.profile,
+  }),
 };
 
 export function migriere(roh: unknown): Datenbestand {

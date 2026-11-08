@@ -1,4 +1,4 @@
-# Code-Review Version 0.1.0
+# Code-Review Version 0.3.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -16,7 +16,26 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | Auf schmalen Handys liefen Kopfzeile und Mathe-Profil über den Rand | Kopfzeile verkleinert sich, Statuswörter umbrechen; Ablauftest misst Überlauf |
 | wichtig | Bei kleinen Ergebnissen war „Ergebnis − 10“ als „knapp daneben“ markiert (6 · 2 → 2 ergab „Fast!“) | Zehner-Distraktor erst ab Ergebnis 20, Test |
 | wichtig | Ablauftest scheiterte auf GitHub (langsame Rechner ohne Grafikkarte) | längere Wartezeiten, Drosselung lokal nachstellbar mit `DROSSEL=6 npm run e2e`, Foto bei Abbruch |
-| Verbesserung | „etwa 1 Minuten“ im Wochenbericht, fehlende Leerzeichen in der Hilfe, Musik-Regler ohne Musik | korrigiert bzw. entfernt |
+| Verbesserung | „etwa 1 Minuten“ im Wochenbericht, fehlende Leerzeichen in der Hilfe, Musik-Regler ohne Musik | korrigiert; Regler wirkt seit 0.3.0 auf die neue Musik |
+
+## Neu in 0.2.0 geprüft
+
+| Bereich | Prüfung |
+| --- | --- |
+| Speicher | Schema 2 mit Migration: vorhandene Profile bekommen ein Aussehen, ein schon gekaufter Strohhut bleibt auf; Tests für Migration und ungültige Werte |
+| Kaufgrenze im Baukasten | Strohhut nur nach Kauf im Andenkenstand, auch beim Einspielen einer Sicherung |
+| Datenschutz | Baukasten ohne Kamera und Fotos |
+| Android | fester Debug-Schlüssel, damit Test-APKs sich überschreiben lassen, ohne den Spielstand zu löschen |
+
+## Neu in 0.3.0 geprüft (Rückmeldung aus dem Test auf dem Samsung-Handy)
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| kritisch | Auf dem Budenvorplatz lag „Bronze spielen“ unterhalb des sichtbaren Bereichs; das Kind kam nicht zu den Aufgaben | Spielknopf in einer festen Leiste am unteren Rand, Bild der Bude kleiner auf niedrigen Bildschirmen |
+| kritisch | Android-Zurück-Taste schloss die App sofort | Zurück führt eine Ebene zurück (Spiel → Bude → Gasse → Jahrmarkt); auf dem Jahrmarkt erst nach zweitem Druck verlassen; während der Hilfe gesperrt; Tests für alle Bildschirme |
+| wichtig | Stimme zu langsam und unnatürlich | Tempo 1,1 statt verlangsamt, beste deutsche Offline-Stimme wird gewählt (hochwertige vor kompakten), Tempo und Stimme einstellbar, Netzstimmen ausgeschlossen (Datenschutz) |
+| wichtig | Keine Musik | eigene Komposition per Web Audio, im Hintergrund sofort stumm, beim Rechnen nur auf Wunsch |
+| wichtig | Standard-Symbol von Capacitor | eigenes Symbol (Flinka unter der Markise) als adaptives Android-Symbol und iOS-Symbol ohne Transparenz, eigenes Startbild |
 
 ## Offen
 
@@ -24,13 +43,13 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | --- | --- | --- |
 | kritisch vor Veröffentlichung | Nativer Kauf fehlt; die App zeigt in der Store-Version ehrlich „noch nicht verfügbar“ | Fahrplan Schritt 6 |
 | wichtig | Der Paketstatus liegt nur lokal; nach Neuinstallation hilft „Käufe wiederherstellen“ erst mit nativem Kauf | mit Schritt 6 beim Start still prüfen |
-| wichtig | Sprachausgabe hängt von installierten Systemstimmen ab; ohne deutsche Stimme bleibt es still | Hinweis im Elternbereich, später eingesprochene Aufnahmen |
+| wichtig | Sprachausgabe hängt von installierten Systemstimmen ab; ohne deutsche Offline-Stimme bleibt es still | Hinweis im Elternbereich ist da; später eingesprochene Aufnahmen |
 | Verbesserung | Gassen-Abschlussanimation und Sommerfest sind im Fortschritt angelegt, aber noch ohne Darstellung | sobald eine Gasse vollständig ist |
 | Verbesserung | Sicherung läuft über Kopieren und Einfügen von Text | Teilen-Dialog über ein Capacitor-Plugin |
 
 ## Prüfstand
 
-- 46 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
+- 48 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
 - Typprüfung ohne Fehler und Warnungen (`svelte-check --fail-on-warnings`)
 - 45 Store-Regel-Prüfungen
-- Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Neustart mit Fortschritt, keine Konsolenfehler
+- Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Figuren-Baukasten, Neustart mit Fortschritt und Figur, keine Konsolenfehler

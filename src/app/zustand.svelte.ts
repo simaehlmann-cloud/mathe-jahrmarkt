@@ -1,5 +1,6 @@
 import type { GasseId, Stufe } from '../domain/buden';
 import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
+import type { Aussehen } from '../domain/aussehen';
 import { MAX_PROFILE, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
 import { randomSeed } from '../domain/rng';
 import { leererBestand, type Datenbestand, type Einstellungen } from '../services/datenbestand';
@@ -7,6 +8,7 @@ import { erstelleKauf, keinKauf, type KaufService } from '../services/kauf';
 import { erstelleKlang, type Klangart } from '../services/klang';
 import { erstelleSprache } from '../services/sprache';
 import { Speicherplan, laden, preferencesKV, type KeyValue } from '../services/speicher';
+import { DOPPELDRUCK_MS, zurueckZiel } from './navigation';
 
 export type Bildschirm =
   | { name: 'laden' }
@@ -17,6 +19,7 @@ export type Bildschirm =
   | { name: 'spiel'; bude: string; stufe: Stufe; n?: number }
   | { name: 'profil' }
   | { name: 'andenken' }
+  | { name: 'figur' }
   | { name: 'eltern' };
 
 /** Zentraler Zustand. Jede Änderung am Bestand läuft über `aendere`, damit sie gespeichert wird. */
@@ -32,6 +35,12 @@ class AppZustand {
   readonly sprache = erstelleSprache();
   readonly klang = erstelleKlang();
   private plan: Speicherplan | undefined;
+  /**
+   * Ein Bildschirm kann die Zurück-Taste selbst behandeln (z. B. das Spiel, um die Runde sauber zu verbuchen).
+   * Gibt die Funktion true zurück, ist der Druck erledigt.
+   */
+  zurueckAbfangen: (() => boolean) | null = null;
+  private letzterZurueck = 0;
 
   get profil(): Profil | undefined {
     return this.bestand.profile.find((p) => p.id === this.bestand.aktiv);
@@ -55,6 +64,31 @@ class AppZustand {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') void this.plan?.sofort();
     });
+  }
+
+  /** Zurück-Taste von Android. Die App schließt nie ungefragt. */
+  async zurueck(): Promise<void> {
+    if (this.zurueckAbfangen?.()) return;
+    const ziel = zurueckZiel(this.bildschirm, !!this.profil);
+    if (ziel === 'nichts') return;
+    if (ziel === 'jahrmarktVerlassen') {
+      const jetzt = Date.now();
+      if (jetzt - this.letzterZurueck < DOPPELDRUCK_MS) {
+        this.letzterZurueck = 0;
+        await this.speichereSofort();
+        try {
+          const { App } = await import('@capacitor/app');
+          await App.minimizeApp();
+        } catch {
+          /* nur Android */
+        }
+      } else {
+        this.letzterZurueck = jetzt;
+        this.melde('Zum Verlassen noch einmal Zurück drücken.');
+      }
+      return;
+    }
+    this.zeige(ziel);
   }
 
   zeige(b: Bildschirm): void {
@@ -81,9 +115,10 @@ class AppZustand {
     return this.plan?.sofort() ?? Promise.resolve();
   }
 
-  profilAnlegen(name: string, figur: FigurId): boolean {
+  profilAnlegen(name: string, figur: FigurId, aussehen?: Aussehen): boolean {
     if (this.bestand.profile.length >= MAX_PROFILE) return false;
-    const p = neuesProfil(`p${Date.now().toString(36)}${randomSeed().toString(36)}`, name, figur, Date.now());
+    const neu = neuesProfil(`p${Date.now().toString(36)}${randomSeed().toString(36)}`, name, figur, Date.now());
+    const p = aussehen ? { ...neu, aussehen: { ...aussehen, extra: aussehen.extra === 'strohhut' ? 'keins' as const : aussehen.extra } } : neu;
     if (!p.name) return false;
     this.aendere((b) => ({ ...b, profile: [...b.profile, p], aktiv: p.id }));
     return true;
@@ -119,7 +154,8 @@ class AppZustand {
   }
 
   sprich(text: string): void {
-    void this.sprache.sprich(text, this.einstellungen.lautSprache);
+    const e = this.einstellungen;
+    void this.sprache.sprich(text, { lautstaerke: e.lautSprache, tempo: e.sprechtempo, stimme: e.stimme });
   }
 
   melde(text: string): void {
