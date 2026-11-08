@@ -27,6 +27,12 @@ export interface Einstellungen {
   schrift: Schrift;
   subtraktion: Subtraktionsverfahren;
   automatischVorlesen: boolean;
+  /** Sprechtempo, 1 = normal. */
+  sprechtempo: number;
+  /** Kennung der gewählten Stimme, '' = automatisch die beste. */
+  stimme: string;
+  /** Musik auch während der Aufgaben (Standard: aus, damit das Kind sich konzentrieren kann). */
+  musikImSpiel: boolean;
 }
 
 export interface Datenbestand {
@@ -47,6 +53,9 @@ export const standardEinstellungen = (): Einstellungen => ({
   schrift: 'normal',
   subtraktion: 'abziehen-entbuendeln',
   automatischVorlesen: true,
+  sprechtempo: 1.1,
+  stimme: '',
+  musikImSpiel: false,
 });
 
 export const leererBestand = (): Datenbestand => ({
@@ -161,6 +170,9 @@ export function pruefeEinstellungen(x: unknown): Einstellungen {
     schrift: (['normal', 'gross', 'sehrGross'].includes(text(x.schrift)) ? x.schrift : s.schrift) as Schrift,
     subtraktion: (Object.keys(SUBTRAKTION_NAMEN).includes(text(x.subtraktion)) ? x.subtraktion : s.subtraktion) as Subtraktionsverfahren,
     automatischVorlesen: bool(x.automatischVorlesen, s.automatischVorlesen),
+    sprechtempo: zahl(x.sprechtempo, s.sprechtempo, 0.7, 1.6),
+    stimme: text(x.stimme, s.stimme).slice(0, 200),
+    musikImSpiel: bool(x.musikImSpiel, s.musikImSpiel),
   };
 }
 
