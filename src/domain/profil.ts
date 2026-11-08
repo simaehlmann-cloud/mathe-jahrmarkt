@@ -1,4 +1,5 @@
 import type { Stufe } from './buden';
+import { standardAussehen, type Aussehen } from './aussehen';
 import type { Ereignis, Wochenwert } from './lernprofil/lernprofil';
 
 export type FigurId = 'fuchs' | 'eule' | 'igel' | 'katze' | 'baer' | 'hase';
@@ -45,6 +46,8 @@ export interface Profil {
   taler: number;
   /** Gekaufte Deko-Kennungen. */
   deko: string[];
+  /** Eigene Figur aus dem Baukasten. */
+  aussehen: Aussehen;
   abzeichen: Abzeichen[];
   fortschritt: Record<string, Partial<Record<Stufe, StufenStand>>>;
   ereignisse: Ereignis[];
@@ -66,6 +69,7 @@ export function neuesProfil(id: string, name: string, figur: FigurId, jetzt: num
     erstellt: jetzt,
     taler: 0,
     deko: [],
+    aussehen: standardAussehen(),
     abzeichen: [],
     fortschritt: {},
     ereignisse: [],
