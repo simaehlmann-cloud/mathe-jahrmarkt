@@ -30,6 +30,8 @@ const WOERTER = {
 };
 
 let fehler = 0;
+/** Für ein Bildschirmfoto, falls der Ablauf abbricht. */
+let letzteSeite;
 const pruefe = (b, text) => {
   if (!b) {
     fehler++;
@@ -37,7 +39,7 @@ const pruefe = (b, text) => {
   } else console.log(`✓ ${text}`);
 };
 
-const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
+const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox', ...(process.env.DROSSEL ? ['--disable-gpu'] : [])] });
 try {
   for (const [name, viewport] of [
     ['quer', { width: 1180, height: 820 }],
@@ -45,6 +47,13 @@ try {
   ]) {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true });
     const page = await ctx.newPage();
+    letzteSeite = page;
+    // Großzügige Zeiten: CI-Rechner haben keine Grafikkarte und sind langsamer.
+    page.setDefaultTimeout(20000);
+    if (process.env.DROSSEL) {
+      const cdp = await ctx.newCDPSession(page);
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.DROSSEL) });
+    }
     const konsole = [];
     page.on('console', (m) => m.type() === 'error' && konsole.push(m.text()));
     page.on('pageerror', (e) => konsole.push(String(e)));
@@ -81,7 +90,7 @@ try {
       const knoepfe = page.locator('.nur-leser button');
       const werte = await knoepfe.allTextContents();
       const ziel = falsch ? werte.find((w) => Number(w) !== richtig) : String(richtig);
-      await page.waitForTimeout(1000); // nicht „zu schnell getippt“
+      await page.waitForTimeout(1300); // nicht „zu schnell getippt“ (Grenze 900 ms)
       const id = await page.locator('.schild').getAttribute('data-aufgabe');
       await knoepfe.filter({ hasText: new RegExp(`^${ziel}$`) }).dispatchEvent('click');
       // Doppelt tippen darf nicht doppelt zählen
@@ -93,7 +102,7 @@ try {
       await page.waitForFunction(
         (alt) => document.querySelector('.schild')?.getAttribute('data-aufgabe') !== alt || document.querySelector('[role=dialog]'),
         id,
-        { timeout: 8000 },
+        { timeout: 20000 },
       );
     };
 
@@ -101,7 +110,7 @@ try {
     pruefe((await page.locator('.marke').count()) === 0, 'Nach dem Probewurf beginnt die Runde');
     // Erste Aufgabe absichtlich falsch → Hilfe
     await loese(true);
-    await page.getByText('Schauen wir genau hin').waitFor({ timeout: 4000 });
+    await page.getByText('Schauen wir genau hin').waitFor();
     await foto('07-hilfe-zeigen');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await foto('08-hilfe-hervorheben');
@@ -117,7 +126,7 @@ try {
     pruefe((await page.locator('.marke').textContent())?.includes('ähnliche'), 'Nach der Hilfe kommt eine ähnliche Aufgabe');
     await abwarten((await loese()).id);
     for (let i = 0; i < 9; i++) await abwarten((await loese(false, i === 0)).id);
-    await page.getByText('Bronze geschafft!').waitFor({ timeout: 5000 });
+    await page.getByText('Bronze geschafft!').waitFor();
     await foto('10-ende');
     pruefe(await page.getByText('9 von 10').isVisible(), 'Ergebnis zeigt 9 von 10');
     await page.getByRole('button', { name: 'Zur Bude' }).click();
@@ -156,6 +165,11 @@ try {
 } catch (e) {
   fehler++;
   console.error('✗ Ablauf abgebrochen:', e.message);
+  if (letzteSeite) {
+    await letzteSeite.screenshot({ path: `${BILDER}/abbruch.png` }).catch(() => {});
+    const hinweis = await letzteSeite.locator('.hinweis').allTextContents().catch(() => []);
+    console.error('  Hinweise auf dem Bildschirm:', JSON.stringify(hinweis));
+  }
 } finally {
   await browser.close();
   server.kill();

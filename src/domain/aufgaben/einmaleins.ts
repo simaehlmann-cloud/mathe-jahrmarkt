@@ -117,9 +117,9 @@ export function distraktoren(art: Rechenart, a: number, b: number): { wert: numb
       { wert: (a - 1) * b, fehlerArt: 'nachbaraufgabe' },
       { wert: a + b, fehlerArt: 'operation' },
       { wert: zifferntausch(p), fehlerArt: 'ziffern' },
-      { wert: p + 10, fehlerArt: 'zehner' },
-      { wert: p - 10, fehlerArt: 'zehner' },
     );
+    // Um 10 daneben ist nur bei zweistelligen Ergebnissen ein Verrechnen, nicht bei 12 → 2.
+    if (p >= 20) liste.push({ wert: p + 10, fehlerArt: 'zehner' }, { wert: p - 10, fehlerArt: 'zehner' });
   } else {
     // Gesucht ist b, gegeben sind a und p.
     liste.push(

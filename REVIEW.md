@@ -14,6 +14,8 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | Verlassen der Bude während des Ladens ließ die Grafik-Engine weiterlaufen | Späte Szene wird sofort zerstört |
 | wichtig | Katze war ein Knopf im Budenknopf (ungültiges HTML, für Bildschirmleser unerreichbar) | Eigener Knopf über der Grafik |
 | wichtig | Auf schmalen Handys liefen Kopfzeile und Mathe-Profil über den Rand | Kopfzeile verkleinert sich, Statuswörter umbrechen; Ablauftest misst Überlauf |
+| wichtig | Bei kleinen Ergebnissen war „Ergebnis − 10“ als „knapp daneben“ markiert (6 · 2 → 2 ergab „Fast!“) | Zehner-Distraktor erst ab Ergebnis 20, Test |
+| wichtig | Ablauftest scheiterte auf GitHub (langsame Rechner ohne Grafikkarte) | längere Wartezeiten, Drosselung lokal nachstellbar mit `DROSSEL=6 npm run e2e`, Foto bei Abbruch |
 | Verbesserung | „etwa 1 Minuten“ im Wochenbericht, fehlende Leerzeichen in der Hilfe, Musik-Regler ohne Musik | korrigiert bzw. entfernt |
 
 ## Offen
@@ -28,7 +30,7 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 
 ## Prüfstand
 
-- 45 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
+- 46 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
 - Typprüfung ohne Fehler und Warnungen (`svelte-check --fail-on-warnings`)
 - 45 Store-Regel-Prüfungen
 - Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Neustart mit Fortschritt, keine Konsolenfehler

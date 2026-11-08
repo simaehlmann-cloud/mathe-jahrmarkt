@@ -1,0 +1,7 @@
+# Einheitliche Zeilenenden, damit Windows-Rechner keine Scheinänderungen erzeugen
+* text=auto eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.jar binary

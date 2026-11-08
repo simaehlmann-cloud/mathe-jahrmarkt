@@ -44,6 +44,19 @@ describe('Einmaleins-Generator', () => {
     });
   }
 
+  it('„um 10 daneben“ nur bei Ergebnissen ab 20, sonst wäre der Hinweis „Fast!“ falsch', () => {
+    const rng = createRng(21);
+    for (let i = 0; i < 5000; i++) {
+      const a = einmaleinsAufgabe('silber', rng);
+      for (const o of a.optionen) {
+        if (o.fehlerArt === 'zehner') {
+          expect(a.antwort).toBeGreaterThanOrEqual(20);
+          expect(Math.abs(o.wert - a.antwort)).toBe(10);
+        }
+      }
+    }
+  });
+
   it('Gold enthält alle drei Rechenarten', () => {
     const rng = createRng(7);
     const arten = new Set(Array.from({ length: 500 }, () => einmaleinsAufgabe('gold', rng).art));
