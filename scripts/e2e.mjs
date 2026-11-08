@@ -173,6 +173,14 @@ try {
     });
     pruefe(gespeichert?.figur === 'eule' && gespeichert?.aussehen?.extra === 'brille' && gespeichert?.aussehen?.tuch === 'blau', `${name}: Figur aus dem Baukasten bleibt gespeichert`);
 
+    // Baukasten ist auch direkt vom Startbildschirm aus erreichbar
+    await page.locator('header button.figur').click();
+    await page.getByRole('heading', { name: 'Wer spielt?' }).waitFor();
+    await foto('17-wer-spielt');
+    await page.getByRole('button', { name: /^Figur von .* gestalten$/ }).first().click();
+    await page.getByRole('button', { name: 'Speichern' }).waitFor();
+    pruefe(true, `${name}: Figur gestalten vom Startbildschirm erreichbar`);
+
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
   }
