@@ -4,7 +4,9 @@ import type { Rng } from '../../domain/rng';
 import type { AuswahlAufgabe } from '../../domain/aufgaben/typen';
 import type { BildKomponente, BudeDefinition } from '../typen';
 import HilfeErklaerung from './HilfeErklaerung.svelte';
-import { auswahlSzene } from './svelteSzene';
+import { auswahlSzene, svelteSzene, type SvelteSzenenExporte } from './svelteSzene';
+import type { Component } from 'svelte';
+import type { SzenenKontext } from '../typen';
 
 /** Erzeuger einer Auswahl-Bude: Stufe, Zufall und (für „ähnliche Aufgabe“) dieselbe Form. */
 export type Baue = (stufe: Stufe, rng: Rng, form?: string) => AuswahlAufgabe;
@@ -19,10 +21,12 @@ export function auswahlBude(o: {
   anleitung: string;
   spalten?: number;
   hintergrund?: string;
+  /** Eigene Spiel-Bühne statt Bild und Antwortknöpfen (Münzen legen, Uhr stellen …). */
+  spiel?: Component<{ kontext: SzenenKontext }, SvelteSzenenExporte>;
 }): BudeDefinition {
   return {
     id: o.id,
-    erstelleSzene: auswahlSzene(o.bild, { spalten: o.spalten ?? 2, hintergrund: o.hintergrund ?? '#fff8e6' }),
+    erstelleSzene: o.spiel ? svelteSzene(o.spiel) : auswahlSzene(o.bild, { spalten: o.spalten ?? 2, hintergrund: o.hintergrund ?? '#fff8e6' }),
     erzeuge: (stufe, rng) => o.baue(stufe, rng),
     aehnlich: (vorher, rng) => {
       if (vorher.art !== 'auswahl') throw new Error(`Keine Aufgabe dieser Bude: ${vorher.text}`);
@@ -34,6 +38,7 @@ export function auswahlBude(o: {
     bild: o.bild,
     ladetext: o.ladetext,
     anleitung: o.anleitung,
-    eigeneBedienung: true,
+    // Spiel-Bühnen: Für Bildschirmleser gibt es zusätzlich die Antwortmöglichkeiten als unsichtbare Knöpfe
+    eigeneBedienung: !o.spiel,
   };
 }

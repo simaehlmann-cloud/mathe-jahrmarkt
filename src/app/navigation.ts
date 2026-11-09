@@ -16,6 +16,8 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
       return 'jahrmarktVerlassen';
     case 'profil':
     case 'andenken':
+    case 'bauplatz':
+    case 'check':
     case 'eltern':
       return hatProfil ? { name: 'jahrmarkt' } : { name: 'start' };
     case 'bude':

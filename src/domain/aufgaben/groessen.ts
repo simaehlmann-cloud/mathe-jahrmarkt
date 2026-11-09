@@ -32,15 +32,15 @@ export function baueKasse(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
   if (f === 'bezahlen') {
     const preis = rng.int(3, 9) * 50 + rng.pick([0, 5, 10, 20, 25, 30, 45]);
     const richtig = muenzen(preis);
-    const falsch = [muenzen(preis + 10), muenzen(preis - 5), muenzen(preis + 100)].filter((l) => muenzenText(l) !== muenzenText(richtig));
-    const c = codeAuswahl([muenzenText(richtig), ...falsch.map(muenzenText)], 0, rng);
     return auswahlAufgabe(
       {
-        bude: 'kasse', form: f, stufe, text: `${ware}: ${euro(preis)}`, sprechtext: `${ware} kostet ${euro(preis)}. Mit welchen Münzen bezahlst du genau?`,
-        ...c, kompetenz: 'groessen', dimension: 'sicherheit',
-        idee: 'Zähle die Münzen zusammen, mit den großen zuerst.',
-        schritte: [`${muenzenText(richtig)} = ${euro(preis)}`],
-        daten: { ware, preis, muenzen: richtig },
+        bude: 'kasse', form: f, stufe, text: 'Bezahle passend!', sprechtext: `${ware} kostet ${euro(preis)}. Lege die Münzen passend hin.`,
+        antwort: preis, frei: true, schritt: 10, format: (w) => euro(w),
+        fehler: [{ wert: preis + 10, fehlerArt: 'sonstige' }, { wert: preis - 5, fehlerArt: 'sonstige' }, { wert: preis + 100, fehlerArt: 'stelle' }],
+        kompetenz: 'groessen', dimension: 'sicherheit',
+        idee: 'Zähle die Münzen zusammen, mit den großen zuerst. 100 Cent sind 1 Euro.',
+        schritte: [`Zum Beispiel: ${muenzenText(richtig)} = ${euro(preis)}`],
+        daten: { ware, preis, modus: 'bezahlen', anzeige: 'euro', muenzen: richtig },
       },
       rng,
     );
@@ -57,12 +57,12 @@ export function baueKasse(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
     const ergaenzung = Math.ceil(preis / 100) * 100;
     return auswahlAufgabe(
       {
-        bude: 'kasse', form: f, stufe, text: `${euro(preis)} mit ${euro(schein)}`, sprechtext: `${ware} kostet ${euro(preis)}. Du bezahlst mit ${schein / 100} Euro. Wie viel Rückgeld bekommst du?`,
-        antwort: rueck, fehler, schritt: 10, format: (w) => euro(w),
+        bude: 'kasse', form: f, stufe, text: 'Gib das Rückgeld!', sprechtext: `${ware} kostet ${euro(preis)}. Der Kunde bezahlt mit ${schein / 100} Euro. Lege das Rückgeld hin.`,
+        antwort: rueck, fehler, schritt: 10, format: (w) => euro(w), frei: true,
         kompetenz: 'groessen', dimension: 'anwendung',
         idee: 'Rückgeld findest du durch Ergänzen: erst bis zum vollen Euro, dann bis zum Schein.',
         schritte: [`${euro(preis)} + ${euro(ergaenzung - preis)} = ${euro(ergaenzung)}`, `${euro(ergaenzung)} + ${euro(schein - ergaenzung)} = ${euro(schein)}`, `Rückgeld: ${euro(ergaenzung - preis)} + ${euro(schein - ergaenzung)} = ${euro(rueck)}`],
-        daten: { ware, preis, schein },
+        daten: { ware, preis, schein, modus: 'rueckgeld', anzeige: 'euro' },
       },
       rng,
     );
@@ -79,12 +79,12 @@ export function baueKasse(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
   ];
   return auswahlAufgabe(
     {
-      bude: 'kasse', form: 'einkauf', stufe, text: 'Was kostet alles zusammen?', sprechtext: `Du kaufst ${waren.join(', ')}. Was kostet alles zusammen?`,
-      antwort: summe, fehler, schritt: 10, format: (w) => euro(w),
+      bude: 'kasse', form: 'einkauf', stufe, text: 'Bezahle den Einkauf!', sprechtext: `Du kaufst ${waren.map((w, i) => `${w} für ${euro(preise[i] ?? 0)}`).join(', ')}. Lege den ganzen Betrag passend hin.`,
+      antwort: summe, fehler, schritt: 10, format: (w) => euro(w), frei: true,
       kompetenz: 'groessen', dimension: 'anwendung',
       idee: 'Erst die Euro zusammenzählen, dann die Cent. 100 Cent sind 1 Euro.',
       schritte: [`Euro: ${preise.map((p) => Math.floor(p / 100)).join(' + ')} = ${preise.reduce((s, p) => s + Math.floor(p / 100), 0)} €`, `Cent: ${preise.map((p) => p % 100).join(' + ')} = ${preise.reduce((s, p) => s + (p % 100), 0)} ct`, `Zusammen: ${euro(summe)}`],
-      daten: { waren, preise },
+      daten: { waren, preise, modus: 'einkauf', anzeige: 'euro' },
     },
     rng,
   );
@@ -162,12 +162,12 @@ export function baueUhr(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe {
     const bisVoll = 60 - (ab % 60);
     return auswahlAufgabe(
       {
-        bude: 'uhrkarussell', form: f, stufe, text: `Abfahrt ${uhrText(ab)}, Fahrt ${dauer} min`, sprechtext: `Das Karussell-Bähnchen fährt um ${uhrText(ab)} los. Die Fahrt dauert ${dauer} Minuten. Wann kommt es an?`,
-        antwort: an, fehler, schritt: 5, format: (w) => uhrText(w),
+        bude: 'uhrkarussell', form: f, stufe, text: 'Wann kommt das Bähnchen an?', sprechtext: `Das Bähnchen fährt um ${uhrText(ab)} los. Die Fahrt dauert ${dauer} Minuten. Stelle die Uhr auf die Ankunftszeit.`,
+        antwort: an, fehler, schritt: 5, format: (w) => uhrText(w), frei: true,
         kompetenz: 'groessen', dimension: 'anwendung',
         idee: 'Rechne erst bis zur vollen Stunde, dann den Rest.',
         schritte: [`${uhrText(ab)} + ${Math.min(bisVoll, dauer)} min = ${uhrText(ab + Math.min(bisVoll, dauer))}`, ...(dauer > bisVoll ? [`+ ${dauer - bisVoll} min = ${uhrText(an)}`] : [])],
-        daten: { min: ab },
+        daten: { min: an, start: ab, dauer, raster: 5, anzeige: 'uhr' },
       },
       rng,
     );
@@ -184,12 +184,13 @@ export function baueUhr(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe {
   const lesen = minute === 30 ? `halb ${(stunde % 12) + 1}` : minute === 15 ? `Viertel nach ${stunde}` : minute === 45 ? `Viertel vor ${(stunde % 12) + 1}` : minute === 0 ? `${stunde} Uhr` : '';
   return auswahlAufgabe(
     {
-      bude: 'uhrkarussell', form: f, stufe, text: 'Wie spät ist es?', antwort: zeit, fehler, schritt: 5,
+      bude: 'uhrkarussell', form: f, stufe, text: `Stelle die Uhr auf ${lesen || uhrText(zeit)}!`, sprechtext: `Stelle die Uhr auf ${lesen || uhrText(zeit)}.`,
+      antwort: zeit, fehler, schritt: 5, frei: true,
       format: (w) => uhrText(w),
       kompetenz: 'groessen', dimension: f === 'viertel' ? 'wissen' : 'sicherheit',
       idee: 'Der kurze Zeiger zeigt die Stunde, der lange die Minuten. Jede Zahl auf dem Ziffernblatt sind 5 Minuten für den langen Zeiger.',
       schritte: [`Der kurze Zeiger ist bei ${stunde}${minute >= 30 ? ` (schon fast bei ${(stunde % 12) + 1})` : ''}.`, `Der lange Zeiger zeigt ${minute} Minuten.`, `Also ${uhrText(zeit)}${lesen ? ` (${lesen})` : ''}.`],
-      daten: { min: zeit },
+      daten: { min: zeit, raster: minute % 5 ? 1 : 5, anzeige: 'uhr' },
     },
     rng,
   );
@@ -259,12 +260,12 @@ export function baueAchterbahn(stufe: Stufe, rng: Rng, form?: string): AuswahlAu
     ];
     return auswahlAufgabe(
       {
-        bude: 'achterbahn', form: f, stufe, text: `Rundbahn ${a} m × ${b} m: wie lang?`, sprechtext: `Die Bahn fährt außen um ein Rechteck, ${a} Meter lang und ${b} Meter breit. Wie lang ist die ganze Runde?`,
-        antwort: u, fehler, schritt: 10, format: (w) => `${w} m`,
+        bude: 'achterbahn', form: f, stufe, text: 'Schienen für die ganze Runde!', sprechtext: `Die Bahn fährt außen um ein Rechteck, ${a} Meter lang und ${b} Meter breit. Lege genau so viele Meter Schienen, wie die ganze Runde lang ist.`,
+        antwort: u, fehler, schritt: 10, format: (w) => `${w} m`, frei: true,
         kompetenz: 'groessen', dimension: 'anwendung',
         idee: 'Die Runde geht an allen vier Seiten entlang. Gegenüberliegende Seiten sind gleich lang.',
         schritte: [`${a} m + ${b} m + ${a} m + ${b} m = ${u} m`],
-        daten: { teile: [a, b, a, b], rechteck: true },
+        daten: { teile: [a, b, a, b], rechteck: true, ziel: u, gebaut: 0, stuecke: [100, 50, 10, 5], anzeige: 'einheit', einheit: 'm' },
       },
       rng,
     );
@@ -282,13 +283,13 @@ export function baueAchterbahn(stufe: Stufe, rng: Rng, form?: string): AuswahlAu
     const zeige = (w: number) => (km ? `${w} m` : `${Math.floor(w / 100)} m ${w % 100} cm`.replace(/^0 m /, ''));
     return auswahlAufgabe(
       {
-        bude: 'achterbahn', form: f, stufe, text: km ? `Ziel 1 km, gebaut ${gebaut} m` : `Ziel 3 m, gebaut ${zeige(gebaut)}`,
-        sprechtext: km ? `Die Bahn soll einen Kilometer lang werden. ${gebaut} Meter sind gebaut. Was fehlt?` : `Das Modell soll 3 Meter lang werden. ${zeige(gebaut)} sind gebaut. Was fehlt?`,
-        antwort: fehlt, fehler: fehler.filter((x) => x.wert > 0), schritt: 10, format: (w) => zeige(w),
+        bude: 'achterbahn', form: f, stufe, text: 'Lege das fehlende Stück!',
+        sprechtext: km ? `Die Bahn soll einen Kilometer lang werden. ${gebaut} Meter sind gebaut. Lege die fehlenden Schienen.` : `Das Modell soll 3 Meter lang werden. ${zeige(gebaut)} sind gebaut. Lege die fehlenden Schienen.`,
+        antwort: fehlt, fehler: fehler.filter((x) => x.wert > 0), schritt: 10, format: (w) => zeige(w), frei: true,
         kompetenz: 'groessen', dimension: 'anwendung',
         idee: km ? '1 km sind 1 000 m. Ergänze bis 1 000.' : '1 m sind 100 cm, 3 m also 300 cm. Ergänze bis 300 cm.',
         schritte: [`${gebaut} + ${fehlt} = ${ziel}`, `Es fehlen ${zeige(fehlt)}.`],
-        daten: { teile: [gebaut, fehlt], ziel },
+        daten: km ? { teile: [gebaut, fehlt], ziel, gebaut, stuecke: [100, 50, 10], anzeige: 'einheit', einheit: 'm' } : { teile: [gebaut, fehlt], ziel, gebaut, stuecke: [100, 50, 10, 5, 1], anzeige: 'mcm' },
       },
       rng,
     );
@@ -305,12 +306,12 @@ export function baueAchterbahn(stufe: Stufe, rng: Rng, form?: string): AuswahlAu
   ];
   return auswahlAufgabe(
     {
-      bude: 'achterbahn', form: 'meter', stufe, text: `Ziel ${ziel} m: ${a} m + ${b} m + ?`, sprechtext: `Die Bahn soll ${ziel} Meter lang werden. Gebaut sind ${a} Meter und ${b} Meter. Welches Stück fehlt?`,
-      antwort: fehlt, fehler, schritt: 5, format: (w) => `${w} m`,
+      bude: 'achterbahn', form: 'meter', stufe, text: 'Lege das fehlende Stück!', sprechtext: `Die Bahn soll ${ziel} Meter lang werden. Gebaut sind ${a} Meter und ${b} Meter. Lege die fehlenden Schienen.`,
+      antwort: fehlt, fehler, schritt: 5, format: (w) => `${w} m`, frei: true,
       kompetenz: 'groessen', dimension: 'anwendung',
       idee: 'Erst zusammenzählen, was schon gebaut ist, dann bis zum Ziel ergänzen.',
       schritte: [`${a} m + ${b} m = ${a + b} m`, `${a + b} m + ${fehlt} m = ${ziel} m`],
-      daten: { teile: [a, b, fehlt], ziel },
+      daten: { teile: [a, b, fehlt], ziel, gebaut: a + b, stuecke: [50, 20, 10, 5, 1], anzeige: 'einheit', einheit: 'm' },
     },
     rng,
   );

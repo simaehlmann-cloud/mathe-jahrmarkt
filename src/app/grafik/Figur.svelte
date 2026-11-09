@@ -24,6 +24,11 @@
   let f1 = $derived(farben[0]);
   let f2 = $derived(farben[1]);
   let tuch = $derived(TUECHER.find((t) => t.id === aussehen.tuch)?.farbe);
+  let mensch = $derived(figur === 'mensch' || figur === 'menschLang');
+  /** Augenhöhe je Figur, für Brillen. */
+  let augeY = $derived(figur === 'hase' ? 37 : mensch ? 38 : figur === 'roboter' ? 35 : 33);
+  let augeX = $derived(figur === 'eule' ? [22, 42] : [24, 40]);
+  let hutY = $derived(figur === 'hase' ? 26 : mensch ? 24 : figur === 'roboter' ? 20 : 22);
   const TINTE = '#1f2a6b';
 </script>
 
@@ -34,7 +39,34 @@
     {#if gesicht}<path d="M{28 + dx} 60 L{36 + dx} 60 L{32 + dx} 68 Z" fill={tuch} />{/if}
   {/if}
 
-  {#if figur === 'fuchs'}
+  {#if mensch}
+    <g>
+    {#if figur === 'menschLang'}<path d="M9 34 Q8 8 32 8 Q56 8 55 34 L57 62 Q46 66 40 58 L24 58 Q18 66 7 62 Z" fill={f2} />{/if}
+    <circle cx="11" cy="39" r="4.5" fill={f1} /><circle cx="53" cy="39" r="4.5" fill={f1} />
+    <circle cx="32" cy="37" r="21" fill={gesicht ? f1 : f2} />
+    {#if gesicht}
+      <path d="M11 33 Q10 11 32 11 Q54 11 53 33 Q47 21 34 22 Q30 26 22 24 Q15 25 11 33 Z" fill={f2} />
+    {/if}
+    </g>
+    {#if gesicht}<g transform="translate({dx} 0)">
+    <path d="M21 32 Q24 30 27 32 M37 32 Q40 30 43 32" stroke={f2} stroke-width="1.8" fill="none" stroke-linecap="round" />
+    <circle cx="24" cy="38" r="2.8" fill={TINTE} /><circle cx="40" cy="38" r="2.8" fill={TINTE} />
+    <path d="M26 47 Q32 52 38 47" stroke={TINTE} stroke-width="2.2" fill="none" stroke-linecap="round" />
+    <circle cx="19" cy="45" r="3" fill="#f48c8c" opacity="0.35" /><circle cx="45" cy="45" r="3" fill="#f48c8c" opacity="0.35" />
+    </g>{/if}
+  {:else if figur === 'roboter'}
+    <g>
+    <path d="M32 14 V5" stroke={TINTE} stroke-width="2.5" /><circle cx="32" cy="4" r="3.5" fill={f2} stroke={TINTE} stroke-width="1.5" />
+    <rect x="5" y="30" width="6" height="12" rx="2" fill={f2} stroke={TINTE} stroke-width="1.5" />
+    <rect x="53" y="30" width="6" height="12" rx="2" fill={f2} stroke={TINTE} stroke-width="1.5" />
+    <rect x="10" y="14" width="44" height="44" rx="11" fill={f1} stroke={TINTE} stroke-width="2.5" />
+    </g>
+    {#if gesicht}<g transform="translate({dx} 0)">
+    <rect x="16" y="26" width="32" height="18" rx="6" fill="#1f2a6b" />
+    <circle cx="25" cy="35" r="3.6" fill="#7fe3ff" /><circle cx="39" cy="35" r="3.6" fill="#7fe3ff" />
+    <path d="M24 50 H40" stroke={TINTE} stroke-width="2.4" stroke-linecap="round" /><path d="M28 48 V52 M32 48 V52 M36 48 V52" stroke={TINTE} stroke-width="1.5" />
+    </g>{:else}<g><circle cx="22" cy="24" r="2" fill={TINTE} /><circle cx="42" cy="24" r="2" fill={TINTE} /><rect x="22" y="34" width="20" height="12" rx="3" fill={f2} opacity="0.6" /></g>{/if}
+  {:else if figur === 'fuchs'}
     <g>
     <path d="M12 26 L10 4 L27 17 Z" fill={f1} /><path d="M12 10 L10 4 L17 9 Z" fill={f2} />
     <path d="M52 26 L54 4 L37 17 Z" fill={f1} /><path d="M52 10 L54 4 L47 9 Z" fill={f2} />
@@ -104,18 +136,29 @@
 
   {#if aussehen.extra === 'brille' && gesicht}
     <g fill="none" stroke={TINTE} stroke-width="2.4" transform="translate({dx} 0)">
-      <circle cx={figur === 'eule' ? 22 : 24} cy={figur === 'hase' ? 37 : 33} r="6.5" />
-      <circle cx={figur === 'eule' ? 42 : 40} cy={figur === 'hase' ? 37 : 33} r="6.5" />
-      <path d="M{figur === 'eule' ? 28.5 : 30.5} {figur === 'hase' ? 37 : 33} H{figur === 'eule' ? 35.5 : 33.5}" />
+      <circle cx={augeX[0]} cy={augeY} r="6.5" />
+      <circle cx={augeX[1]} cy={augeY} r="6.5" />
+      <path d="M{(augeX[0] ?? 24) + 6.5} {augeY} H{(augeX[1] ?? 40) - 6.5}" />
     </g>
+  {:else if aussehen.extra === 'sonnenbrille' && gesicht}
+    <g transform="translate({dx} 0)">
+      <rect x={(augeX[0] ?? 24) - 8} y={augeY - 5} width="15" height="10" rx="4" fill="#1f2a6b" />
+      <rect x={(augeX[1] ?? 40) - 7} y={augeY - 5} width="15" height="10" rx="4" fill="#1f2a6b" />
+      <path d="M{(augeX[0] ?? 24) + 7} {augeY - 2} H{(augeX[1] ?? 40) - 7}" stroke="#1f2a6b" stroke-width="2.4" />
+      <path d="M{(augeX[0] ?? 24) - 5} {augeY - 2} l4 -1.5" stroke="#fff" stroke-width="1.6" opacity="0.7" />
+    </g>
+  {:else if aussehen.extra === 'cap'}
+    <path d="M9 {hutY + 2} Q10 4 32 4 Q54 4 55 {hutY + 2} Z" fill="#e23a4e" stroke={TINTE} stroke-width="1.5" />
+    <path d="M30 4 Q32 2 34 4 L34 {hutY} M32 4 V{hutY}" stroke="#b52437" stroke-width="1.2" fill="none" />
+    {#if gesicht}<path d="M{36 + dx} {hutY} Q{56 + dx} {hutY - 2} {64 + dx} {hutY + 5} L{38 + dx} {hutY + 5} Z" fill="#b52437" stroke={TINTE} stroke-width="1.5" />{/if}
   {:else if aussehen.extra === 'schleife'}
     <g transform="translate({figur === 'hase' ? 44 : 46} {figur === 'hase' ? 22 : 14})">
       <path d="M0 0 L-9 -6 L-9 6 Z M0 0 L9 -6 L9 6 Z" fill="#e23a4e" stroke={TINTE} stroke-width="1.2" />
       <circle r="3" fill="#ff6b7d" stroke={TINTE} stroke-width="1.2" />
     </g>
   {:else if aussehen.extra === 'muetze'}
-    <path d="M10 {figur === 'hase' ? 26 : 22} Q32 -4 54 {figur === 'hase' ? 26 : 22} Z" fill="#3c78d8" />
-    <rect x="9" y={figur === 'hase' ? 22 : 18} width="46" height="7" rx="3.5" fill="#fffdf7" />
+    <path d="M10 {hutY} Q32 -4 54 {hutY} Z" fill="#3c78d8" />
+    <rect x="9" y={hutY - 4} width="46" height="7" rx="3.5" fill="#fffdf7" />
     <circle cx="32" cy={figur === 'hase' ? 4 : 1} r="5" fill="#fffdf7" />
   {:else if aussehen.extra === 'kopfhoerer'}
     <path d="M9 38 Q9 6 32 6 Q55 6 55 38" fill="none" stroke={TINTE} stroke-width="3.5" />

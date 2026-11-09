@@ -107,6 +107,20 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Barrierefreiheit | Spiegelkabinett: jedes Kästchen ist ein Knopf mit Spalte/Zeile; Bilder haben Beschreibungen | |
 | Ablauftest | Bei falscher Probe wird die Aufgabe wiederholt, der Test probiert dann den nächsten Knopf | `e2e.mjs` |
 
+## Neu in 0.9.0 geprüft
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| Didaktik | Viele Buden waren Bild plus vier Knöpfe: Raten möglich, wenig Handlung | acht Buden als Spiele mit freier Antwort (Münzen, Zeiger, Schienen, Steine, Ziffern, Pizzastücke, Kraftregler); typische Fehler bleiben für das Lernprofil erhalten |
+| Didaktik | Würfelgebäude zum Nachbauen dürfen nichts verdecken | Generator baut „Treppen nach hinten“, Test prüft jede Vorlage (`istUnverdeckt`) |
+| Didaktik | Quader-Auftrag: viele richtige Lösungen | Prüfung erkennt jeden Quader mit den Maßen, auch gedreht und an jeder Stelle (Test) |
+| Fairness | Zeitgefühl darf nicht als Mathefehler zählen | Hau den Lukas ohne Timing: Kraft einstellen statt im richtigen Moment tippen |
+| Barrierefreiheit | Spiel-Bühnen mit Zeichnungen | zusätzlich unsichtbare Antwortknöpfe, Pizza-Stücke und Mauersteine als Knöpfe, Uhr mit ±5 min / ±1 h |
+| Speicher | Neue Felder (Bauplatz, Aufträge, Check) in alten Ständen | werden beim Laden geprüft und aufgefüllt, kein neues Schema nötig (Test) |
+| Oberfläche | Kopfzeile auf dem Handy zu voll, Titel abgeschnitten | Mathe-Profil, Bauplatz, Check, Spieler wechseln und Elternbereich im Menü hinter der Figur |
+| Oberfläche | Wolken lagen über neuen Bildschirmen | eigene Ebene für Bauplatz und Check |
+| Ablauftest | Sternenmarkt und Spiel-Buden | zweiter Durchgang mit eingespieltem Stand (Paket, Silber überall): alle acht Spiele, Bauplatz, Bauauftrag, Check, Aufträge |
+
 ## Offen
 
 | Stufe | Befund | Vorschlag |
@@ -115,7 +129,6 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | Der Paketstatus liegt nur lokal; nach Neuinstallation hilft „Käufe wiederherstellen“ erst mit nativem Kauf | mit Schritt 6 beim Start still prüfen |
 | wichtig | Sprachausgabe hängt von installierten Systemstimmen ab; ohne deutsche Offline-Stimme bleibt es still | Hinweis im Elternbereich ist da; später eingesprochene Aufnahmen |
 | Verbesserung | Gassen-Abschlussanimation und Sommerfest sind im Fortschritt angelegt, aber noch ohne Darstellung | jetzt möglich, da alle Buden gebaut sind |
-| Verbesserung | Sternenmarkt lässt sich im Ablauftest nicht erreichen (braucht Silber überall); geprüft über Unit-Tests und Bildvorschau | Testzugang über einen Entwicklerschalter |
 | Verbesserung | Sicherung läuft über Kopieren und Einfügen von Text | Teilen-Dialog über ein Capacitor-Plugin |
 
 ## Prüfstand

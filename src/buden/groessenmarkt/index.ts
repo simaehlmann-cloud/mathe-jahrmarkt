@@ -1,5 +1,8 @@
 import { baueAchterbahn, baueKasse, baueMemory, baueSchaetzen, baueUhr } from '../../domain/aufgaben/groessen';
 import { auswahlBude } from '../gemeinsam/auswahlBude';
+import SpielKasse from '../spiele/Kasse.svelte';
+import SpielUhr from '../spiele/Uhr.svelte';
+import SpielAchterbahn from '../spiele/Achterbahn.svelte';
 import BildAchterbahn from './BildAchterbahn.svelte';
 import BildKasse from './BildKasse.svelte';
 import BildMemory from './BildMemory.svelte';
@@ -8,11 +11,12 @@ import BildUhr from './BildUhr.svelte';
 
 export const kasse = auswahlBude({
   id: 'kasse',
+  spiel: SpielKasse,
   baue: baueKasse,
   probe: (rng) => baueKasse('bronze', rng, 'bezahlen'),
   bild: BildKasse,
   ladetext: 'Die Kasse wird geöffnet …',
-  anleitung: 'Bezahle passend, berechne das Rückgeld oder rechne den Einkauf zusammen.',
+  anleitung: 'Lege Münzen und Scheine auf den Tresen: passend bezahlen, Rückgeld geben, Einkauf bezahlen. Antippen legt zurück.',
   spalten: 1,
 });
 export const schaetzbude = auswahlBude({
@@ -25,11 +29,12 @@ export const schaetzbude = auswahlBude({
 });
 export const uhrkarussell = auswahlBude({
   id: 'uhrkarussell',
+  spiel: SpielUhr,
   baue: baueUhr,
   probe: (rng) => baueUhr('bronze', rng),
   bild: BildUhr,
   ladetext: 'Die Uhren werden gestellt …',
-  anleitung: 'Lies die Uhr ab oder rechne aus, wann das Bähnchen ankommt.',
+  anleitung: 'Stelle die Zeiger: Zieh am langen Zeiger für die Minuten und am kurzen für die Stunde.',
   hintergrund: '#e8f4ee',
 });
 export const umrechnungsmemory = auswahlBude({
@@ -42,9 +47,10 @@ export const umrechnungsmemory = auswahlBude({
 });
 export const achterbahn = auswahlBude({
   id: 'achterbahn',
+  spiel: SpielAchterbahn,
   baue: baueAchterbahn,
   probe: (rng) => baueAchterbahn('bronze', rng),
   bild: BildAchterbahn,
   ladetext: 'Die Schienen werden geliefert …',
-  anleitung: 'Baue die Achterbahn genau auf die Ziellänge. Welches Stück fehlt?',
+  anleitung: 'Lege Schienen aus dem Lager, bis die Bahn genau das Ziel erreicht. Dann: Testfahrt!',
 });

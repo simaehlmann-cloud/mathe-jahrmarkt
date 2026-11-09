@@ -3,6 +3,7 @@ import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
 import type { Aussehen } from '../domain/aussehen';
 import { MAX_PROFILE, fortschrittZurueckgesetzt, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
 import { randomSeed } from '../domain/rng';
+import { auftraegeFuerTag, tagKennung } from '../domain/auftraege';
 import { leererBestand, type Datenbestand, type Einstellungen } from '../services/datenbestand';
 import { erstelleKauf, keinKauf, type KaufService } from '../services/kauf';
 import { erstelleKlang, type Klangart } from '../services/klang';
@@ -19,7 +20,9 @@ export type Bildschirm =
   | { name: 'profil' }
   | { name: 'andenken' }
   | { name: 'figur' }
-  | { name: 'eltern' };
+  | { name: 'eltern' }
+  | { name: 'bauplatz' }
+  | { name: 'check' };
 
 /** Zentraler Zustand. Jede Änderung am Bestand läuft über `aendere`, damit sie gespeichert wird. */
 class AppZustand {
@@ -111,6 +114,16 @@ class AppZustand {
 
   aendereEinstellungen(teil: Partial<Einstellungen>): void {
     this.aendere((b) => ({ ...b, einstellungen: { ...b.einstellungen, ...teil } }));
+  }
+
+  /** Tagesaufträge für heute bereitstellen (am neuen Tag neue). */
+  auftraegeSicherstellen(): void {
+    const p = this.profil;
+    if (!p) return;
+    const tag = tagKennung(new Date());
+    if (p.auftraege?.tag === tag) return;
+    const neu = auftraegeFuerTag(p, this.paket, tag, p.check?.empfehlung ?? []);
+    this.aendereProfil((q) => ({ ...q, auftraege: neu }));
   }
 
   speichereSofort(): Promise<void> {

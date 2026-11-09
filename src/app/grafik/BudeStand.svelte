@@ -152,13 +152,13 @@
     overflow: visible;
   }
   .bude.grau {
-    filter: grayscale(0.92) brightness(0.92);
+    filter: grayscale(0.7) brightness(0.97);
   }
   .bude.zu {
     filter: saturate(0.45) brightness(0.98);
   }
   .bude.licht {
-    filter: saturate(0.6);
+    filter: saturate(0.78);
   }
   .lampe {
     fill: #6b6f80;

@@ -429,7 +429,17 @@ describe('Größenmarkt', () => {
       const r = baueKasse('silber', rng, 'rueckgeld');
       expect(r.antwort).toBe((r.daten.schein as number) - (r.daten.preis as number));
       const u = baueUhr('gold', rng);
-      expect(u.antwort).toBeGreaterThan(u.daten.min as number);
+      expect(u.antwort).toBeGreaterThan(u.daten.start as number);
+      expect(u.eingabe).toBe('ziffern');
+      const k = baueKasse(rng.pick(STUFEN), rng);
+      expect(k.eingabe).toBe('ziffern');
+      expect(k.daten.anzeige).toBe('euro');
+      // Spiel-Buden: Die Uhr arbeitet im Raster, die Münzen reichen für jeden Betrag
+      const v = baueUhr('bronze', rng);
+      expect(v.antwort % 15).toBe(0);
+      expect(v.daten.raster).toBe(5);
+      const b = baueKasse('bronze', rng, 'bezahlen');
+      expect(muenzen(b.antwort).reduce((x, y) => x + y, 0)).toBe(b.antwort);
     }
   });
 });
@@ -496,14 +506,23 @@ describe('Musterbahn und Forschergasse', () => {
       }
     }
   });
-  it('Rechenmauer: jeder Stein ist die Summe der beiden darunter, die Lücke ist die Antwort', () => {
+  it('Rechenmauer: jeder Stein ist die Summe der beiden darunter, die Antwort ist der letzte leere Stein', () => {
     expect(mauer([1, 2, 3])).toEqual([[1, 2, 3], [3, 5], [8]]);
     const rng = createRng(7);
     for (let i = 0; i < 200; i++) {
       const a = baueMauer(rng.pick(STUFEN), rng);
       const z = a.daten.zeilen as (number | null)[][];
-      const voll = z.map((r) => r.map((v) => v ?? a.antwort));
-      for (let r = 1; r < voll.length; r++) for (let s = 0; s < voll[r]!.length; s++) expect(voll[r]![s]).toBe(voll[r - 1]![s]! + voll[r - 1]![s + 1]!);
+      const l = a.daten.loesung as number[][];
+      for (let r = 1; r < l.length; r++) for (let s = 0; s < l[r]!.length; s++) expect(l[r]![s]).toBe(l[r - 1]![s]! + l[r - 1]![s + 1]!);
+      // Sichtbare Steine stimmen mit der Lösung überein, die Antwort ist der letzte leere Stein (Bau-Reihenfolge)
+      const leer: [number, number][] = [];
+      z.forEach((zeile, r) => zeile.forEach((v, s) => (v === null ? leer.push([r, s]) : expect(v).toBe(l[r]![s]))));
+      const [lr, ls] = leer[leer.length - 1]!;
+      expect(a.antwort).toBe(l[lr]![ls]);
+      expect(a.eingabe).toBe('ziffern');
+      // Lösbar: Bei „aufbauen“ ist die unterste Reihe ganz da
+      if (a.form !== 'rueckwaerts') expect(z[0]!.every((v) => v !== null)).toBe(true);
+      else expect(leer).toHaveLength(1);
     }
   });
   it('Zahlenfolge: die Antwort ist der Wert an der Lücke', () => {
@@ -551,12 +570,51 @@ describe('Sternenmarkt', () => {
       }
     }
   });
-  it('Ziffer-Aufgaben fragen nach der richtigen Ergebnisziffer', () => {
+  it('Geisterbahn: Antwort ist Ergebnis, Ergebnis mit Rest oder die Startzahl', () => {
     const rng = createRng(4);
     for (let i = 0; i < 300; i++) {
       const a = baueDivision(rng.pick(STUFEN), rng);
-      if (a.daten.frage === 'ziffer') expect(a.antwort - 1).toBe(a.daten.loesung);
-      if (a.daten.frage === 'rest') expect(a.antwort).toBe((a.daten.a as number) % (a.daten.d as number));
+      const zahl = a.daten.a as number;
+      const t = a.daten.d as number;
+      if (a.daten.frage === 'ohne') {
+        expect(zahl % t).toBe(0);
+        expect(a.antwort).toBe(zahl / t);
+      }
+      if (a.daten.frage === 'rest') {
+        expect(a.antwort).toBe(Math.floor(zahl / t) * 10 + (zahl % t));
+        expect(zahl % t).toBeGreaterThan(0);
+      }
+      if (a.daten.frage === 'probe') expect(a.antwort).toBe(zahl);
+      // Die Schritte ergeben das Ergebnis
+      expect(Number((a.daten.schritte as { q: number }[]).map((x) => x.q).join(''))).toBe(Math.floor(zahl / t));
+    }
+  });
+  it('Pizzabäckerei: Bestellung und Antwort passen zusammen, gleichwertige Brüche', () => {
+    const rng = createRng(9);
+    for (let i = 0; i < 300; i++) {
+      const a = baueBruch(rng.pick(STUFEN), rng);
+      const n = Math.floor(a.antwort / 100);
+      const z = a.antwort % 100;
+      expect(n).toBeGreaterThanOrEqual(2);
+      expect(z).toBeGreaterThanOrEqual(1);
+      expect(z).toBeLessThan(n);
+      const [bz, bn] = a.daten.bestellung as [number, number];
+      expect(z * bn).toBe(bz * n);
+      if (a.form === 'gleich') expect(n).toBe(a.daten.stuecke);
+    }
+  });
+  it('Hau den Lukas: Zehntel und Hundertstel liegen auf der Skala', () => {
+    const rng = createRng(10);
+    for (let i = 0; i < 300; i++) {
+      const a = baueDezimal(rng.pick(STUFEN), rng);
+      if (a.form === 'zehntel') {
+        expect(Math.floor(a.antwort / 10)).toBe(a.daten.von);
+        expect(a.antwort % 10).toBeGreaterThan(0);
+      }
+      if (a.form === 'bruch') {
+        expect(a.antwort % 5).toBe(0);
+        expect(a.antwort).toBeLessThanOrEqual(100);
+      }
     }
   });
 });

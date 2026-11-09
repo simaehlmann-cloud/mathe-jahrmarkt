@@ -3,7 +3,7 @@
   import { FIGUREN, type FigurId } from '../../domain/profil';
   import Figur from '../grafik/Figur.svelte';
 
-  /** Figuren-Baukasten: Tier, Fellfarbe, Halstuch, Extra. Ohne Fotos, alles bleibt auf dem Gerät. */
+  /** Figuren-Baukasten: Figur, Farbe, Shirt, Extra. Ohne Fotos, alles bleibt auf dem Gerät. */
   let {
     figur = $bindable(),
     aussehen = $bindable(),
@@ -24,7 +24,7 @@
 
   <div class="gruppen">
     <fieldset>
-      <legend>Tier</legend>
+      <legend>Figur</legend>
       <div class="reihe">
         {#each FIGUREN as f (f.id)}
           <label class="wahl" class:gewaehlt={figur === f.id}>
@@ -37,7 +37,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Fellfarbe</legend>
+      <legend>Farbe</legend>
       <div class="reihe">
         {#each FELL[figur] as [haupt, zweit], i (i)}
           <label class="farbe" class:gewaehlt={aussehen.fell === i} title={FELL_NAMEN[figur][i]}>
@@ -50,7 +50,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>Halstuch</legend>
+      <legend>Shirt</legend>
       <div class="reihe">
         <label class="farbe" class:gewaehlt={aussehen.tuch === 'keins'}>
           <input type="radio" name="tuch" class="nur-leser" checked={aussehen.tuch === 'keins'} onchange={() => setze({ tuch: 'keins' })} />

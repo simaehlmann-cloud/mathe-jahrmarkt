@@ -9,8 +9,9 @@
   const frage = $derived(String(d.frage ?? 'ziffer'));
   const geloest = $derived(zustand === 'richtig');
   // Ergebnis: bekannte Ziffern, dann „?“ (bzw. Lösung) für die gefragte
-  const ergebnis = $derived(frage === 'ziffer' ? [...quotient, geloest ? String(d.loesung) : '?'].join('') : quotient.join(''));
-  const restText = $derived(frage === 'rest' ? (geloest ? ` R ${aufgabe.antwort}` : ' R ?') : d.rest ? ` R ${d.rest}` : '');
+  // Ergebnis erst nach der Lösung zeigen (in der Hilfe ist es gelöst); bei der Probe ist es gegeben
+  const ergebnis = $derived(geloest || frage === 'probe' ? quotient.join('') : '?');
+  const restText = $derived(frage === 'ohne' ? '' : geloest || frage === 'probe' ? ` R ${d.rest}` : ' R ?');
   const spalten = $derived(a.length);
   const verdeckt = $derived(frage === 'probe' && !geloest);
   /** Zeile als Zellen (Spalte −1 für das Minus): rechtsbündig bis `ende`, das Minus direkt vor der ersten Ziffer. */
@@ -24,7 +25,6 @@
     if (minus && start >= 0) z[start] = { c: '−', ziffer: false };
     return z;
   };
-  const letzte = $derived(zeilen.length - 1);
 </script>
 
 <div class="heft" role="img" aria-label="{verdeckt ? 'Unbekannte Zahl' : a} geteilt durch {d.d} gleich {ergebnis}{restText}">
@@ -33,10 +33,10 @@
     {#if verdeckt}<span class="frage breit">?</span>{:else}{#each a.split('') as c, i (i)}<span class:teil={i <= Number(d.markiere ?? -1)}>{c}</span>{/each}{/if}
     <span class="rechts">&nbsp;: {d.d} = <b class:frage={!geloest && frage === 'ziffer'}>{ergebnis}</b><b class:frage={!geloest && frage === 'rest'}>{restText}</b></span>
   </div>
-  {#if !verdeckt}
+  {#if !verdeckt && (geloest || frage === 'probe')}
     {#each zeilen as z, j (j)}
       <div class="zeile">
-        {#each zellen(frage === 'rest' && j === letzte && !geloest ? '?' : z.text, z.ende, z.minus) as x, i (i)}<span class:frage={x.c === '?'} class:strich={z.minus && x.ziffer}>{x.c}</span>{/each}
+        {#each zellen(z.text, z.ende, z.minus) as x, i (i)}<span class:frage={x.c === '?'} class:strich={z.minus && x.ziffer}>{x.c}</span>{/each}
       </div>
     {/each}
   {/if}
@@ -52,7 +52,8 @@
     border-radius: 10px;
     font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace;
     font-weight: 800;
-    font-size: 1.45rem;
+    font-size: clamp(0.95rem, 4.2vw, 1.45rem);
+    max-width: 100%;
     color: var(--tinte);
   }
   .zeile {

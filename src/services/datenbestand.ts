@@ -1,4 +1,7 @@
 import { pruefeAussehen } from '../domain/aussehen';
+import { pruefeAuftraege } from '../domain/auftraege';
+import { pruefeBau } from '../domain/bau';
+import { pruefeCheck } from '../domain/check';
 import { STUFEN } from '../domain/buden';
 import { FIGUREN, MAX_PROFILE, bereinigeName, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
 import type { Ereignis, Wochenwert } from '../domain/lernprofil/lernprofil';
@@ -110,7 +113,7 @@ function pruefeProfil(x: unknown): Profil | undefined {
   if (!istObjekt(x) || typeof x.id !== 'string' || x.id.length === 0) return undefined;
   const name = bereinigeName(text(x.name));
   if (!name) return undefined;
-  const figur = FIGUREN.some((f) => f.id === x.figur) ? (x.figur as FigurId) : 'fuchs';
+  const figur = FIGUREN.some((f) => f.id === x.figur) ? (x.figur as FigurId) : 'mensch';
   const fortschritt: Profil['fortschritt'] = {};
   if (istObjekt(x.fortschritt)) {
     for (const [bude, stufen] of Object.entries(x.fortschritt)) {
@@ -161,6 +164,9 @@ function pruefeProfil(x: unknown): Profil | undefined {
       entdeckungen: liste(gesehen.entdeckungen, (e) => (typeof e === 'string' ? e : undefined)),
       gassen: liste(gesehen.gassen, (e) => (typeof e === 'string' ? e : undefined)),
     },
+    bau: pruefeBau(x.bau),
+    auftraege: pruefeAuftraege(x.auftraege),
+    check: pruefeCheck(x.check),
   };
 }
 

@@ -101,8 +101,13 @@ describe('Speicher', () => {
     });
     expect(b.profile).toHaveLength(1);
     expect(b.profile[0]?.name).toBe('Mia');
-    expect(b.profile[0]?.figur).toBe('fuchs');
+    expect(b.profile[0]?.figur).toBe('mensch');
     expect(b.profile[0]?.taler).toBe(0);
+    // Ältere Stände ohne Bauplatz, Aufträge und Check bekommen leere Werte
+    expect(b.profile[0]?.bau.bloecke).toBeGreaterThan(0);
+    expect(b.profile[0]?.bau.welt).toHaveLength(64);
+    expect(b.profile[0]?.auftraege).toBeNull();
+    expect(b.profile[0]?.check).toBeNull();
     expect(b.profile[0]?.fortschritt.dartbude?.bronze).toEqual({ geschafft: true, rekord: 0, gespielt: 0, verlauf: [] });
     expect(b.einstellungen.lautMusik).toBe(1);
     expect(b.einstellungen.schrift).toBe('normal');

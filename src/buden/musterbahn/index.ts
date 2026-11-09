@@ -1,5 +1,7 @@
 import { baueDiagramm, baueFolge, baueMauer, baueMurmeln, baueRiesenrad } from '../../domain/aufgaben/muster';
 import { auswahlBude } from '../gemeinsam/auswahlBude';
+import SpielMauer from '../spiele/Mauer.svelte';
+import SpielRiesenrad from '../spiele/Riesenrad.svelte';
 import BildDiagramm from './BildDiagramm.svelte';
 import BildFolge from './BildFolge.svelte';
 import BildMauer from './BildMauer.svelte';
@@ -17,19 +19,21 @@ export const zahlenfolgenzug = auswahlBude({
 });
 export const rechenmauer = auswahlBude({
   id: 'rechenmauer',
+  spiel: SpielMauer,
   baue: baueMauer,
   probe: (rng) => baueMauer('bronze', rng, 'drei'),
   bild: BildMauer,
   ladetext: 'Die Steine werden gestapelt …',
-  anleitung: 'Jeder Stein ist die Summe der beiden Steine darunter. Welche Zahl fehlt?',
+  anleitung: 'Jeder Stein ist die Summe der beiden Steine darunter. Fülle die leeren Steine bis zur Spitze.',
 });
 export const riesenradtechniker = auswahlBude({
   id: 'riesenradtechniker',
+  spiel: SpielRiesenrad,
   baue: baueRiesenrad,
   probe: (rng) => baueRiesenrad('bronze', rng, 'plaetze'),
   bild: BildRiesenrad,
   ladetext: 'Das Riesenrad wird geölt …',
-  anleitung: 'Plätze, Gondeln, Preise: Rechne für das Riesenrad.',
+  anleitung: 'Rechne für das Riesenrad: Plätze, Gondeln, Preise. Dann zeigt die Fahrt, ob es stimmt.',
   hintergrund: '#e8f0fb',
 });
 export const murmellabor = auswahlBude({

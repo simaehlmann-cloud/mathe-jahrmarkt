@@ -121,10 +121,13 @@ export function reihenSpanne(r: Reihe): [number, number] {
 /** Gassennamen für die Straßenschilder, je Reihe. */
 export function reihenSchilder(): { reihe: Reihe; name: string; farbe: string; seite: 'links' | 'rechts' }[] {
   const liste: { reihe: Reihe; name: string; farbe: string; seite: 'links' | 'rechts' }[] = [];
+  // Jede Gasse bekommt ein Schild in der ersten Reihe (von unten), in der sie beginnt
+  const gesehen = new Set<string>();
   for (const r of [...REIHEN].reverse()) {
     const ids = new Set(r.buden.map((id) => BUDEN.find((b) => b.id === id)?.gasse));
     for (const g of GASSEN) {
-      if (!ids.has(g.id)) continue;
+      if (!ids.has(g.id) || gesehen.has(g.id)) continue;
+      gesehen.add(g.id);
       const erste = r.buden.findIndex((id) => BUDEN.find((b) => b.id === id)?.gasse === g.id);
       const seite = erste >= Math.ceil(r.buden.length / 2) ? 'rechts' : 'links';
       liste.push({ reihe: r, name: g.name, farbe: g.farbe, seite });

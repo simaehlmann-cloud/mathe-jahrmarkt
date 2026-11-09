@@ -50,6 +50,8 @@
     width: min(100%, 44rem);
     flex: 1;
     min-height: 0;
+    /* clip statt hidden: Beim Antippen weiter unten darf nicht die ganze Tafel verrutschen */
+    overflow: clip;
     display: flex;
     flex-direction: column;
   }

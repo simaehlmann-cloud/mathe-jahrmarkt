@@ -10,7 +10,7 @@
   /** Profil anlegen in zwei Schritten: erst der Name, dann die Figur. */
   let schritt = $state<'name' | 'figur'>('name');
   let name = $state('');
-  let figur = $state<FigurId>('fuchs');
+  let figur = $state<FigurId>('mensch');
   let aussehen = $state<Aussehen>(standardAussehen());
   let voll = $derived(app.bestand.profile.length >= MAX_PROFILE);
 
@@ -190,7 +190,7 @@
   }
   /* Figur-Schritt: feste Höhe, nur die Auswahl im Baukasten blättert. */
   .start.fest {
-    overflow: hidden;
+    overflow: clip;
     padding-top: 6px;
   }
   .kopf.weg {
@@ -198,6 +198,7 @@
   }
   .fest .karte {
     flex: 1;
+    overflow: clip;
     min-height: 0;
     display: flex;
     flex-direction: column;

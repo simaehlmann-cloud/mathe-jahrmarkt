@@ -4,9 +4,9 @@ Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die 
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.8.0)
+## Stand dieser Version (0.9.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar. Neu in 0.9.0 (Zielgruppe Anfang Klasse 5): älterer Ton mit Menschen- und Roboterfiguren und Rängen, Menü hinter der eigenen Figur, acht Buden als echte Spiele, Tagesaufträge, Jahrmarkt-Check, Bauplatz mit Blöcken und Bauaufträgen.
 
 | Bereich | Stand |
 | --- | --- |
@@ -25,9 +25,14 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Musterbahn | Zahlenfolgen-Zug (plus/minus, mal/geteilt, zwei Regeln), Rechenmauer (3 und 4 Ebenen, rückwärts), Riesenrad-Techniker (Plätze, Division mit Rest, Preistabelle) |
 | Forschergasse | Murmel-Labor (sicher/möglich/unmöglich, wahrscheinlichste Farbe, zwei Tüten vergleichen), Diagramm-Reporter (Strichliste, Säulen- und Balkendiagramm mit Skala) |
 | Sternenmarkt | Geisterbahn (schriftliche Division wie im Heft, Schritt für Schritt, Rest, Probe), Pizzabäckerei (Stammbrüche, Anteile, gleichwertige Brüche), Hau den Lukas (Zehntel ablesen, Kommazahlen ordnen, Bruch als Dezimalzahl) |
+| Spiel-Buden | Kasse: Münzen und Scheine auf den Tresen legen. Uhr: Zeiger ziehen. Achterbahn: Schienen aus dem Lager legen, die Bahn wächst maßstäblich. Rechenmauer: Stein für Stein bis zur Spitze. Riesenrad: erst rechnen, dann fährt das Rad. Geisterbahn: Division Ziffer für Ziffer, der Wagen fährt in den Tunnel. Pizzabäckerei: selbst schneiden und belegen. Hau den Lukas: Kraft einstellen und zuschlagen. Für Bildschirmleser gibt es weiter Antwortknöpfe |
+| Ränge | Jede geschaffte Stufe ist ein Stern: Neuling, Budenhelfer, Budenprofi, Budenchef, Jahrmarkt-Manager, Jahrmarkt-Direktor, Mathe-Legende; im Menü, im Mathe-Profil und beim Aufstieg nach der Runde |
+| Tagesaufträge | jeden Tag drei Buden aus verschiedenen Gassen (zuerst die Empfehlung aus dem Check); erledigt mit 7 Treffern; 15 Taler und 10 Blöcke je Auftrag, 20 Blöcke Bonus für alle drei; Marke über der Bude auf der Karte |
+| Jahrmarkt-Check | zwölf Aufgaben aus sechs Bereichen ohne Zeitdruck, Ergebnis je Bereich (sicher / fast sicher / üben) und drei empfohlene Buden; gehört wie geplant zum Zusatzpaket |
+| Bauplatz | Blöcke verdienen (einer je Treffer, fünf für eine neue Stufe), frei bauen auf 8 × 8 Feldern in acht Blockarten, Ansicht drehen; gebaut wird im Bauplan mit Zahlen. Bauaufträge: nach Bauplan bauen, Würfelgebäude nachbauen, Quader mit Maßen, Spiegelbau – danach „Wie viele Würfel?“ |
 | Hilfe der neuen Buden | einheitlich in drei Schritten: Grundidee, Rechenweg mit dem Bild der Bude (Lösung markiert), selbst wählen |
 | Dartbude | Bronze, Silber, Gold, Probewurf, Hilfe nach Fehlern, Nochmal-Aufgabe, Rekord, Familien-Bestenliste, Verlaufskurve |
-| Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
+| Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: zwei Menschenfiguren, Roboter und 6 Tiere, je 3 Farben, Shirt, Extras (Cap, Sonnenbrille, …; Strohhut aus dem Andenkenstand), ohne Fotos |
 | Buden | vier Dachformen (Markise, Zirkuszelt, Kuppel, Holzgiebel), eigene Farben und ein Motiv je Bude, auch auf dem Rollladen noch nicht gebauter Buden |
 | Lebendige Welt | Buden grau → Licht → Farbe → Fest, Bruno winkt, Katze als Entdeckung, Deko aus dem Andenkenstand sichtbar |
 | Lernprofil | Protokoll jeder Antwort, Fehlerursachen, Einschätzung ab 20 Aufgaben an 2 Tagen, Elternsätze, Verdichtung alter Daten |
@@ -37,7 +42,7 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
 | Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
 | Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
-| Noch nicht | Jahrmarkt-Check, Gassen-Abschlussfeier, nativer Kauf |
+| Noch nicht | Gassen-Abschlussfeier, nativer Kauf |
 
 ## App-Symbol und Startbild
 

@@ -6,12 +6,15 @@
   import { ENTDECKUNGEN } from '../geschichte';
   import Figur from '../grafik/Figur.svelte';
   import { app } from '../zustand.svelte';
+  import { RAENGE, rang } from '../../domain/rang';
+  import Icon from '../components/Icon.svelte';
 
   /**
    * „Mein Mathe-Profil“ für das Kind: drei Wörter statt Zahlen, keine Noten.
    * Kompetenzen ohne genug Daten zeigen „Wir lernen uns noch kennen“.
    */
   let p = $derived(app.profil);
+  let r = $derived(p ? rang(p) : { name: '', stufe: 0, sterne: 0, fehlen: 0, naechster: undefined as string | undefined });
   // Nur Kompetenzen, zu denen es schon eine spielbare Bude gibt
   const sichtbar = KOMPETENZ_REIHENFOLGE.filter((k) => BUDEN.some((b) => b.spielbar && b.kompetenzen.some((x) => x.kompetenz === k)));
   const bald = KOMPETENZ_REIHENFOLGE.filter((k) => !sichtbar.includes(k));
@@ -30,6 +33,13 @@
           <Figur figur={p.figur} groesse={52} aussehen={p.aussehen} />
           <h2>{p.name}</h2>
           <button class="ticket hell gestalten" onclick={() => app.zeige({ name: 'figur' })}>Figur gestalten</button>
+        </div>
+        <div class="rangleiste" aria-label="Rang {r.name}, {r.sterne} Sterne{r.naechster ? `, noch ${r.fehlen} bis ${r.naechster}` : ''}">
+          <p class="rangname"><Icon name="stern" groesse={22} /> {r.name} <small>· {r.sterne} Sterne</small></p>
+          <ol aria-hidden="true">
+            {#each RAENGE as x, i (x.name)}<li class:erreicht={i <= r.stufe} title={x.name}></li>{/each}
+          </ol>
+          {#if r.naechster}<p class="klein">Noch {r.fehlen} {r.fehlen === 1 ? 'Stern' : 'Sterne'} bis {r.naechster}. Jede geschaffte Stufe einer Bude ist ein Stern.</p>{/if}
         </div>
         <ul class="balken">
           {#each sichtbar as k (k)}
@@ -82,6 +92,42 @@
 {/if}
 
 <style>
+  .rangleiste {
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    background: #fff4c2;
+    border-radius: 12px;
+  }
+  .rangname {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-weight: 900;
+    font-size: 1.2rem;
+  }
+  .rangname small {
+    font-size: 0.95rem;
+    color: var(--tinte-weich);
+  }
+  .rangleiste ol {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .rangleiste li {
+    flex: 1;
+    height: 10px;
+    border-radius: 5px;
+    background: #fff;
+    border: 2px solid var(--tinte);
+  }
+  .rangleiste li.erreicht {
+    background: var(--senf);
+  }
   .seite {
     flex: 1;
     min-height: 0;

@@ -3,6 +3,7 @@
   import type { Aufgabe } from '../../domain/aufgaben/typen';
   import type { HilfeProps } from '../typen';
   import HilfeRahmen from './HilfeRahmen.svelte';
+  import { wertText } from '../../domain/aufgaben/anzeige';
 
   /**
    * Hilfe für Auswahl-Buden: 1. Grundidee, 2. Weg in Schritten mit dem Bild der Bude (richtige Antwort markiert),
@@ -10,7 +11,7 @@
    */
   type BildProps = { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null };
   let { aufgabe, gewaehlt, onfertig, bild }: HilfeProps & { bild?: Component<BildProps> } = $props();
-  const text = (w: number): string => aufgabe.labels?.[w] ?? String(w);
+  const text = (w: number): string => wertText(aufgabe, w);
   const e = $derived(aufgabe.erklaerung ?? { idee: '', schritte: [] });
   const Bild = $derived(bild);
 </script>

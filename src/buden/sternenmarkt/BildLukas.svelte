@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Aufgabe } from '../../domain/aufgaben/typen';
   import { zehntel } from '../../domain/aufgaben/klasse5';
+  import { wertText } from '../../domain/aufgaben/anzeige';
   /** Hau den Lukas: senkrechte Skala von `von` bis `von + 1` in Zehnteln, der Puck steht bei `pos` Zehnteln. */
   let { aufgabe, zustand }: { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null } = $props();
   const d = $derived(aufgabe.art === 'auswahl' ? aufgabe.daten : {});
@@ -35,7 +36,7 @@
   {#if pos !== null}
     <g transform="translate(0 {y(pos)})">
       <rect x="-20" y="-8" width="40" height="16" rx="6" fill="#e23a4e" stroke="#232a5c" stroke-width="3" />
-      {#if d.zeige === false && zustand === 'richtig'}<text x="30" y="7" font-size="20" font-weight="900" fill="#232a5c">{aufgabe.labels?.[aufgabe.antwort]}</text>{/if}
+      {#if d.zeige === false && zustand === 'richtig'}<text x="30" y="7" font-size="20" font-weight="900" fill="#232a5c">{wertText(aufgabe, aufgabe.antwort)}</text>{/if}
       {#if d.zeige !== false && zustand === 'richtig'}<text x="30" y="7" font-size="20" font-weight="900" fill="#232a5c">{zehntel(aufgabe.antwort)}</text>{/if}
     </g>
   {/if}

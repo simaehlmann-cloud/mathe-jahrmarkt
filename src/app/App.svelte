@@ -8,6 +8,8 @@
   import MatheProfil from './screens/MatheProfil.svelte';
   import Spiel from './screens/Spiel.svelte';
   import Start from './screens/Start.svelte';
+  import Bauplatz from './screens/Bauplatz.svelte';
+  import JahrmarktCheck from './screens/JahrmarktCheck.svelte';
   import { erstelleMusik } from '../services/musik';
   import { app } from './zustand.svelte';
 
@@ -74,6 +76,10 @@
     <FigurGestalten />
   {:else if b.name === 'eltern'}
     <Eltern />
+  {:else if b.name === 'bauplatz'}
+    <Bauplatz />
+  {:else if b.name === 'check'}
+    <JahrmarktCheck />
   {/if}
 
   {#if app.ladefehler && b.name !== 'laden'}
@@ -91,7 +97,8 @@
   .welt {
     position: relative;
     height: 100%;
-    overflow: hidden;
+    /* clip: Auch beim Antippen weit unten (scrollIntoView) verrutscht die ganze Seite nicht */
+    overflow: clip;
     background: linear-gradient(180deg, var(--himmel) 0%, var(--himmel-hell) 62%, #c9ecd4 62.1%, #9fd8a8 100%);
     display: flex;
     flex-direction: column;

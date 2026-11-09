@@ -1,9 +1,15 @@
 import type { Stufe } from './buden';
 import { standardAussehen, type Aussehen } from './aussehen';
 import type { Ereignis, Wochenwert } from './lernprofil/lernprofil';
+import { leererBau, type BauStand } from './bau';
+import type { AuftragsTag } from './auftraege';
+import type { CheckErgebnis } from './check';
 
-export type FigurId = 'fuchs' | 'eule' | 'igel' | 'katze' | 'baer' | 'hase';
+export type FigurId = 'mensch' | 'menschLang' | 'roboter' | 'fuchs' | 'eule' | 'igel' | 'katze' | 'baer' | 'hase';
 export const FIGUREN: readonly { id: FigurId; name: string }[] = [
+  { id: 'mensch', name: 'Kurzhaar' },
+  { id: 'menschLang', name: 'Langhaar' },
+  { id: 'roboter', name: 'Roboter' },
   { id: 'fuchs', name: 'Fuchs' },
   { id: 'eule', name: 'Eule' },
   { id: 'igel', name: 'Igel' },
@@ -55,6 +61,12 @@ export interface Profil {
   runden: Runde[];
   /** Gesehene Geschichte und Entdeckungen. */
   gesehen: { intro: boolean; entdeckungen: string[]; gassen: string[] };
+  /** Bauplatz: Blöcke, gebaute Welt, erledigte Bauaufträge. */
+  bau: BauStand;
+  /** Tagesaufträge des aktuellen Tages. */
+  auftraege: AuftragsTag | null;
+  /** Letzter Jahrmarkt-Check. */
+  check: CheckErgebnis | null;
 }
 
 export const MAX_PROFILE = 4;
@@ -76,6 +88,9 @@ export function neuesProfil(id: string, name: string, figur: FigurId, jetzt: num
     wochen: [],
     runden: [],
     gesehen: { intro: false, entdeckungen: [], gassen: [] },
+    bau: leererBau(),
+    auftraege: null,
+    check: null,
   };
 }
 

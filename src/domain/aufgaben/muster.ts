@@ -79,35 +79,51 @@ export function baueMauer(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
   const breite = f === 'drei' ? 3 : 4;
   const unten = Array.from({ length: breite }, () => rng.int(f === 'drei' ? 5 : 3, f === 'drei' ? 60 : 40));
   const z = mauer(unten);
-  // Gesuchter Stein: oben oder in der Mitte; rückwärts: unten (aus dem Stein darüber und dem Nachbarn)
-  const reihe = f === 'rueckwaerts' ? 0 : rng.int(1, z.length - 1);
-  const spalte = rng.int(0, (z[reihe] ?? []).length - 1);
-  const antwort = z[reihe]?.[spalte] ?? 0;
-  const sichtbar = z.map((zeile, r) => zeile.map((v, s) => (r === reihe && s === spalte ? null : v)));
-  // Bei rückwärts müssen die Steine darüber bekannt sein, die mittleren dürfen teilweise fehlen; hier alle anderen sichtbar
-  const darunter = reihe > 0 ? [z[reihe - 1]?.[spalte] ?? 0, z[reihe - 1]?.[spalte + 1] ?? 0] : [];
-  const fehler: Fehler[] = (
-    reihe > 0
-      ? [
-          { wert: Math.abs((darunter[0] ?? 0) - (darunter[1] ?? 0)), fehlerArt: 'operation' },
-          { wert: antwort + 10, fehlerArt: 'uebertrag' },
-          { wert: antwort - 10, fehlerArt: 'uebertrag' },
-        ]
-      : [
-          { wert: (z[1]?.[spalte > 0 ? spalte - 1 : spalte] ?? 0) + (z[0]?.[spalte > 0 ? spalte - 1 : spalte + 1] ?? 0), fehlerArt: 'operation' },
-          { wert: antwort + 10, fehlerArt: 'uebertrag' },
-          { wert: antwort + 1, fehlerArt: 'sonstige' },
-        ]
-  ).filter((x) => x.wert > 0 && x.wert !== antwort) as Fehler[];
+  const top = z[z.length - 1]?.[0] ?? 0;
+  if (f !== 'rueckwaerts') {
+    // Aufbauen: Die oberen Reihen sind leer, das Kind setzt Stein für Stein bis zur Spitze (Antwort: Spitze)
+    const abReihe = f === 'drei' ? 1 : 2;
+    const sichtbar = z.map((zeile, r) => zeile.map((v) => (r >= abReihe ? null : v)));
+    const schritte: string[] = [];
+    for (let r = abReihe; r < z.length; r++)
+      (z[r] ?? []).forEach((v, s2) => schritte.push(`${z[r - 1]?.[s2]} + ${z[r - 1]?.[s2 + 1]} = ${v}`));
+    const fehler: Fehler[] = [
+      { wert: top + 10, fehlerArt: 'uebertrag' },
+      { wert: top - 10, fehlerArt: 'uebertrag' },
+      { wert: unten.reduce((x, y) => x + y, 0), fehlerArt: 'operation' },
+      { wert: top + 1, fehlerArt: 'sonstige' },
+    ].filter((x) => x.wert > 0 && x.wert !== top) as Fehler[];
+    return auswahlAufgabe(
+      {
+        bude: 'rechenmauer', form: f, stufe, text: 'Baue die Mauer bis zur Spitze!', sprechtext: 'Baue die Mauer bis zur Spitze. Jeder Stein ist die Summe der beiden Steine darunter.',
+        antwort: top, fehler, schritt: 1, frei: true,
+        kompetenz: 'muster', dimension: f === 'drei' ? 'wissen' : 'sicherheit',
+        idee: 'Jeder Stein ist so groß wie die beiden Steine darunter zusammen. Arbeite dich Reihe für Reihe nach oben.',
+        schritte,
+        daten: { zeilen: sichtbar, loesung: z },
+      },
+      rng,
+    );
+  }
+  // Rückwärts: ein Stein unten fehlt; aus dem Stein darüber und dem Nachbarn ergänzen
+  const spalte = rng.int(0, breite - 1);
+  const antwort = z[0]?.[spalte] ?? 0;
+  const sichtbar = z.map((zeile, r) => zeile.map((v, s2) => (r === 0 && s2 === spalte ? null : v)));
   const ueber = spalte > 0 ? (z[1]?.[spalte - 1] ?? 0) : (z[1]?.[0] ?? 0);
   const nachbar = spalte > 0 ? (z[0]?.[spalte - 1] ?? 0) : (z[0]?.[1] ?? 0);
+  const fehler: Fehler[] = [
+    { wert: ueber + nachbar, fehlerArt: 'operation' },
+    { wert: antwort + 10, fehlerArt: 'uebertrag' },
+    { wert: antwort + 1, fehlerArt: 'sonstige' },
+  ].filter((x) => x.wert > 0 && x.wert !== antwort) as Fehler[];
   return auswahlAufgabe(
     {
-      bude: 'rechenmauer', form: f, stufe, text: 'Welche Zahl gehört in den leeren Stein?', antwort, fehler, schritt: 1,
-      kompetenz: f === 'rueckwaerts' ? 'operationsverstaendnis' : 'muster', dimension: f === 'rueckwaerts' ? 'anwendung' : 'wissen',
-      idee: 'Jeder Stein ist so groß wie die beiden Steine darunter zusammen.',
-      schritte: reihe > 0 ? [`${darunter[0]} + ${darunter[1]} = ${antwort}`] : [`Der Stein darüber ist ${ueber}, der Nachbar ${nachbar}.`, `${ueber} − ${nachbar} = ${antwort}`],
-      daten: { zeilen: sichtbar },
+      bude: 'rechenmauer', form: f, stufe, text: 'Ein Stein unten fehlt. Welche Zahl?', sprechtext: 'Unten fehlt ein Stein. Welche Zahl gehört hinein?',
+      antwort, fehler, schritt: 1, frei: true,
+      kompetenz: 'operationsverstaendnis', dimension: 'anwendung',
+      idee: 'Der Stein darüber ist die Summe. Rechne rückwärts: Summe minus Nachbar.',
+      schritte: [`Der Stein darüber ist ${ueber}, der Nachbar ${nachbar}.`, `${ueber} − ${nachbar} = ${antwort}`],
+      daten: { zeilen: sichtbar, loesung: z },
     },
     rng,
   );
@@ -125,10 +141,10 @@ export function baueRiesenrad(stufe: Stufe, rng: Rng, form?: string): AuswahlAuf
       {
         bude: 'riesenradtechniker', form: f, stufe, text: `${gondeln} Gondeln mit je ${pro} Plätzen`, sprechtext: `Das Riesenrad hat ${gondeln} Gondeln. In jede passen ${pro} Kinder. Wie viele Kinder können gleichzeitig fahren?`,
         antwort, fehler: [{ wert: pro + gondeln, fehlerArt: 'operation' }, { wert: antwort + pro, fehlerArt: 'nachbaraufgabe' }, { wert: antwort - pro, fehlerArt: 'nachbaraufgabe' }],
-        format: (w) => `${w} Kinder`, kompetenz: 'operationsverstaendnis', dimension: 'anwendung',
+        format: (w) => `${w} Kinder`, frei: true, kompetenz: 'operationsverstaendnis', dimension: 'anwendung',
         idee: 'Gleich viele in jeder Gondel: Das ist eine Malaufgabe.',
         schritte: [`${gondeln} · ${pro} = ${antwort}`],
-        daten: { gondeln, pro },
+        daten: { gondeln, pro, anzeige: 'einheit', einheit: 'Kinder' },
       },
       rng,
     );
@@ -144,10 +160,10 @@ export function baueRiesenrad(stufe: Stufe, rng: Rng, form?: string): AuswahlAuf
       {
         bude: 'riesenradtechniker', form: f, stufe, text: `${kinder} Kinder, ${pro} pro Gondel`, sprechtext: `${kinder} Kinder wollen fahren. In jede Gondel passen ${pro}. Wie viele Gondeln braucht man mindestens?`,
         antwort, fehler: [{ wert: voll, fehlerArt: 'sonstige' }, { wert: rest, fehlerArt: 'sonstige' }, { wert: antwort + 1, fehlerArt: 'sonstige' }],
-        format: (w) => `${w} Gondeln`, kompetenz: 'operationsverstaendnis', dimension: 'anwendung',
+        format: (w) => `${w} Gondeln`, frei: true, kompetenz: 'operationsverstaendnis', dimension: 'anwendung',
         idee: 'Teile die Kinder auf die Gondeln auf. Bleiben Kinder übrig, brauchen sie noch eine Gondel.',
         schritte: [`${kinder} : ${pro} = ${voll} Rest ${rest}`, `${voll} volle Gondeln und eine für die ${rest} übrigen Kinder: ${antwort} Gondeln.`],
-        daten: { gondeln: antwort, pro, verdeckt: true },
+        daten: { gondeln: antwort, pro, verdeckt: true, kinder, anzeige: 'einheit', einheit: 'Gondeln' },
       },
       rng,
     );
@@ -160,10 +176,10 @@ export function baueRiesenrad(stufe: Stufe, rng: Rng, form?: string): AuswahlAuf
     {
       bude: 'riesenradtechniker', form: f, stufe, text: `Was kosten ${n} Fahrten?`, sprechtext: `${grund ? `Der Eintritt kostet ${grund} Euro, ` : ''}jede Fahrt ${preis} Euro. Was kosten ${n} Fahrten?`,
       antwort, fehler: [{ wert: preis * n, fehlerArt: 'sonstige' }, { wert: antwort + preis, fehlerArt: 'nachbaraufgabe' }, { wert: grund + preis + n, fehlerArt: 'operation' }].filter((x) => x.wert !== antwort) as Fehler[],
-      format: (w) => `${w} €`, kompetenz: 'muster', dimension: 'anwendung',
+      format: (w) => `${w} €`, frei: true, kompetenz: 'muster', dimension: 'anwendung',
       idee: 'In der Tabelle kommt bei jeder Fahrt derselbe Betrag dazu.',
       schritte: [grund ? `${grund} € Eintritt + ${n} · ${preis} € = ${antwort} €` : `${n} · ${preis} € = ${antwort} €`],
-      daten: { tabelle: [1, 2, 3].map((k) => [k, grund + preis * k]), n },
+      daten: { tabelle: [1, 2, 3].map((k) => [k, grund + preis * k]), n, anzeige: 'einheit', einheit: '€' },
     },
     rng,
   );

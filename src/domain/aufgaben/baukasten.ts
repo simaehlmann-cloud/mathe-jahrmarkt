@@ -2,7 +2,6 @@ import type { Dimension, KompetenzId } from '../kompetenzen/modell';
 import type { Stufe } from '../buden';
 import type { Rng } from '../rng';
 import { auswahl, neueAufgabenId, type Fehler } from './auswahl';
-import { fehlerkatalog } from './einmaleins';
 import type { AuswahlAufgabe } from './typen';
 
 /** Bausteine für Auswahl-Buden: eine Aufgabe aus Text, Antwort, typischen Fehlern und Erklärung. */
@@ -30,7 +29,8 @@ export interface AuswahlEntwurf {
 }
 
 export function auswahlAufgabe(e: AuswahlEntwurf, rng: Rng): AuswahlAufgabe {
-  const optionen = e.frei ? fehlerkatalog(e.antwort, e.fehler) : auswahl(e.antwort, e.fehler, rng, e.schritt ?? 1, e.anzahl);
+  // Auch bei freier Eingabe (Spiel-Buden) gibt es Antwortmöglichkeiten: für Bildschirmleser und den letzten Hilfeschritt
+  const optionen = auswahl(e.antwort, e.fehler, rng, e.schritt ?? 1, e.anzahl);
   const fmt = e.format;
   const labels = fmt ? Object.fromEntries(optionen.map((o) => [o.wert, fmt(o.wert)])) : e.labels;
   return {

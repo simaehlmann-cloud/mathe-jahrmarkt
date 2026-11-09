@@ -60,6 +60,10 @@ try {
     page.on('pageerror', (e) => konsole.push(String(e)));
     const foto = (n) => page.screenshot({ path: `${BILDER}/${name}-${n}.png` });
     const weiter = async () => page.getByRole('button', { name: /Weiter|Los geht/ }).last().click();
+    const menue = async (punkt) => {
+      await page.getByRole('button', { name: 'Menü' }).click();
+      await page.locator('nav.menue').getByRole('button', { name: punkt }).click();
+    };
 
     await page.goto(`http://localhost:${PORT}/`);
     await page.getByText('Wie heißt du?').waitFor();
@@ -76,7 +80,8 @@ try {
     await page.getByRole('button', { name: 'Los geht’s' }).click();
     await page.getByText('Ich bin Flinka').waitFor();
     await foto('02-intro');
-    for (let i = 0; i < 4; i++) await weiter();
+    // Intro: so lange „Weiter“, bis die Sprechblase weg ist
+    for (let i = 0; i < 6 && (await page.getByRole('button', { name: /Weiter|Los geht/ }).count()); i++) await weiter();
     await foto('03-jahrmarkt');
 
     // Begehbarer Jahrmarkt: Tippen auf die Bude, die Figur läuft hin
@@ -151,7 +156,7 @@ try {
     pruefe(await page.getByRole('button', { name: 'Katze auf dem Dach' }).isVisible(), 'Katze erscheint nach Bronze');
 
     // Elternbereich
-    await page.getByRole('button', { name: 'Elternbereich' }).click();
+    await menue('Elternbereich');
     const sperre = await page.locator('.frage').textContent();
     const [, w1, w2] = sperre.match(/Was ist (\S+) mal (\S+)\?/);
     await page.getByLabel(sperre).fill(String(WOERTER[w1] * WOERTER[w2]));
@@ -164,7 +169,7 @@ try {
     await page.getByText('noch nicht verfügbar').waitFor();
     pruefe(true, 'Store-Version bietet ohne native Anbindung keinen Scheinkauf an');
     await page.getByRole('button', { name: 'Elternbereich schließen' }).click();
-    await page.getByRole('button', { name: 'Mein Mathe-Profil' }).click();
+    await menue('Mein Mathe-Profil');
     await foto('15-mathe-profil');
 
     // Figuren-Baukasten: Eule mit Brille und blauem Tuch
@@ -199,7 +204,7 @@ try {
     pruefe(gespeichert?.figur === 'eule' && gespeichert?.aussehen?.extra === 'brille' && gespeichert?.aussehen?.tuch === 'blau', `${name}: Figur aus dem Baukasten bleibt gespeichert`);
 
     // Baukasten ist auch direkt vom Startbildschirm aus erreichbar
-    await page.locator('header button.figur').click();
+    await menue('Spieler wechseln');
     await page.getByRole('heading', { name: 'Wer spielt?' }).waitFor();
     await foto('17-wer-spielt');
     await page.getByRole('button', { name: /^Figur von .* gestalten$/ }).first().click();
@@ -426,18 +431,13 @@ try {
       pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
     };
     for (const [titel, kurz] of [
-      ['Süßigkeitenkasse', '31-kasse'],
       ['Schätz-Bude', '32-schaetzen'],
-      ['Uhr-Karussell', '33-uhr'],
       ['Umrechnungs-Memory', '34-memory'],
-      ['Achterbahn-Architekt', '35-achterbahn'],
       ['Würfelnetz-Werkstatt', '37-netz'],
       ['Labyrinth-Robo', '38-labyrinth'],
       ['Formen-Sortierer', '39-formen'],
       ['Zelt-Dekorateur', '40-band'],
       ['Zahlenfolgen-Zug', '41-folge'],
-      ['Rechenmauer', '42-mauer'],
-      ['Riesenrad-Techniker', '43-riesenrad'],
       ['Murmel-Labor', '44-murmeln'],
       ['Diagramm-Reporter', '45-diagramm'],
     ]) await auswahlBudeTesten(titel, kurz);
@@ -452,6 +452,182 @@ try {
 
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
+
+    // ---------- Zweiter Durchgang mit Zusatzpaket und Silber überall: Spiel-Buden, Sternenmarkt, Bauplatz, Check, Aufträge ----------
+    {
+      const ctx2 = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true });
+      const page = await ctx2.newPage();
+      letzteSeite = page;
+      page.setDefaultTimeout(20000);
+      const konsole2 = (globalThis.konsole = []);
+      page.on('console', (m) => m.type() === 'error' && konsole2.push(m.text()));
+      page.on('pageerror', (e) => konsole2.push(String(e)));
+      const foto = (n) => page.screenshot({ path: `${BILDER}/${name}-${n}.png` });
+      const menue = async (punkt) => {
+        await page.getByRole('button', { name: 'Menü' }).click();
+        await page.locator('nav.menue').getByRole('button', { name: punkt }).click();
+      };
+      await page.goto(`http://localhost:${PORT}/`);
+      await page.getByPlaceholder('Spitzname').fill('Sam');
+      await page.getByPlaceholder('Spitzname').press('Enter');
+      await page.getByText('Roboter', { exact: true }).click();
+      await page.getByText('Cap', { exact: true }).click();
+      await foto('50-roboter');
+      await page.getByRole('button', { name: 'Los geht’s' }).click();
+      for (let i = 0; i < 6 && (await page.getByRole('button', { name: /Weiter|Los geht/ }).count()); i++) await page.getByRole('button', { name: /Weiter|Los geht/ }).last().click();
+      await page.getByRole('button', { name: /Tagesaufträge/ }).click();
+      pruefe((await page.locator('.auftraege li').count()) === 3, `${name}: drei Tagesaufträge`);
+      await foto('51-auftraege');
+      await page.getByRole('button', { name: 'Schließen' }).click();
+      // Bestand mit Paket und Silber an allen Buden einspielen (wie nach langem Spielen)
+      await page.goto('about:blank');
+      await page.addInitScript(() => {
+        const k = 'CapacitorStorage.mathe-jahrmarkt.daten';
+        const d = JSON.parse(localStorage.getItem(k) ?? 'null');
+        if (!d || d.paket.gekauft) return;
+        d.paket = { gekauft: true, seit: 1 };
+        const st = { geschafft: true, rekord: 900, gespielt: 1, verlauf: [900] };
+        const ids = ['dartbude', 'einmaleins-turbo', 'dosenwerfen', 'seilbahn', 'waage', 'rechendomino', 'rechenwerkstatt', 'fehlerdetektiv', 'tresor', 'kasse', 'schaetzbude', 'uhrkarussell', 'umrechnungsmemory', 'achterbahn', 'spiegelkabinett', 'wuerfelnetz', 'labyrinth', 'formensortierer', 'zeltdekorateur', 'zahlenfolgenzug', 'rechenmauer', 'riesenradtechniker', 'murmellabor', 'diagrammreporter'];
+        for (const id of ids) d.profile[0].fortschritt[id] = { bronze: st, silber: st };
+        for (const id of ['geisterbahn', 'pizzabaeckerei']) d.profile[0].fortschritt[id] = { bronze: st };
+        d.profile[0].fortschritt.hauDenLukas = { bronze: st, silber: st };
+        d.profile[0].gesehen.gassen = ['zahlengasse', 'groessenmarkt', 'spiegelzelt', 'musterbahn', 'forschergasse', 'abendmarkt'];
+        localStorage.setItem(k, JSON.stringify(d));
+      });
+      await page.goto(`http://localhost:${PORT}/`);
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      await page.getByRole('button', { name: 'Menü' }).click();
+      pruefe(await page.getByText('Jahrmarkt-Manager').isVisible(), `${name}: Rang aus 48 Sternen ist Jahrmarkt-Manager`);
+      await foto('52-menue');
+      await page.locator('nav.menue').getByRole('button', { name: 'Bauplatz' }).click();
+
+      // Bauplatz: Blöcke setzen und abbauen
+      const lager = async () => Number((await page.locator('.lager').textContent()).match(/(\d+)/)?.[1]);
+      const vorher = await lager();
+      for (const f of ['Spalte 4, Reihe 4', 'Spalte 4, Reihe 4', 'Spalte 5, Reihe 4']) await page.getByRole('button', { name: new RegExp(`Feld ${f},`) }).click();
+      pruefe((await lager()) === vorher - 3, `${name}: Bauplatz – drei Blöcke gesetzt`);
+      await page.getByRole('button', { name: 'Abbauen' }).click();
+      await page.getByRole('button', { name: /Feld Spalte 4, Reihe 4,/ }).click();
+      pruefe((await lager()) === vorher - 2, `${name}: Bauplatz – ein Block zurück ins Lager`);
+      await foto('53-bauplatz');
+      // Bauauftrag: Zielhöhen aus dem Bauplan ablesen und bauen, dann die Würfelfrage
+      await page.getByRole('tab', { name: 'Bauaufträge' }).click();
+      await page.getByRole('img', { name: /^Bauplan:/ }).waitFor();
+      const plan = (await page.getByRole('img', { name: /^Bauplan:/ }).getAttribute('aria-label')).replace('Bauplan: ', '').split(', ').map(Number);
+      await page.getByRole('button', { name: '+ Würfel' }).click();
+      for (let i = 0; i < plan.length; i++) for (let k = 0; k < plan[i]; k++) await page.getByRole('button', { name: new RegExp(`^Feld Spalte ${(i % 4) + 1}, Reihe ${Math.floor(i / 4) + 1},`) }).click();
+      await page.getByRole('button', { name: 'Prüfen' }).click();
+      await page.getByText('Wie viele Würfel hast du verbaut?').waitFor();
+      const summe = plan.reduce((a, b) => a + b, 0);
+      await page.locator('.optionen button').filter({ hasText: new RegExp(`^${summe}$`) }).click();
+      await page.getByRole('button', { name: 'Nächster Auftrag' }).waitFor();
+      pruefe(true, `${name}: Bauauftrag nach Bauplan gelöst`);
+      await foto('54-bauauftrag');
+      await page.getByRole('button', { name: 'Nächster Auftrag' }).click();
+      await foto('55-bauauftrag-2');
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Jahrmarkt-Check
+      await menue('Jahrmarkt-Check');
+      await page.getByRole('button', { name: 'Check starten' }).click();
+      for (let i = 0; i < 12; i++) {
+        await page.locator('.aufgabe .wahl').first().waitFor();
+        if (i === 3) await foto('56-check');
+        await page.locator('.aufgabe .wahl').last().click();
+        await page.waitForTimeout(550);
+      }
+      await page.getByText('Das bringt dich jetzt weiter').waitFor();
+      pruefe((await page.locator('.empfehlung button').count()) === 3, `${name}: Check empfiehlt drei Buden`);
+      await foto('57-check-ergebnis');
+      await page.getByRole('button', { name: 'Zum Jahrmarkt' }).click();
+
+      // Spiel-Buden: Probe über die Antwortknöpfe für Bildschirmleser lösen, eine Bedienung ausprobieren, Hilfe erreichen
+      const leserKnoepfe = () => page.locator('.nur-leser button');
+      const spielBude = async (titel, kurz, stufe, bedienen) => {
+        await page.getByRole('button', { name: `${titel} öffnen` }).click();
+        await page.getByRole('radio', { name: new RegExp(stufe) }).click();
+        await page.getByRole('button', { name: `${stufe} spielen` }).click();
+        await leserKnoepfe().first().waitFor({ state: 'attached' });
+        await page.waitForTimeout(900);
+        await foto(`${kurz}-probe`);
+        // Bedienung ausprobieren (Antwort ist dabei meist falsch: Die Probe wird dann wiederholt)
+        await bedienen();
+        await page.waitForTimeout(1600);
+        await foto(`${kurz}-bedient`);
+        let hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+        let n = 0;
+        for (let i = 0; i < 16 && !hilfe; i++) {
+          await page.waitForTimeout(900);
+          const k = leserKnoepfe();
+          const anzahl = await k.count();
+          if (!anzahl) continue;
+          await k.nth(n % anzahl).dispatchEvent('click');
+          await page.waitForTimeout(1500);
+          hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+          if (!hilfe && (await page.getByText('Probewurf').isVisible())) n++;
+        }
+        if (hilfe) {
+          await page.getByRole('button', { name: 'Weiter' }).click();
+          await foto(`${kurz}-hilfe`);
+          await page.getByRole('button', { name: 'Weiter' }).click();
+          for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
+            if (await page.getByText('Super!').isVisible()) break;
+            await knopf.click();
+          }
+          await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+        }
+        pruefe(hilfe, `${name}: ${titel} (${stufe}) spielbar, Hilfe erscheint`);
+        await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+        await page.getByRole('button', { name: 'Zurück' }).first().click();
+      };
+      const klick = (n) => page.getByRole('button', { name: n, exact: true }).click();
+      const tippen = async (zahl, ok = 'OK') => {
+        for (const z of String(zahl)) await page.getByRole('button', { name: `Ziffer ${z}` }).click();
+        await page.locator('.tasten button.ok').click();
+      };
+      await spielBude('Süßigkeitenkasse', '60-kasse', 'Bronze', async () => {
+        await klick('1 € hinlegen');
+        await klick('50 ct hinlegen');
+        await klick('1 € zurücklegen');
+        await klick('Bezahlen');
+      });
+      await spielBude('Uhr-Karussell', '61-uhr', 'Gold', async () => {
+        await klick('Eine Stunde vor');
+        await klick('5 Minuten vor');
+        const uhr = await page.locator('svg.uhr').boundingBox();
+        await page.mouse.move(uhr.x + uhr.width / 2, uhr.y + uhr.height * 0.1);
+        await page.mouse.down();
+        await page.mouse.move(uhr.x + uhr.width * 0.9, uhr.y + uhr.height / 2, { steps: 5 });
+        await page.mouse.up();
+        await klick('Fertig');
+      });
+      await spielBude('Achterbahn-Architekt', '62-achterbahn', 'Bronze', async () => {
+        await klick('Schiene 10 m legen');
+        await klick('Schiene 5 m legen');
+        await klick('Testfahrt!');
+      });
+      await spielBude('Rechenmauer', '63-mauer', 'Silber', async () => {
+        for (let i = 0; i < 3; i++) await tippen(12);
+      });
+      await spielBude('Riesenrad-Techniker', '64-riesenrad', 'Silber', async () => tippen(5));
+      await spielBude('Geisterbahn', '65-geisterbahn', 'Silber', async () => tippen(1));
+      await spielBude('Pizzabäckerei', '66-pizza', 'Silber', async () => {
+        for (let i = 0; i < 4; i++) await klick('Mehr Stücke');
+        await page.getByRole('button', { name: 'Stück 1', exact: true }).click();
+        await page.getByRole('button', { name: 'Stück 3', exact: true }).click();
+        await klick('In den Ofen!');
+      });
+      await spielBude('Hau den Lukas', '67-lukas', 'Bronze', async () => {
+        for (let i = 0; i < 3; i++) await klick('Mehr Kraft');
+        await klick('🔨 Hau!');
+      });
+      await spielBude('Hau den Lukas', '68-lukas-gold', 'Gold', async () => {
+        await klick('Mehr Kraft');
+        await klick('🔨 Hau!');
+      });
+      pruefe(konsole2.length === 0, `${name}: zweiter Durchgang ohne Fehler in der Konsole${konsole2.length ? `: ${konsole2.join(' | ')}` : ''}`);
+      await ctx2.close();
+    }
   }
 } catch (e) {
   fehler++;

@@ -35,6 +35,9 @@
   import Laeufer from '../grafik/Laeufer.svelte';
   import Riesenrad from '../grafik/Riesenrad.svelte';
   import { app } from '../zustand.svelte';
+  import Icon from '../components/Icon.svelte';
+  import { STUFEN_NAME } from '../../domain/buden';
+  import { gasseFarbe } from '../../domain/auftraege';
 
   /**
    * Der begehbare Jahrmarkt. Das Kind tippt auf eine Bude (oder einen Weg),
@@ -45,6 +48,10 @@
   let laufend = $derived(gondeln.filter((g) => g).length);
   let abendOffen = $derived(p ? abendmarktOffen(p, app.paket) : false);
   let dialog = $state<{ saetze: string[]; danach?: () => void } | null>(null);
+  let auftraegeOffen = $state(false);
+  let auftraege = $derived(p?.auftraege?.liste ?? []);
+  let auftragsBuden = $derived(new Set(auftraege.filter((a) => !a.erledigt).map((a) => a.bude)));
+  let erledigt = $derived(auftraege.filter((a) => a.erledigt).length);
 
   // Startpunkt: vor der zuletzt besuchten Bude, sonst am Eingang
   let pos = $state<Punkt>(app.karteOrt ?? budenOrt(app.letzteBude ?? '')?.vorne ?? EINGANG);
@@ -201,6 +208,7 @@
   });
 
   onMount(() => {
+    app.auftraegeSicherstellen();
     messen();
     void tick().then(() => kamera(false));
     const ro = new ResizeObserver(() => {
@@ -349,6 +357,7 @@
                 <button class="katze-knopf" onclick={katzeEntdeckt} aria-label="Katze auf dem Dach"></button>
               {/if}
               <div class="schild" class:zu={!info.spielbar}>{info.name}</div>
+              {#if auftragsBuden.has(o.id)}<div class="auftrag-marke" aria-hidden="true"><Icon name="auftrag" groesse={30} /></div>{/if}
             </div>
           {/if}
         {/each}
@@ -401,8 +410,39 @@
   </div>
 
   <div class="leiste">
-    <button class="ticket hell" onclick={() => kamera(false)}>Wo bin ich?</button>
+    <button class="ticket gelb" onclick={() => (auftraegeOffen = true)} aria-label="Tagesaufträge, {erledigt} von {auftraege.length} erledigt">
+      <Icon name="auftrag" groesse={22} /> Aufträge {erledigt}/{auftraege.length}
+    </button>
+    <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}><Icon name="block" groesse={22} /> Bauplatz</button>
+    <button class="ticket hell rund-klein" onclick={() => kamera(false)} aria-label="Wo bin ich?">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22" /></svg>
+    </button>
   </div>
+
+  {#if auftraegeOffen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="schleier" onclick={() => (auftraegeOffen = false)}></div>
+    <div class="tafel auftraege" role="dialog" aria-modal="true" aria-labelledby="auftraege-titel">
+      <div class="markise"></div>
+      <div class="inhalt">
+        <h2 id="auftraege-titel">Tagesaufträge</h2>
+        <p class="klein">Spiel eine Runde mit mindestens 7 Treffern. Pro Auftrag: 15 Taler und 10 Blöcke. Alle drei: 20 Blöcke extra.</p>
+        <ul>
+          {#each auftraege as a (a.bude)}
+            {@const info = budeInfo(a.bude)}
+            <li class:fertig={a.erledigt} style="--f: {gasseFarbe(a.bude)}">
+              <span class="haken" aria-hidden="true">{#if a.erledigt}<Icon name="haken" groesse={20} />{/if}</span>
+              <span class="was"><strong>{info.name}</strong><small>{STUFEN_NAME[a.stufe]}</small></span>
+              {#if !a.erledigt}
+                <button class="ticket rot klein" onclick={() => { auftraegeOffen = false; zurBude(a.bude); }}>Hin</button>
+              {:else}<span class="erledigt">erledigt</span>{/if}
+            </li>
+          {/each}
+        </ul>
+        <button class="ticket hell" onclick={() => (auftraegeOffen = false)}>Schließen</button>
+      </div>
+    </div>
+  {/if}
 
   {#if dialog}
     <div class="schleier"></div>
@@ -655,5 +695,98 @@
   .leiste .ticket {
     min-height: 44px;
     font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-inline: 12px;
+  }
+  .leiste .rund-klein {
+    padding-inline: 10px;
+  }
+  .auftrag-marke {
+    position: absolute;
+    right: 4px;
+    top: -82px;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    background: var(--senf);
+    color: var(--tinte);
+    border: 3px solid var(--tinte);
+    border-radius: 50%;
+    box-shadow: 0 3px 0 var(--tinte);
+    animation: hupf 0.8s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .schleier {
+    position: absolute;
+    inset: 0;
+    background: rgb(31 42 107 / 0.25);
+    z-index: 20;
+  }
+  .auftraege {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(calc(100% - 32px), 26rem);
+    z-index: 30;
+  }
+  .auftraege .inhalt {
+    padding: 12px 16px 16px;
+    display: grid;
+    gap: 10px;
+  }
+  .auftraege ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .auftraege li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 3px solid var(--tinte);
+    border-left: 10px solid var(--f);
+    border-radius: 12px;
+    background: #fff;
+  }
+  .auftraege li.fertig {
+    background: #e7f6ec;
+  }
+  .haken {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border: 3px solid var(--tinte);
+    border-radius: 8px;
+    color: var(--wiese-dunkel);
+  }
+  .was {
+    flex: 1;
+    display: grid;
+  }
+  .was small {
+    color: var(--tinte-weich);
+    font-weight: 800;
+  }
+  .erledigt {
+    font-weight: 900;
+    color: var(--wiese-dunkel);
+  }
+  .klein {
+    font-size: 0.95rem;
+    margin: 0;
+  }
+  .ticket.klein {
+    min-height: 40px;
+    padding: 4px 16px;
   }
 </style>

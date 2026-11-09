@@ -12,6 +12,9 @@
   import { vibriere } from '../../services/haptik';
   import Icon from '../components/Icon.svelte';
   import { BUDE_FARBE, BUDE_FEST, BUDE_WIEDER_AN } from '../geschichte';
+  import { AUFTRAG_BLOECKE, AUFTRAG_TALER, BONUS_BLOECKE, auftragPruefen, tagKennung } from '../../domain/auftraege';
+  import { bloeckeFuerRunde } from '../../domain/bau';
+  import { rang } from '../../domain/rang';
   import { app } from '../zustand.svelte';
 
   let props: { bude: string; stufe: Stufe } = $props();
@@ -48,7 +51,7 @@
   let ergebnisse = $state<boolean[]>([]);
   let hinweis = $state<string | null>(null);
   let hilfe = $state<{ aufgabe: Aufgabe; gewaehlt: number } | null>(null);
-  let ende = $state<{ punkte: number; richtig: number; taler: number; rekord: boolean; geschafft: boolean; erster: boolean } | null>(null);
+  let ende = $state<{ punkte: number; richtig: number; taler: number; rekord: boolean; geschafft: boolean; erster: boolean; bloecke: number; auftraege: number; bonus: boolean; neuerRang: string | null } | null>(null);
   let bereit = $state(false);
   let fehlerBeimLaden = $state(false);
   let gezeigtUm = 0;
@@ -122,10 +125,35 @@
     if (!p) return;
     verbuche();
     const r = runde.ergebnis();
-    const e = rundeVerbuchen(app.profil ?? p, r);
-    app.aendereProfil(() => e.profil);
+    const vorher = app.profil ?? p;
+    const rangVorher = rang(vorher);
+    const e = rundeVerbuchen(vorher, r);
+    // Blöcke für den Bauplatz und Tagesaufträge
+    const bloecke = bloeckeFuerRunde(r.richtig, e.ersterErfolg);
+    const a = auftragPruefen(e.profil.auftraege, { bude, stufe, richtig: r.richtig }, tagKennung(new Date()));
+    const auftragsTaler = (a?.neu.length ?? 0) * AUFTRAG_TALER;
+    const auftragsBloecke = (a?.neu.length ?? 0) * AUFTRAG_BLOECKE + (a?.bonus ? BONUS_BLOECKE : 0);
+    const nachher = {
+      ...e.profil,
+      taler: e.profil.taler + auftragsTaler,
+      bau: { ...e.profil.bau, bloecke: e.profil.bau.bloecke + bloecke + auftragsBloecke },
+      auftraege: a ? a.stand : e.profil.auftraege,
+    };
+    app.aendereProfil(() => nachher);
     void app.speichereSofort();
-    ende = { punkte: r.punkte, richtig: r.richtig, taler: e.taler, rekord: e.neuerRekord, geschafft: e.geschafft, erster: e.ersterErfolg };
+    const rangNachher = rang(nachher);
+    ende = {
+      punkte: r.punkte,
+      richtig: r.richtig,
+      taler: e.taler + auftragsTaler,
+      rekord: e.neuerRekord,
+      geschafft: e.geschafft,
+      erster: e.ersterErfolg,
+      bloecke: bloecke + auftragsBloecke,
+      auftraege: a?.neu.length ?? 0,
+      bonus: a?.bonus ?? false,
+      neuerRang: rangNachher.stufe > rangVorher.stufe ? rangNachher.name : null,
+    };
     app.spieleKlang(e.geschafft ? 'jubel' : 'richtig');
     if (e.geschafft) void vibriere('erfolg');
     if (e.ersterErfolg) app.flinka = stufe === 'bronze' ? BUDE_WIEDER_AN(info.name) : stufe === 'silber' ? BUDE_FARBE(info.name) : BUDE_FEST(info.name);
@@ -243,7 +271,9 @@
           {#if ende.rekord}<p class="rekord">Neuer Rekord!</p>{/if}
           <p class="gross">{ende.punkte} Punkte</p>
           <p>{ende.richtig} von {AUFGABEN_PRO_RUNDE} beim ersten Versuch richtig.</p>
-          <p class="taler"><Icon name="taler" groesse={26} /> +{ende.taler} Taler</p>
+          <p class="taler"><span><Icon name="taler" groesse={26} /> +{ende.taler} Taler</span>{#if ende.bloecke}<span><Icon name="block" groesse={24} /> +{ende.bloecke} Blöcke</span>{/if}</p>
+          {#if ende.auftraege}<p class="auftrag"><Icon name="auftrag" groesse={22} /> {ende.bonus ? 'Alle Tagesaufträge erledigt!' : 'Tagesauftrag erledigt!'}</p>{/if}
+          {#if ende.neuerRang}<p class="rang"><Icon name="stern" groesse={24} /> Neuer Rang: <strong>{ende.neuerRang}</strong></p>{/if}
           {#if !ende.geschafft}<p class="klein">Mit 8 Treffern schaffst du die Stufe. Du kommst näher!</p>{/if}
           <div class="knoepfe">
             <button class="ticket hell" onclick={() => app.zeige({ name: 'bude', bude })}>Zur Bude</button>
@@ -414,12 +444,32 @@
     font-size: 1.3rem;
   }
   .taler {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    font-weight: 900;
+    font-size: 1.2rem;
+  }
+  .taler span,
+  .auftrag,
+  .rang {
     display: inline-flex;
     gap: 6px;
     align-items: center;
     justify-content: center;
+  }
+  .auftrag {
     font-weight: 900;
-    font-size: 1.2rem;
+    color: var(--wiese-dunkel);
+  }
+  .rang {
+    font-weight: 800;
+    font-size: 1.15rem;
+    background: #fff4c2;
+    border-radius: 12px;
+    padding: 6px 10px;
   }
   .klein {
     font-size: 0.95rem;

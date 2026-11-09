@@ -142,6 +142,9 @@ button {
 .ticket.hell {
   --farbe: #f1e4c8;
 }
+.ticket.gelb {
+  --farbe: var(--senf);
+}
 
 /* Runder Symbolknopf (Zurück, Vorlesen, Schloss) */
 .rund {
@@ -199,5 +202,19 @@ html[data-ruhig='1'] *::after {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Spiel-Bühnen auf Tablets und im Querformat größer zeichnen (die Bedienelemente sind fürs Handy bemessen) */
+@media (min-width: 760px) and (min-height: 560px) {
+  .spielflaeche {
+    zoom: 1.2;
+    min-height: calc(100% / 1.2) !important;
+  }
+}
+@media (min-width: 1000px) and (min-height: 700px) {
+  .spielflaeche {
+    zoom: 1.4;
+    min-height: calc(100% / 1.4) !important;
   }
 }
