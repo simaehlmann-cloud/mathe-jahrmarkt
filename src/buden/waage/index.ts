@@ -1,17 +1,18 @@
 import { faktGewichtung } from '../../domain/adaptiv/gewichtung';
-import { aehnlicheUeberschlag, ueberschlagAufgabe, ueberschlagProbe } from '../../domain/aufgaben/ueberschlag';
+import { RELATION, aehnlicheGleichheit, gleichheitAufgabe, gleichheitProbe } from '../../domain/aufgaben/gleichheit';
 import type { BudeDefinition } from '../typen';
-import HilfeUeberschlag from './HilfeUeberschlag.svelte';
+import HilfeGleichheit from './HilfeGleichheit.svelte';
 import { erstelleWaageSzene } from './szene';
 
-export const ueberschlagswaage: BudeDefinition = {
-  id: 'ueberschlagswaage',
+export const waage: BudeDefinition = {
+  id: 'waage',
   erstelleSzene: erstelleWaageSzene,
-  erzeuge: ueberschlagAufgabe,
-  aehnlich: aehnlicheUeberschlag,
-  probe: ueberschlagProbe,
+  erzeuge: gleichheitAufgabe,
+  aehnlich: aehnlicheGleichheit,
+  probe: gleichheitProbe,
   gewichtung: faktGewichtung,
-  hilfe: HilfeUeberschlag,
-  ladetext: 'Die Waage wird geeicht …',
-  anleitung: 'Links liegt ein Sack. Lege das runde Gewicht dazu, das ungefähr gleich schwer ist. Dafür musst du nicht genau rechnen, runden reicht!',
+  hilfe: HilfeGleichheit,
+  ladetext: 'Die Waage wird ausgerichtet …',
+  anleitung: 'Die Waage ist nur im Gleichgewicht, wenn beide Seiten genau gleich viel sind. Lege das passende Gewicht auf, oder entscheide: kleiner, gleich oder größer?',
+  antwortText: (w) => RELATION[w] ?? String(w),
 };

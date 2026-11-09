@@ -23,7 +23,7 @@ export const BUDEN_STIL: Readonly<Record<string, BudenStil>> = {
   'einmaleins-turbo': { dach: 'zelt', farbe: BLAU, zweit: GELB },
   dosenwerfen: { dach: 'giebel', farbe: GRUEN, zweit: WEISS },
   seilbahn: { dach: 'kuppel', farbe: LILA, zweit: GELB },
-  ueberschlagswaage: { dach: 'markise', farbe: TUERKIS, zweit: WEISS },
+  waage: { dach: 'markise', farbe: TUERKIS, zweit: WEISS },
   rechendomino: { dach: 'zelt', farbe: ORANGE, zweit: WEISS },
   rechenwerkstatt: { dach: 'giebel', farbe: BLAU, zweit: GELB },
   fehlerdetektiv: { dach: 'kuppel', farbe: PINK, zweit: WEISS },

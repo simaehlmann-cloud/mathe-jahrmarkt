@@ -4,7 +4,7 @@ import { dosenwerfen } from './dosenwerfen';
 import { rechendomino } from './domino';
 import { seilbahn } from './seilbahn';
 import { einmaleinsTurbo } from './turbo';
-import { ueberschlagswaage } from './waage';
+import { waage } from './waage';
 import type { BudeDefinition } from './typen';
 
 /** Anmeldung aller spielbaren Buden. Muss zu `spielbar` im Budenregister passen (wird getestet). */
@@ -13,7 +13,7 @@ export const BUDEN_DEFINITIONEN: Readonly<Record<string, BudeDefinition>> = {
   'einmaleins-turbo': einmaleinsTurbo,
   dosenwerfen,
   seilbahn,
-  ueberschlagswaage,
+  waage,
   rechendomino,
 };
 

@@ -79,6 +79,20 @@ export function neuesProfil(id: string, name: string, figur: FigurId, jetzt: num
   };
 }
 
+/**
+ * Fortschritt zurücksetzen: Stufen, Rekorde, Taler, Andenken, Abzeichen und Lernprofil auf Anfang.
+ * Spitzname und gestaltete Figur bleiben; Extras, die es nur im Andenkenstand gibt (Strohhut), fallen weg.
+ * Das Intro muss nicht noch einmal kommen.
+ */
+export function fortschrittZurueckgesetzt(p: Profil): Profil {
+  const neu = neuesProfil(p.id, p.name, p.figur, p.erstellt);
+  return {
+    ...neu,
+    aussehen: { ...p.aussehen, extra: p.aussehen.extra === 'strohhut' ? 'keins' : p.aussehen.extra },
+    gesehen: { ...neu.gesehen, intro: p.gesehen.intro },
+  };
+}
+
 /** Spitznamen: Steuerzeichen raus, Leerraum zusammenfassen, Länge begrenzen. */
 export function bereinigeName(name: string): string {
   const sauber = name.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim();

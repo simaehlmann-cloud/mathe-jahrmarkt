@@ -46,7 +46,7 @@ export interface Datenbestand {
   paket: { gekauft: boolean; seit?: number | undefined };
 }
 
-export const SCHEMA = 2;
+export const SCHEMA = 3;
 
 export const standardEinstellungen = (): Einstellungen => ({
   lautMusik: 0.4,
@@ -219,7 +219,27 @@ export const MIGRATIONEN: Readonly<Record<number, (alt: Record<string, unknown>)
         )
       : alt.profile,
   }),
+  // 2 → 3: Die Überschlags-Waage wurde zur Gleichgewichts-Waage (Kennung „waage“). Fortschritt und Lernprotokoll ziehen mit um.
+  2: (alt) => ({
+    ...alt,
+    profile: Array.isArray(alt.profile) ? alt.profile.map((p: unknown) => (istObjekt(p) ? benenneBudeUm(p, 'ueberschlagswaage', 'waage') : p)) : alt.profile,
+  }),
 };
+
+function benenneBudeUm(p: Record<string, unknown>, alt: string, neu: string): Record<string, unknown> {
+  const fortschritt = istObjekt(p.fortschritt) ? { ...p.fortschritt } : p.fortschritt;
+  if (istObjekt(fortschritt) && alt in fortschritt) {
+    fortschritt[neu] = fortschritt[alt];
+    delete fortschritt[alt];
+  }
+  const umbenennen = (x: unknown) => (istObjekt(x) && x.bude === alt ? { ...x, bude: neu } : x);
+  return {
+    ...p,
+    fortschritt,
+    ereignisse: Array.isArray(p.ereignisse) ? p.ereignisse.map(umbenennen) : p.ereignisse,
+    runden: Array.isArray(p.runden) ? p.runden.map(umbenennen) : p.runden,
+  };
+}
 
 export function migriere(roh: unknown): Datenbestand {
   if (!istObjekt(roh)) throw new Error('Kein Datenbestand');

@@ -270,3 +270,46 @@ describe('Rechendomino', () => {
     expect(rechenweg(':', 744, 6)).toEqual(['720 : 6 = 120', '24 : 6 = 4', '120 + 4 = 124']);
   });
 });
+
+import { GLEICH, baueGleichheit, ergaenzenSchritte, gleichheitAufgabe, loese, relationVon, termWert } from '../src/domain/aufgaben/gleichheit';
+
+describe('Gleichgewichts-Waage', () => {
+  it('die richtige Zahl bringt die Waage genau ins Gleichgewicht, jede falsche nicht', () => {
+    const rng = createRng(51);
+    for (const stufe of STUFEN) {
+      for (let i = 0; i < 400; i++) {
+        const a = gleichheitAufgabe(stufe, rng);
+        pruefeOptionen(a);
+        if (a.form === 'vergleichen') {
+          expect(a.optionen).toHaveLength(3);
+          expect(a.antwort).toBe(relationVon(termWert(a.links), termWert(a.rechts)));
+        } else {
+          expect(a.optionen).toHaveLength(4);
+          for (const o of a.optionen) {
+            const gleich = termWert(a.links, o.wert) === termWert(a.rechts, o.wert);
+            expect(gleich).toBe(o.wert === a.antwort);
+          }
+          expect(Number.isInteger(a.antwort) && a.antwort > 0).toBe(true);
+        }
+      }
+    }
+  });
+  it('Vergleichen kommt in allen drei Beziehungen vor', () => {
+    const rng = createRng(3);
+    const gesehen = new Set<number>();
+    for (let i = 0; i < 200; i++) gesehen.add(baueGleichheit('vergleichen', 10000, rng).antwort);
+    expect([...gesehen].sort()).toEqual([1, 2, 3]);
+    expect(GLEICH).toBe(2);
+  });
+  it('Umkehraufgaben und Ergänzen in Schritten', () => {
+    expect(loese({ a: 7, op: '·', b: null }, 420)).toBe(60);
+    expect(loese({ a: 480, op: ':', b: null }, 60)).toBe(8);
+    expect(loese({ a: null, op: ':', b: 6 }, 80)).toBe(480);
+    expect(loese({ a: 500, op: '−', b: null }, 347)).toBe(153);
+    expect(ergaenzenSchritte(347, 500)).toEqual([
+      { von: 347, bis: 350, plus: 3 },
+      { von: 350, bis: 400, plus: 50 },
+      { von: 400, bis: 500, plus: 100 },
+    ]);
+  });
+});

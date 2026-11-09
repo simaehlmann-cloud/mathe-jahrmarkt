@@ -99,6 +99,14 @@
     }
   }
 
+  let zuruecksetzenBestaetigen = $state<string | null>(null);
+  function zuruecksetzen(id: string) {
+    const name = app.bestand.profile.find((p) => p.id === id)?.name ?? '';
+    app.fortschrittZuruecksetzen(id);
+    zuruecksetzenBestaetigen = null;
+    app.melde(`Fortschritt von ${name} ist zurückgesetzt.`);
+  }
+
   function loeschen(id: string) {
     app.profilLoeschen(id);
     loeschenBestaetigen = null;
@@ -312,6 +320,7 @@
       {:else}
         <section>
           <h2>Profile</h2>
+          <p class="hinweis">Jedes Kind hat ein eigenes Profil mit eigenem Fortschritt (bis zu vier). Zum Wechseln tippt man im Spiel oben auf die eigene Figur.</p>
           <ul class="profile">
             {#each app.bestand.profile as p (p.id)}
               <li>
@@ -320,7 +329,12 @@
                   <span class="frage">Wirklich löschen? Der Fortschritt geht verloren.</span>
                   <button class="ticket rot" onclick={() => loeschen(p.id)}>Löschen</button>
                   <button class="ticket hell" onclick={() => (loeschenBestaetigen = null)}>Behalten</button>
+                {:else if zuruecksetzenBestaetigen === p.id}
+                  <span class="frage">Stufen, Rekorde, Taler, Andenken und Lernprofil auf Anfang? Name und Figur bleiben.</span>
+                  <button class="ticket rot" onclick={() => zuruecksetzen(p.id)}>Zurücksetzen</button>
+                  <button class="ticket hell" onclick={() => (zuruecksetzenBestaetigen = null)}>Abbrechen</button>
                 {:else}
+                  <button class="ticket hell" onclick={() => (zuruecksetzenBestaetigen = p.id)}>Fortschritt zurücksetzen</button>
                   <button class="ticket hell" onclick={() => (loeschenBestaetigen = p.id)}>Profil löschen</button>
                 {/if}
               </li>

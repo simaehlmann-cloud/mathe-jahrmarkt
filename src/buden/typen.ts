@@ -46,6 +46,8 @@ export interface BudeDefinition {
   anleitung: string;
   /** Text, solange die Grafik lädt. */
   ladetext: string;
+  /** Beschriftung einer Antwort für Bildschirmleser, wenn der Wert ein Code ist (z. B. 1 → „kleiner“). */
+  antwortText?: (wert: number) => string;
   /** Die Bude bringt eine eigene zugängliche Eingabe mit (z. B. Ziffernfeld); dann entfallen die versteckten Antwortknöpfe. */
   eigeneBedienung?: boolean;
 }

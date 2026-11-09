@@ -30,7 +30,7 @@
     <rect x="-10" y="4" width="32" height="22" rx="5" fill="#ffc62b" />
     <rect x="-5" y="8" width="9" height="8" rx="1" fill={W} /><rect x="8" y="8" width="9" height="8" rx="1" fill={W} />
     {#each [-48, -24, 24, 48] as x (x)}<path d="M{x} 28 v8" fill="none" />{/each}
-  {:else if bude === 'ueberschlagswaage'}
+  {:else if bude === 'waage'}
     <path d="M0 30 V-24 M-40 -18 L40 -10" fill="none" stroke-width="3" />
     <path d="M-48 -18 l8 18 h-16 z M40 -10 l8 18 h-16 z" fill="#17a398" transform="translate(8 0)" />
     <rect x="-14" y="28" width="28" height="7" rx="3" fill="#b9763f" />

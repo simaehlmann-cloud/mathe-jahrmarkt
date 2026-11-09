@@ -263,12 +263,13 @@ try {
     let hilfeGesehen = false;
     for (let i = 0; i < 8; i++) {
       const [w] = await page.locator('.nur-leser button').allTextContents();
-      await tippeDose(w);
+      const id = await tippeDose(w);
       await page.waitForTimeout(1500);
       if (await page.getByText('Schauen wir genau hin').isVisible()) {
         hilfeGesehen = true;
         break;
       }
+      await abwarten(id);
     }
     if (hilfeGesehen) {
       await foto('23-dosen-hilfe');
@@ -317,7 +318,7 @@ try {
       pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
     };
     await budeTesten('Zahlenstrahl-Seilbahn', '25-seilbahn', '500');
-    await budeTesten('Überschlags-Waage', '26-waage', '300');
+    await budeTesten('Gleichgewichts-Waage', '26-waage', '200');
     await budeTesten('Rechendomino', '27-domino', '270');
 
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);

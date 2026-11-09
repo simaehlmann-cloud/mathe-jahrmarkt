@@ -1,7 +1,7 @@
 import type { Stufe } from '../domain/buden';
 import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
 import type { Aussehen } from '../domain/aussehen';
-import { MAX_PROFILE, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
+import { MAX_PROFILE, fortschrittZurueckgesetzt, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
 import { randomSeed } from '../domain/rng';
 import { leererBestand, type Datenbestand, type Einstellungen } from '../services/datenbestand';
 import { erstelleKauf, keinKauf, type KaufService } from '../services/kauf';
@@ -129,6 +129,11 @@ class AppZustand {
   profilWaehlen(id: string, ziel: Bildschirm = { name: 'jahrmarkt' }): void {
     this.aendere((b) => ({ ...b, aktiv: id }));
     this.zeige(ziel);
+  }
+
+  fortschrittZuruecksetzen(id: string): void {
+    this.aendere((b) => ({ ...b, profile: b.profile.map((p) => (p.id === id ? fortschrittZurueckgesetzt(p) : p)) }));
+    if (this.bestand.aktiv === id) this.karteOrt = null;
   }
 
   profilLoeschen(id: string): void {

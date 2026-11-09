@@ -128,7 +128,22 @@ export interface HalbschriftlichAufgabe extends AufgabeBasis {
   weg: string[];
 }
 
-export type Aufgabe = EinmaleinsAufgabe | StellenwertAufgabe | ZahlenstrahlAufgabe | UeberschlagAufgabe | HalbschriftlichAufgabe;
+/** Rechenausdruck auf einer Waagschale; `null` ist die gesuchte Zahl (?). Ohne `op` nur die Zahl `a`. */
+export interface Term {
+  a: number | null;
+  op?: '+' | '−' | '·' | ':';
+  b?: number | null;
+}
+
+export interface GleichheitAufgabe extends AufgabeBasis {
+  art: 'gleichheit';
+  /** ergaenzen: fehlende Zahl bei Plus/Minus; platzhalter: bei Mal/Geteilt; vergleichen: <, = oder > wählen. */
+  form: 'ergaenzen' | 'platzhalter' | 'vergleichen';
+  links: Term;
+  rechts: Term;
+}
+
+export type Aufgabe = EinmaleinsAufgabe | StellenwertAufgabe | ZahlenstrahlAufgabe | UeberschlagAufgabe | HalbschriftlichAufgabe | GleichheitAufgabe;
 
 export function istEinmaleins(a: Aufgabe): a is EinmaleinsAufgabe {
   return a.art === 'mal' || a.art === 'geteilt' || a.art === 'platzhalter';

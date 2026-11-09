@@ -223,7 +223,7 @@
   <!-- Für Bildschirmleser und Tastatur: dieselben Antworten als Knöpfe (außer die Bude hat eine eigene Eingabe, z. B. ein Ziffernfeld) -->
   <div class="nur-leser" hidden={def.eigeneBedienung === true}>
     {#each aufgabe.optionen as o (o.wert)}
-      <button onclick={() => void antwort(o.wert)} disabled={!bereit || !!hilfe || !!ende}>{o.wert}</button>
+      <button onclick={() => void antwort(o.wert)} disabled={!bereit || !!hilfe || !!ende}>{def.antwortText && aufgabe.art === 'gleichheit' && aufgabe.form === 'vergleichen' ? def.antwortText(o.wert) : o.wert}</button>
     {/each}
   </div>
 

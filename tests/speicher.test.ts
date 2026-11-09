@@ -59,10 +59,26 @@ describe('Speicher', () => {
     const ohneHut = { ...mitFortschritt(), id: 'p2' } as Record<string, unknown>;
     delete ohneHut.aussehen;
     const b = migriere({ schema: 1, profile: [alt, ohneHut], einstellungen: {}, paket: { gekauft: false } });
-    expect(b.schema).toBe(2);
+    expect(b.schema).toBe(SCHEMA);
     expect(b.profile[0]?.aussehen).toEqual({ fell: 0, tuch: 'keins', extra: 'strohhut' });
     expect(b.profile[1]?.aussehen).toEqual({ fell: 0, tuch: 'keins', extra: 'keins' });
     expect(b.profile[0]?.fortschritt).toEqual(alt.fortschritt);
+  });
+
+  it('migriert Version 2 auf 3: Fortschritt der Überschlags-Waage zieht zur Gleichgewichts-Waage um', () => {
+    const p = neuesProfil('p1', 'Alex', 'eule', 1);
+    const stand = { geschafft: true, rekord: 900, gespielt: 1, verlauf: [900] };
+    const alt = {
+      ...p,
+      fortschritt: { ueberschlagswaage: { bronze: stand } },
+      runden: [{ bude: 'ueberschlagswaage', stufe: 'bronze', start: 1, dauerMs: 60000, punkte: 900, richtig: 9, gesamt: 10 }],
+      ereignisse: [{ t: 1, bude: 'ueberschlagswaage', kompetenz: 'halbschriftlich', dimension: 'wissen', richtig: true, ms: 900, gewertet: true }],
+    };
+    const b = migriere({ schema: 2, profile: [alt] });
+    expect(b.profile[0]?.fortschritt.waage?.bronze?.geschafft).toBe(true);
+    expect(b.profile[0]?.fortschritt.ueberschlagswaage).toBeUndefined();
+    expect(b.profile[0]?.ereignisse[0]?.bude).toBe('waage');
+    expect(b.profile[0]?.runden[0]?.bude).toBe('waage');
   });
 
   it('Strohhut ohne Kauf wird nicht übernommen, ungültige Werte werden ersetzt', () => {

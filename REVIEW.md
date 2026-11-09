@@ -1,4 +1,4 @@
-# Code-Review Version 0.6.0
+# Code-Review Version 0.6.1
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -75,6 +75,15 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Bedienung | Seilbahn auf kleinen Handys | 20 Abschnitte mit Einrasten, Tippen aufs Seil als Alternative zum Ziehen, Bestätigen mit „Hier halten!“; Zahlen über dem Seil, damit die Gondel sie nicht verdeckt |
 | Barrierefreiheit | Ziehen ist für Bildschirmleser nicht bedienbar | versteckte Antwortknöpfe bleiben, nur Buden mit eigener zugänglicher Eingabe (Ziffernfeld) blenden sie aus |
 | Architektur | gemeinsame Auswahl-Logik und Hilfe-Rahmen für alle Buden; neue Fehlerarten (Skala, Runden, Übertrag) fließen ins Lernprofil | |
+
+## Neu in 0.6.1
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| Fachdidaktik | Eine Waage steht für Gleichheit; beim Runden war sie nur ungefähr im Gleichgewicht, das Bild war irreführend | Gleichgewichts-Waage: nur genaue Gleichheit (Ergänzen, Vergleichen, Platzhalter). Test: jede richtige Zahl macht beide Seiten gleich, jede falsche nicht. Der Überschlag (`ueberschlag.ts`, getestet) kommt in den Fehlerdetektiv als „Kann das stimmen?“ |
+| Daten | Kennung der Bude geändert | Migration 2 → 3 zieht Fortschritt, Runden und Lernprotokoll von „ueberschlagswaage“ nach „waage“ um (Test) |
+| Eltern | Fortschritt ließ sich nur durch Löschen des Profils entfernen | „Fortschritt zurücksetzen“ je Profil mit Rückfrage; Name und Figur bleiben (Test) |
+| Barrierefreiheit | Vergleichs-Antworten sind Codes (1, 2, 3) | Bildschirmleser hören <, = oder > |
 
 ## Offen
 
