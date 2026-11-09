@@ -17,6 +17,7 @@
     inhalt,
     format = (n: number) => String(n),
     hinweisFalsch = 'Schau noch einmal genau hin.',
+    kandidaten = [],
     onfertig,
   }: {
     gewaehlt: number;
@@ -28,6 +29,8 @@
     inhalt: Snippet<[number]>;
     format?: (n: number) => string;
     hinweisFalsch?: string;
+    /** Falsche Auswahlmöglichkeiten in Schritt 3; ohne Angabe nahe Zahlen. */
+    kandidaten?: number[];
     onfertig: () => void;
   } = $props();
 
@@ -35,17 +38,19 @@
   let falschGetippt = $state<number | null>(null);
   const TITEL = ['Schauen wir genau hin', 'So geht es leichter', 'Jetzt du', 'Super!'];
 
+  /** Drei Möglichkeiten: Lösung, die eigene falsche Antwort, dann Vorschläge der Bude oder nahe Zahlen. */
   const auswahl = $derived.by(() => {
     const rng = createRng(randomSeed());
-    const kandidaten = new Set<number>([loesung]);
-    if (gewaehlt !== loesung && gewaehlt > 0) kandidaten.add(gewaehlt);
+    const wahl = new Set<number>([loesung]);
+    if (gewaehlt !== loesung && gewaehlt > 0) wahl.add(gewaehlt);
+    for (const x of kandidaten) if (wahl.size < 3 && x > 0) wahl.add(x);
     const stufe = 10 ** Math.max(0, String(loesung).length - 2);
     for (const d of [10, -10, 1, -1, 2]) {
-      if (kandidaten.size >= 3) break;
+      if (wahl.size >= 3) break;
       const x = loesung + d * stufe;
-      if (x > 0) kandidaten.add(x);
+      if (x > 0) wahl.add(x);
     }
-    return rng.shuffle([...kandidaten]);
+    return rng.shuffle([...wahl]);
   });
 
   const sprechtext = (s: number): string => (s <= 3 ? (texte[s - 1] ?? '') : 'Genau! Jetzt kommt eine ähnliche Aufgabe.');

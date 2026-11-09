@@ -49,7 +49,7 @@ describe('Kaufgrenze', () => {
     expect(stufeFreigabe(mitBronze, 'dartbude', 'gold', true)).toEqual({ frei: false, grund: 'vorstufe' });
   });
   it('nicht gebaute Buden und Sternenmarkt sind gesperrt', () => {
-    expect(stufeFreigabe(profil(), 'seilbahn', 'bronze', true).grund).toBe('nichtSpielbar');
+    expect(stufeFreigabe(profil(), 'rechenwerkstatt', 'bronze', true).grund).toBe('nichtSpielbar');
   });
   it('Sternenmarkt öffnet erst mit Paket und Silber überall', () => {
     let p = profil();

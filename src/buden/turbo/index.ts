@@ -13,5 +13,6 @@ export const einmaleinsTurbo: BudeDefinition = {
   gewichtung: faktGewichtung,
   hilfe: HilfeTurbo,
   ladetext: 'Tilda tankt ihr Kart …',
+  eigeneBedienung: true,
   anleitung: 'Tippe das Ergebnis ein und drücke OK. Mit jeder richtigen Antwort fährt Tilda weiter. Wer mag, schaltet den Turbo ein.',
 };

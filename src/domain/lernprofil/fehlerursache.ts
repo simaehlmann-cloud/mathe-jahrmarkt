@@ -27,12 +27,15 @@ export function bestimmeUrsache(s: Antwortsignal): Ursache | undefined {
       return 'gelesen';
     case 'zehner':
     case 'ziffern':
+    case 'uebertrag':
       return 'verrechnet';
     case 'nachbaraufgabe':
       return 'unsicher';
     case 'umkehr':
     case 'stelle':
     case 'buendel':
+    case 'skala':
+    case 'runden':
       return 'konzept';
     default:
       return 'unsicher';

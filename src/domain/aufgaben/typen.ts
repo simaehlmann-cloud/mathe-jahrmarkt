@@ -19,6 +19,12 @@ export type FehlerArt =
   | 'stelle'
   /** Nicht entbündelt, z. B. 4 T 13 H als 41 3.. gelesen. */
   | 'buendel'
+  /** Skala am Zahlenstrahl falsch gelesen, z. B. einen Strich als 1 statt als 50 gezählt. */
+  | 'skala'
+  /** Falsch gerundet, z. B. immer aufgerundet oder auf die falsche Stelle. */
+  | 'runden'
+  /** Übertrag vergessen oder zu viel, z. B. 340 + 80 = 320. */
+  | 'uebertrag'
   /** Kein bekanntes Muster. */
   | 'sonstige';
 
@@ -84,7 +90,45 @@ export interface StellenwertAufgabe extends AufgabeBasis {
   bausteine: Baustein[];
 }
 
-export type Aufgabe = EinmaleinsAufgabe | StellenwertAufgabe;
+/** Zahlenstrahl: von `start` bis `ende`, ein Strich alle `schritt`, beschriftet alle `beschriftung`. */
+export interface Strahl {
+  start: number;
+  ende: number;
+  schritt: number;
+  beschriftung: number;
+}
+
+export interface ZahlenstrahlAufgabe extends AufgabeBasis {
+  art: 'zahlenstrahl';
+  /** ziehen: Gondel an die Zahl bringen (freie Position); ablesen: Zahl an der Gondel erkennen. */
+  form: 'ziehen' | 'ablesen';
+  strahl: Strahl;
+}
+
+export interface UeberschlagAufgabe extends AufgabeBasis {
+  art: 'ueberschlag';
+  /** runden: eine Zahl runden; plus, minus, mal: Überschlag einer Rechnung. */
+  form: 'runden' | 'plus' | 'minus' | 'mal';
+  /** Zahlen der Rechnung (beim Runden nur eine). */
+  zahlen: number[];
+  /** Die gerundeten Zahlen, mit denen überschlagen wird. */
+  gerundet: number[];
+  /** Rundungsstelle als Zehnerpotenz je Zahl (1 = Zehner, 2 = Hunderter …). */
+  stellen: number[];
+  /** Genaues Ergebnis (zum Vergleich auf der Waage). */
+  genau: number;
+}
+
+export interface HalbschriftlichAufgabe extends AufgabeBasis {
+  art: 'halbschriftlich';
+  op: '+' | '−' | '·' | ':';
+  a: number;
+  b: number;
+  /** Rechenweg in Schritten, z. B. ['467 + 20 = 487', '487 + 8 = 495']. */
+  weg: string[];
+}
+
+export type Aufgabe = EinmaleinsAufgabe | StellenwertAufgabe | ZahlenstrahlAufgabe | UeberschlagAufgabe | HalbschriftlichAufgabe;
 
 export function istEinmaleins(a: Aufgabe): a is EinmaleinsAufgabe {
   return a.art === 'mal' || a.art === 'geteilt' || a.art === 'platzhalter';

@@ -283,6 +283,43 @@ try {
     }
     pruefe(hilfeGesehen, `${name}: Dosenwerfen mit Stellenwert-Hilfe spielbar`);
 
+    // Seilbahn, Waage, Domino: Probe lösen, dann bis zur Hilfe spielen und sie durchlaufen
+    const budeTesten = async (titel, kurz, probe) => {
+      await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      await page.getByRole('button', { name: 'Bronze spielen' }).click();
+      await page.locator('canvas').waitFor();
+      await page.waitForTimeout(900);
+      await foto(`${kurz}-probe`);
+      await abwarten(await tippeDose(probe));
+      await page.waitForTimeout(400);
+      await foto(`${kurz}-aufgabe`);
+      let hilfe = false;
+      for (let i = 0; i < 8 && !hilfe; i++) {
+        const [w] = await page.locator('.nur-leser button').allTextContents();
+        const id = await tippeDose(w);
+        await page.waitForTimeout(1600);
+        hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+        if (!hilfe) await abwarten(id);
+      }
+      if (hilfe) {
+        await foto(`${kurz}-hilfe-1`);
+        await page.getByRole('button', { name: 'Weiter' }).click();
+        await foto(`${kurz}-hilfe-2`);
+        await page.getByRole('button', { name: 'Weiter' }).click();
+        for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
+          if (await page.getByText('Super!').isVisible()) break;
+          await knopf.click();
+        }
+        await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+      }
+      pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
+    };
+    await budeTesten('Zahlenstrahl-Seilbahn', '25-seilbahn', '500');
+    await budeTesten('Überschlags-Waage', '26-waage', '300');
+    await budeTesten('Rechendomino', '27-domino', '270');
+
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
   }

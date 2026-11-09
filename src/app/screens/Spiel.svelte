@@ -40,7 +40,7 @@
   let anzeige = $derived(
     aufgabe.art === 'stellenwert' && aufgabe.form === 'wort'
       ? aufgabe.text.replace(/(tausend|hundert|und)(?=.)/g, '$1\u00AD')
-      : `${aufgabe.text}${aufgabe.art === 'mal' ? ' = ?' : ''}`,
+      : `${aufgabe.text}${aufgabe.art === 'mal' || aufgabe.art === 'halbschriftlich' ? ' = ?' : ''}`,
   );
   let phase = $state(runde.aktuellePhase);
   let nummer = $state(runde.nummer);
@@ -220,8 +220,8 @@
     {#if hinweis && !hilfe}<p class="hinweis" role="status">{hinweis}</p>{/if}
   </div>
 
-  <!-- Für Bildschirmleser und Tastatur: dieselben Antworten als Knöpfe (bei freier Eingabe hat die Bude ein Ziffernfeld) -->
-  <div class="nur-leser" hidden={aufgabe.eingabe === 'ziffern'}>
+  <!-- Für Bildschirmleser und Tastatur: dieselben Antworten als Knöpfe (außer die Bude hat eine eigene Eingabe, z. B. ein Ziffernfeld) -->
+  <div class="nur-leser" hidden={def.eigeneBedienung === true}>
     {#each aufgabe.optionen as o (o.wert)}
       <button onclick={() => void antwort(o.wert)} disabled={!bereit || !!hilfe || !!ende}>{o.wert}</button>
     {/each}

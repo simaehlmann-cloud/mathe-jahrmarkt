@@ -1,4 +1,4 @@
-# Code-Review Version 0.5.1
+# Code-Review Version 0.6.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -65,6 +65,16 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | Lange Zahlwörter im Dosenwerfen liefen aus dem Schild | Umbruch an den Wortteilen (tausend, hundert, und), kleinere Schrift bei langen Aufgaben |
 | wichtig | Figur schaute beim Laufen immer nach vorne | Seitenansicht beim Laufen nach links/rechts, Hinterkopf beim Laufen nach oben, im Stehen Blick zum Kind |
 | Text | „Abendmarkt“ | heißt jetzt „Sternenmarkt“ (interne Kennung bleibt, keine Datenumstellung nötig) |
+
+## Neu in 0.6.0 geprüft
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| Mathematik | Überschlag: eine falsche Option könnte dem genauen Ergebnis näher sein als der richtige Überschlag | Aufgaben werden nur verwendet, wenn der Überschlag eindeutig am nächsten liegt; Test über 1 200 Aufgaben |
+| Mathematik | Rechendomino | Bronze immer mit Übertrag/Entbündeln, Ergebnisse ganzzahlig und positiv, Rechenweg endet beim Ergebnis (Test) |
+| Bedienung | Seilbahn auf kleinen Handys | 20 Abschnitte mit Einrasten, Tippen aufs Seil als Alternative zum Ziehen, Bestätigen mit „Hier halten!“; Zahlen über dem Seil, damit die Gondel sie nicht verdeckt |
+| Barrierefreiheit | Ziehen ist für Bildschirmleser nicht bedienbar | versteckte Antwortknöpfe bleiben, nur Buden mit eigener zugänglicher Eingabe (Ziffernfeld) blenden sie aus |
+| Architektur | gemeinsame Auswahl-Logik und Hilfe-Rahmen für alle Buden; neue Fehlerarten (Skala, Runden, Übertrag) fließen ins Lernprofil | |
 
 ## Offen
 

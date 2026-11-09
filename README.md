@@ -4,9 +4,9 @@ Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die 
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.5.0)
+## Stand dieser Version (0.6.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Überschlags-Waage, Rechendomino.
 
 | Bereich | Stand |
 | --- | --- |
@@ -14,6 +14,9 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Geschichte | Flinka mit Intro, Gassen-Begrüßung, Lob bei jeder neuen Stufe |
 | Einmaleins-Turbo | Ergebnis mit Ziffernfeld eintippen, Kart fährt mit jeder richtigen Antwort; freiwilliger Turbo mit Zeitleiste und Bonus; Gold mit Analogaufgaben (7 · 80) und eigener Hilfe |
 | Dosenwerfen | Stellenwerte bis 1 000 / 100 000 / 1 000 000: Stellentafel, Zahlwort, Ziffernwert, Entbündeln; falsche Dosen aus typischen Fehlern (Null vergessen, wie gesprochen, nicht gebündelt); Hilfe mit Stellenwerttafel |
+| Zahlenstrahl-Seilbahn | Gondel am Seil (Zahlenstrahl mit 20 Abschnitten) an die Zahl ziehen oder ablesen; bis 1 000, 100 000, Ausschnitte mit Nachbartausendern; Hilfe: Wert eines Strichs, Sprünge vom beschrifteten Strich |
+| Überschlags-Waage | rundes Gewicht zum Sack legen: Runden, Überschlag bei Plus/Minus und Mal; die richtige Antwort ist immer dem genauen Ergebnis am nächsten; Hilfe: Runden am Zahlenstrahl, dann mit runden Zahlen rechnen |
+| Rechendomino | Kette aus Aufgabe und Ergebnis, halbschriftlich Plus/Minus mit Übertrag, Mal und Geteilt durch Zerlegen; Hilfe zeigt den Rechenweg in Schritten |
 | Dartbude | Bronze, Silber, Gold, Probewurf, Hilfe nach Fehlern, Nochmal-Aufgabe, Rekord, Familien-Bestenliste, Verlaufskurve |
 | Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
 | Buden | vier Dachformen (Markise, Zirkuszelt, Kuppel, Holzgiebel), eigene Farben und ein Motiv je Bude, auch auf dem Rollladen noch nicht gebauter Buden |
@@ -25,7 +28,7 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
 | Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
 | Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
-| Noch nicht | übrige 21 Buden, Jahrmarkt-Check, Sternenmarkt, nativer Kauf |
+| Noch nicht | übrige 18 Buden, Jahrmarkt-Check, Sternenmarkt, nativer Kauf |
 
 ## App-Symbol und Startbild
 

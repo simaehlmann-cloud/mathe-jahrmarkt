@@ -175,3 +175,98 @@ describe('Begehbarer Jahrmarkt', () => {
     expect(p.x).toBe(WELT_BREITE / 2);
   });
 });
+
+import { baueHalbschriftlich, halbschriftlichAufgabe, rechenweg } from '../src/domain/aufgaben/halbschriftlich';
+import { baueUeberschlag, runde, ueberschlagAufgabe } from '../src/domain/aufgaben/ueberschlag';
+import { ABSCHNITTE, istBeschriftet, wertAnStrich, zahlenstrahlAufgabe } from '../src/domain/aufgaben/zahlenstrahl';
+import type { Aufgabe as AlleAufgaben } from '../src/domain/aufgaben/typen';
+
+const pruefeOptionen = (a: AlleAufgaben) => {
+  const werte = a.optionen.map((o) => o.wert);
+  expect(new Set(werte).size).toBe(werte.length);
+  expect(werte.filter((w) => w === a.antwort)).toHaveLength(1);
+  expect(werte.every((w) => Number.isInteger(w) && w > 0)).toBe(true);
+  expect(a.optionen.filter((o) => o.wert !== a.antwort).every((o) => o.fehlerArt)).toBe(true);
+};
+
+describe('Zahlenstrahl-Seilbahn', () => {
+  it('Ziel liegt auf einem Strich, 20 Abschnitte, Zahlenraum der Stufe', () => {
+    const rng = createRng(21);
+    const max = { bronze: 1000, silber: 100_000, gold: 1_000_000 } as const;
+    for (const stufe of STUFEN) {
+      for (let i = 0; i < 300; i++) {
+        const a = zahlenstrahlAufgabe(stufe, rng);
+        pruefeOptionen(a);
+        const s = a.strahl;
+        expect((s.ende - s.start) / s.schritt).toBe(ABSCHNITTE);
+        expect((a.antwort - s.start) % s.schritt).toBe(0);
+        expect(a.antwort).toBeGreaterThan(s.start);
+        expect(a.antwort).toBeLessThan(s.ende);
+        expect(s.ende).toBeLessThanOrEqual(max[stufe]);
+        if (a.form === 'ablesen') expect(a.optionen).toHaveLength(4);
+        else expect(a.eingabe).toBe('ziffern');
+      }
+    }
+  });
+  it('Beschriftung: Enden immer, in Gold teils nur die Enden', () => {
+    const s = { start: 7000, ende: 9000, schritt: 100, beschriftung: 2000 };
+    expect(istBeschriftet(s, 7000) && istBeschriftet(s, 9000)).toBe(true);
+    expect(istBeschriftet(s, 8000)).toBe(false);
+    expect(wertAnStrich(s, 3)).toBe(7300);
+  });
+});
+
+describe('Überschlags-Waage', () => {
+  it('Runden nach Schulregel', () => {
+    expect(runde(347, 2)).toBe(300);
+    expect(runde(350, 2)).toBe(400);
+    expect(runde(4651, 3)).toBe(5000);
+  });
+  it('richtiges Gewicht ist dem genauen Ergebnis am nächsten', () => {
+    const rng = createRng(31);
+    for (const stufe of STUFEN) {
+      for (let i = 0; i < 400; i++) {
+        const a = ueberschlagAufgabe(stufe, rng);
+        pruefeOptionen(a);
+        expect(a.optionen).toHaveLength(4);
+        if (a.form !== 'runden') {
+          for (const o of a.optionen) if (o.wert !== a.antwort) expect(Math.abs(a.genau - o.wert)).toBeGreaterThan(Math.abs(a.genau - a.antwort));
+        }
+      }
+    }
+  });
+  it('Überschlag Mal rundet beide Faktoren', () => {
+    const rng = createRng(2);
+    for (let i = 0; i < 50; i++) {
+      const a = baueUeberschlag('mal', 'gold', rng);
+      expect(a.antwort).toBe((a.gerundet[0] ?? 0) * (a.gerundet[1] ?? 0));
+    }
+  });
+});
+
+describe('Rechendomino', () => {
+  it('Ergebnisse stimmen, Rechenweg endet beim Ergebnis', () => {
+    const rng = createRng(41);
+    for (const stufe of STUFEN) {
+      for (let i = 0; i < 400; i++) {
+        const a = halbschriftlichAufgabe(stufe, rng);
+        pruefeOptionen(a);
+        expect(a.optionen).toHaveLength(4);
+        const ergebnis = a.op === '+' ? a.a + a.b : a.op === '−' ? a.a - a.b : a.op === '·' ? a.a * a.b : a.a / a.b;
+        expect(a.antwort).toBe(ergebnis);
+        expect(Number.isInteger(a.antwort) && a.antwort > 0).toBe(true);
+        const letzter = a.weg[a.weg.length - 1] ?? '';
+        expect(letzter.replace(/ /g, '').endsWith(`= ${a.antwort}`)).toBe(true);
+      }
+    }
+  });
+  it('Bronze bleibt bis 1 000 und braucht einen Übertrag', () => {
+    const rng = createRng(7);
+    for (let i = 0; i < 200; i++) {
+      const a = baueHalbschriftlich('+', false, rng);
+      expect(a.antwort).toBeLessThanOrEqual(1000);
+    }
+    expect(rechenweg('+', 467, 28)).toEqual(['467 + 20 = 487', '487 + 8 = 495']);
+    expect(rechenweg(':', 744, 6)).toEqual(['720 : 6 = 120', '24 : 6 = 4', '120 + 4 = 124']);
+  });
+});
