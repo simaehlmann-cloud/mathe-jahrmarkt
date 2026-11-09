@@ -276,7 +276,7 @@
               {#each stimmen as st (st.uri)}<option value={st.uri}>{st.name}</option>{/each}
             </select>
           </label>
-          <button class="ticket hell" onclick={() => app.sprich('Hallo! Ich bin Flinka. Was ist sieben mal acht?')}>Probehören</button>
+          <button class="ticket hell" onclick={() => app.sprich('Hallo! Ich bin Flinka. Was ist sieben mal acht?', true)}>Probehören</button>
           {#if stimmen.length === 0}
             <p class="hinweis">Auf diesem Gerät wurde keine deutsche Stimme ohne Internet gefunden. In den Android-Einstellungen unter „Sprachausgabe“ lässt sich eine deutsche Stimme herunterladen.</p>
           {:else}

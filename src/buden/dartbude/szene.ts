@@ -1,6 +1,7 @@
 import { Circle, Container, Graphics, Text } from 'pixi.js';
 import type { Aufgabe } from '../../domain/aufgaben/typen';
 import { erstelleBuehne, kurven, type Buehne } from '../../engine/buehne';
+import { schriftBereit } from '../gemeinsam/schrift';
 import type { BudeSzene, SzenenKontext } from '../typen';
 
 const BALLONFARBEN = [0xe23a4e, 0xffc62b, 0x3c78d8, 0x3fae6a, 0x7b5ea7, 0xf07f2a];
@@ -16,14 +17,6 @@ interface Ballon {
   geplatzt: boolean;
 }
 
-/** Schriftart sicher geladen, bevor PixiJS Text auf die Leinwand zeichnet. */
-async function schriftBereit(): Promise<void> {
-  try {
-    await Promise.all([document.fonts.load('900 40px Nunito'), document.fonts.load('800 20px Nunito')]);
-  } catch {
-    /* Systemschrift als Rückfall */
-  }
-}
 
 export async function erstelleDartSzene(host: HTMLElement, k: SzenenKontext): Promise<BudeSzene> {
   await schriftBereit();

@@ -59,7 +59,7 @@
 </script>
 
 {#if p}
-  <Kopfzeile titel={info.name} zurueck={() => app.zeige({ name: 'gasse', gasse: info.gasse })} />
+  <Kopfzeile titel={info.name} zurueck={() => app.zeige({ name: 'jahrmarkt' })} />
   <div class="vorplatz">
     <div class="bild">
       <BudeStand {bude} zustand={budenZustand(p, bude)} besitzer={bude === 'dartbude'} />

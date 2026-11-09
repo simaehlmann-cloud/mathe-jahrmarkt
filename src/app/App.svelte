@@ -4,7 +4,6 @@
   import BudeVorplatz from './screens/BudeVorplatz.svelte';
   import Eltern from './screens/Eltern.svelte';
   import FigurGestalten from './screens/FigurGestalten.svelte';
-  import Gasse from './screens/Gasse.svelte';
   import Jahrmarkt from './screens/Jahrmarkt.svelte';
   import MatheProfil from './screens/MatheProfil.svelte';
   import Spiel from './screens/Spiel.svelte';
@@ -40,7 +39,7 @@
   $effect(() => {
     const name = app.bildschirm.name;
     const e = app.einstellungen;
-    const spielen = name !== 'laden' && name !== 'eltern' && (name !== 'spiel' || e.musikImSpiel);
+    const spielen = e.musikAn && name !== 'laden' && name !== 'eltern' && (name !== 'spiel' || e.musikImSpiel);
     musik.stelle(spielen, e.lautMusik);
   });
 
@@ -63,8 +62,6 @@
     <Start />
   {:else if b.name === 'jahrmarkt'}
     <Jahrmarkt />
-  {:else if b.name === 'gasse'}
-    <Gasse gasse={b.gasse} />
   {:else if b.name === 'bude'}
     {#key b.bude}<BudeVorplatz bude={b.bude} />{/key}
   {:else if b.name === 'spiel'}

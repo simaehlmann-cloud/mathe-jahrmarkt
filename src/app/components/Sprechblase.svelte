@@ -33,7 +33,7 @@
   <div class="blase">
     <p aria-live="polite">{text}</p>
     <div class="knoepfe">
-      <button class="rund" onclick={() => app.sprich(text)} aria-label="Vorlesen"><Icon name="laut" /></button>
+      <button class="rund" onclick={() => app.sprich(text, true)} aria-label="Vorlesen"><Icon name="laut" /></button>
       <button class="ticket" onclick={weiter}>{i < saetze.length - 1 ? 'Weiter' : 'Los geht’s'}</button>
     </div>
   </div>

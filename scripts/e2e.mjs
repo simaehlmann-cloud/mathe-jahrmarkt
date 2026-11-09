@@ -54,7 +54,7 @@ try {
       const cdp = await ctx.newCDPSession(page);
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.DROSSEL) });
     }
-    const konsole = [];
+    const konsole = (globalThis.konsole = []);
     page.on('console', (m) => m.type() === 'error' && konsole.push(m.text()));
     page.on('pageerror', (e) => konsole.push(String(e)));
     const foto = (n) => page.screenshot({ path: `${BILDER}/${name}-${n}.png` });
@@ -64,17 +64,26 @@ try {
     await page.getByText('Wie heißt du?').waitFor();
     await foto('01-start');
     await page.getByPlaceholder('Spitzname').fill('Alex');
+    // Enter auf der Tastatur führt zum Baukasten, nicht direkt ins Spiel
+    await page.getByPlaceholder('Spitzname').press('Enter');
+    await page.getByText('Gestalte deine Figur, Alex!').waitFor();
+    await foto('01b-figur-anlegen');
+    const vorschau = await page.locator('.vorschau').boundingBox();
+    pruefe(!!vorschau && vorschau.y >= 0 && vorschau.y + vorschau.height <= page.viewportSize().height, `${name}: Figur beim Anlegen sichtbar`);
+    pruefe(await page.getByRole('button', { name: 'Los geht’s' }).isVisible(), `${name}: „Los geht’s“ ohne Blättern sichtbar`);
     await page.getByRole('button', { name: 'Los geht’s' }).click();
     await page.getByText('Ich bin Flinka').waitFor();
     await foto('02-intro');
-    for (let i = 0; i < 3; i++) await weiter();
+    for (let i = 0; i < 4; i++) await weiter();
     await foto('03-jahrmarkt');
 
-    await page.getByRole('button', { name: /Zahlengasse/ }).click();
+    // Begehbarer Jahrmarkt: Tippen auf die Bude, die Figur läuft hin
+    await page.getByRole('button', { name: 'Dartbude öffnen' }).click();
+    await page.waitForTimeout(400);
+    await foto('04-laufen');
     await page.getByText('Willkommen in der Zahlengasse').waitFor();
     await weiter();
-    await foto('04-gasse');
-    await page.getByRole('button', { name: 'Dartbude öffnen' }).click();
+    await page.getByRole('button', { name: 'Bronze spielen' }).waitFor();
     await foto('05-vorplatz');
     pruefe(await page.getByRole('radio', { name: /Silber/ }).getAttribute('aria-checked') === 'false', 'Silber ist ohne Paket nicht gewählt');
 
@@ -134,7 +143,9 @@ try {
     await foto('11-flinka-lob');
     await weiter();
     await page.getByRole('button', { name: 'Zurück' }).click();
-    await foto('12-gasse-licht-katze');
+    await page.locator('.karte').waitFor();
+    await page.waitForTimeout(500);
+    await foto('12-karte-licht-katze');
     pruefe(await page.getByRole('button', { name: 'Katze auf dem Dach' }).isVisible(), 'Katze erscheint nach Bronze');
 
     // Elternbereich
@@ -181,6 +192,84 @@ try {
     await page.getByRole('button', { name: 'Speichern' }).waitFor();
     pruefe(true, `${name}: Figur gestalten vom Startbildschirm erreichbar`);
 
+    // Neue Buden: Einmaleins-Turbo (Ziffernfeld) und Dosenwerfen (Stellenwert)
+    await page.reload();
+    await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+    await page.getByRole('button', { name: 'Einmaleins-Turbo öffnen' }).click();
+    await page.getByRole('button', { name: 'Bronze spielen' }).click();
+    await page.locator('.turbo-bahn canvas').waitFor();
+    await page.waitForTimeout(600);
+    const tippe = async (zahl) => {
+      for (const z of String(zahl)) await page.locator('.tasten button').filter({ hasText: new RegExp(`^${z}$`) }).click();
+      await page.getByRole('button', { name: 'Fertig' }).click();
+    };
+    const turboLoesen = async (falsch = false) => {
+      const text = (await page.locator('.aufgabe').textContent()).replace('= ?', '').trim();
+      const [a, b] = text.split('·').map((x) => Number(x.trim()));
+      const id = await page.locator('.schild').getAttribute('data-aufgabe');
+      await tippe(falsch ? a * b + 1 : a * b);
+      return id;
+    };
+    await foto('18-turbo-probe');
+    await abwarten(await turboLoesen()); // Probe
+    await page.getByRole('button', { name: /Turbo aus/ }).click();
+    pruefe(await page.getByRole('button', { name: 'Turbo an' }).isVisible(), `${name}: Turbo lässt sich einschalten`);
+    await abwarten(await turboLoesen());
+    await foto('19-turbo-fahrt');
+    await turboLoesen(true);
+    await page.getByText('Schauen wir genau hin').waitFor();
+    await foto('20-turbo-hilfe');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
+      if (await page.getByText('Super!').isVisible()) break;
+      await knopf.click();
+    }
+    await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+    await abwarten(await turboLoesen());
+    pruefe(true, `${name}: Einmaleins-Turbo mit Ziffernfeld spielbar`);
+    await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+    await page.getByRole('button', { name: 'Zurück' }).first().click();
+    await page.locator('.karte').waitFor();
+    await foto('20b-karte-vor-turbo');
+
+    await page.getByRole('button', { name: 'Dosenwerfen öffnen' }).click();
+    await page.getByRole('button', { name: 'Bronze spielen' }).click();
+    await page.locator('canvas').waitFor();
+    await page.waitForTimeout(900);
+    await foto('21-dosen-probe');
+    const tippeDose = async (wert) => {
+      await page.waitForTimeout(1000);
+      const id = await page.locator('.schild').getAttribute('data-aufgabe');
+      await page.locator('.nur-leser button').filter({ hasText: new RegExp(`^${wert}$`) }).dispatchEvent('click');
+      return id;
+    };
+    await abwarten(await tippeDose(235)); // Probe: 2 H 3 Z 5 E
+    await foto('22-dosen-aufgabe');
+    // Immer die erste Dose, bis eine falsch ist und die Hilfe kommt
+    let hilfeGesehen = false;
+    for (let i = 0; i < 8; i++) {
+      const [w] = await page.locator('.nur-leser button').allTextContents();
+      await tippeDose(w);
+      await page.waitForTimeout(1500);
+      if (await page.getByText('Schauen wir genau hin').isVisible()) {
+        hilfeGesehen = true;
+        break;
+      }
+    }
+    if (hilfeGesehen) {
+      await foto('23-dosen-hilfe');
+      await page.getByRole('button', { name: 'Weiter' }).click();
+      await foto('24-dosen-hilfe-null');
+      await page.getByRole('button', { name: 'Weiter' }).click();
+      for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
+        if (await page.getByText('Super!').isVisible()) break;
+        await knopf.click();
+      }
+      await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+    }
+    pruefe(hilfeGesehen, `${name}: Dosenwerfen mit Stellenwert-Hilfe spielbar`);
+
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
   }
@@ -191,6 +280,7 @@ try {
     await letzteSeite.screenshot({ path: `${BILDER}/abbruch.png` }).catch(() => {});
     const hinweis = await letzteSeite.locator('.hinweis').allTextContents().catch(() => []);
     console.error('  Hinweise auf dem Bildschirm:', JSON.stringify(hinweis));
+    console.error('  Konsole:', JSON.stringify(globalThis.konsole ?? []));
   }
 } finally {
   await browser.close();

@@ -33,6 +33,9 @@ export interface Einstellungen {
   stimme: string;
   /** Musik auch während der Aufgaben (Standard: aus, damit das Kind sich konzentrieren kann). */
   musikImSpiel: boolean;
+  /** Schalter oben in der Kopfzeile. Die App startet still, bis das Kind sie einschaltet. */
+  musikAn: boolean;
+  stimmeAn: boolean;
 }
 
 export interface Datenbestand {
@@ -56,6 +59,8 @@ export const standardEinstellungen = (): Einstellungen => ({
   sprechtempo: 1.1,
   stimme: '',
   musikImSpiel: false,
+  musikAn: false,
+  stimmeAn: false,
 });
 
 export const leererBestand = (): Datenbestand => ({
@@ -173,6 +178,8 @@ export function pruefeEinstellungen(x: unknown): Einstellungen {
     sprechtempo: zahl(x.sprechtempo, s.sprechtempo, 0.7, 1.6),
     stimme: text(x.stimme, s.stimme).slice(0, 200),
     musikImSpiel: bool(x.musikImSpiel, s.musikImSpiel),
+    musikAn: bool(x.musikAn, s.musikAn),
+    stimmeAn: bool(x.stimmeAn, s.stimmeAn),
   };
 }
 

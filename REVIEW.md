@@ -1,4 +1,4 @@
-# Code-Review Version 0.3.0
+# Code-Review Version 0.5.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -36,6 +36,26 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | Stimme zu langsam und unnatürlich | Tempo 1,1 statt verlangsamt, beste deutsche Offline-Stimme wird gewählt (hochwertige vor kompakten), Tempo und Stimme einstellbar, Netzstimmen ausgeschlossen (Datenschutz) |
 | wichtig | Keine Musik | eigene Komposition per Web Audio, im Hintergrund sofort stumm, beim Rechnen nur auf Wunsch |
 | wichtig | Standard-Symbol von Capacitor | eigenes Symbol (Flinka unter der Markise) als adaptives Android-Symbol und iOS-Symbol ohne Transparenz, eigenes Startbild |
+
+## Neu in 0.4.0 geprüft
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| wichtig | Beim Anlegen schickte die Enter-Taste der Handytastatur das Profil sofort ab; der Baukasten war unter der Tastatur verborgen | zwei Schritte: Name (Taste heißt „Weiter“), dann Figur mit Vorschau, die beim Blättern oben bleibt; Ablauftest prüft, dass Figur und „Los geht’s“ sichtbar sind |
+| wichtig | App begann mit Musik und Stimme | Start still, Schalter in der Kopfzeile; ausdrückliches „Vorlesen“ spricht trotzdem |
+| Architektur | Aufgaben waren fest aufs 1×1 zugeschnitten | Aufgabe als Typ-Vereinigung (Einmaleins, Stellenwert), Gewichtung über Schlüssel, freie Eingabe mit Fehlerkatalog; „zu schnell“ gilt nur fürs Antippen |
+| Mathematik | Stellenwert-Distraktoren | aus Fehlvorstellungen (Null vergessen, Schreibweise wie gesprochen, Zahlendreher, nicht entbündelt), Tests prüfen Eindeutigkeit, Zahlenraum und Bündelsummen |
+| Barrierefreiheit | Ziffernfeld | echte Knöpfe, auch mit Tastatur (Ziffern, Rücktaste, Enter) |
+
+## Neu in 0.5.0 geprüft
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| Architektur | Karte und Wege | reine Funktionen in `domain/karte.ts` (Lage der Buden, Weg über die Allee, nächster Wegpunkt), mit Tests; die Darstellung kennt keine Geometrie-Regeln |
+| wichtig | Intro erschien bei jeder Rückkehr auf den Jahrmarkt (Vergleich mit einem Svelte-Proxy statt mit dem Original) | „gesehen“ wird im Abschluss des Dialogs gesetzt, Ablauftest läuft mehrfach über die Karte |
+| wichtig | doppelte Schlüssel in einer Liste brachen die Darstellung ab | eindeutige Schlüssel; der Ablauftest meldet Konsolenfehler jetzt auch beim Abbruch |
+| Barrierefreiheit | Buden auf der Karte sind echte Knöpfe („Dartbude öffnen“, „…, bald geöffnet“); bei „Bewegung reduzieren“ springt die Figur ohne Laufen | |
+| Leistung | Karte als skalierte Ebene mit nativem Wischen; Laufen per requestAnimationFrame, Kamera folgt weich | |
 
 ## Offen
 

@@ -101,8 +101,12 @@
       align-items: start;
     }
   }
+  /* Die Vorschau bleibt beim Blättern oben sichtbar. */
   .vorschau {
     justify-self: center;
+    position: sticky;
+    top: 0;
+    z-index: 2;
     background: radial-gradient(circle, #fff4cc 0 60%, transparent 61%);
     padding: 10px;
   }

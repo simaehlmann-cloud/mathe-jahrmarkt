@@ -13,7 +13,7 @@ const ZEHNER = ['', '', 'zwanzig', 'dreißig', 'vierzig', 'fünfzig', 'sechzig',
 
 /** Zahlwort für 0 bis 9999. */
 export function zahlInWorten(n: number): string {
-  if (!Number.isInteger(n) || n < 0 || n > 9999) throw new RangeError(`Zahl außerhalb 0..9999: ${n}`);
+  if (!Number.isInteger(n) || n < 0 || n > 999_999) throw new RangeError(`Zahl außerhalb 0..999999: ${n}`);
   if (n < 10) return EINER[n] as string;
   if (n < 20) return ZEHN_BIS_NEUNZEHN[n - 10] as string;
   if (n < 100) {
@@ -28,7 +28,9 @@ export function zahlInWorten(n: number): string {
   }
   const t = Math.floor(n / 1000);
   const rest = n % 1000;
-  return `${EINER_VOR_UND[t]}tausend${rest ? zahlInWorten(rest) : ''}`;
+  // „eins“ wird vor „tausend“ zu „ein“: einundzwanzigtausend, hunderteintausend
+  const tausender = zahlInWorten(t).replace(/eins$/, 'ein');
+  return `${tausender}tausend${rest ? zahlInWorten(rest) : ''}`;
 }
 
 export interface Sperrfrage {

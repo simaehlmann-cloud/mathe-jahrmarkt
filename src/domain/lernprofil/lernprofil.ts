@@ -86,7 +86,7 @@ export function einschaetzen(ereignisse: readonly Ereignis[], kompetenz: Kompete
 export function unsichereReihen(ereignisse: readonly Ereignis[]): number[] {
   const proReihe = new Map<number, { f: number; n: number }>();
   for (const e of ereignisse) {
-    if (!e.gewertet || !e.fakt) continue;
+    if (!e.gewertet || !e.fakt || !/^\d+x\d+$/.test(e.fakt)) continue;
     const teile = e.fakt.split('x').map(Number);
     for (const r of new Set(teile)) {
       if (!Number.isInteger(r) || r < 1 || r > 10) continue;

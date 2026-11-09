@@ -13,5 +13,6 @@ export const dartbude: BudeDefinition = {
   probe: (rng) => baueAufgabe({ a: 2, b: 5 }, 'mal', rng),
   gewichtung: faktGewichtung,
   hilfe: HilfeEinmaleins,
+  ladetext: 'Bruno bläst die Ballons auf …',
   anleitung: 'Tippe auf den Ballon mit dem richtigen Ergebnis. Bruno wirft dann den Pfeil für dich.',
 };

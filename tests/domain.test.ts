@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { faktGewichtung } from '../src/domain/adaptiv/gewichtung';
 import { aehnlicheAufgabe, einmaleinsAufgabe } from '../src/domain/aufgaben/einmaleins';
-import type { Aufgabe } from '../src/domain/aufgaben/typen';
+import type { Aufgabe, EinmaleinsAufgabe } from '../src/domain/aufgaben/typen';
 import { BUDEN, GASSEN, TAGESBUDEN } from '../src/domain/buden';
 import { erzeugeSperrfrage, pruefeSperre, zahlInWorten } from '../src/domain/elternsperre';
 import { abendmarktOffen, budenZustand, rundeVerbuchen, sommerfest } from '../src/domain/fortschritt/fortschritt';
@@ -49,7 +49,7 @@ describe('Kaufgrenze', () => {
     expect(stufeFreigabe(mitBronze, 'dartbude', 'gold', true)).toEqual({ frei: false, grund: 'vorstufe' });
   });
   it('nicht gebaute Buden und Abendmarkt sind gesperrt', () => {
-    expect(stufeFreigabe(profil(), 'dosenwerfen', 'bronze', true).grund).toBe('nichtSpielbar');
+    expect(stufeFreigabe(profil(), 'seilbahn', 'bronze', true).grund).toBe('nichtSpielbar');
   });
   it('Abendmarkt öffnet erst mit Paket und Silber überall', () => {
     let p = profil();
@@ -198,7 +198,9 @@ describe('Rundensteuerung', () => {
     expect(ant.hilfe).toBe(true);
     const nochmal = r.weiter();
     expect(r.aktuellePhase).toBe('nochmal');
-    expect(nochmal?.a === erste.a || nochmal?.b === erste.a).toBe(true);
+    const n1 = nochmal as EinmaleinsAufgabe;
+    const e1 = erste as EinmaleinsAufgabe;
+    expect(n1.a === e1.a || n1.b === e1.a).toBe(true);
     const n2 = r.antworte((nochmal as Aufgabe).antwort, 3000);
     expect(n2.durchgehalten).toBe(true);
     let a = r.weiter();
@@ -310,8 +312,7 @@ import { zurueckZiel } from '../src/app/navigation';
 describe('Zurück-Taste', () => {
   it('führt Schritt für Schritt zurück und schließt nie direkt', () => {
     expect(zurueckZiel({ name: 'spiel', bude: 'dartbude', stufe: 'bronze' }, true)).toEqual({ name: 'bude', bude: 'dartbude' });
-    expect(zurueckZiel({ name: 'bude', bude: 'dartbude' }, true)).toEqual({ name: 'gasse', gasse: 'zahlengasse' });
-    expect(zurueckZiel({ name: 'gasse', gasse: 'zahlengasse' }, true)).toEqual({ name: 'jahrmarkt' });
+    expect(zurueckZiel({ name: 'bude', bude: 'dartbude' }, true)).toEqual({ name: 'jahrmarkt' });
     expect(zurueckZiel({ name: 'figur' }, true)).toEqual({ name: 'profil' });
     expect(zurueckZiel({ name: 'eltern' }, false)).toEqual({ name: 'start' });
     expect(zurueckZiel({ name: 'jahrmarkt' }, true)).toBe('jahrmarktVerlassen');

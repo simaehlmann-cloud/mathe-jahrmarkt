@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { zerlegung } from '../../domain/aufgaben/einmaleins';
+  import { alsEinmaleins, zerlegung } from '../../domain/aufgaben/einmaleins';
   import { createRng, randomSeed } from '../../domain/rng';
   import { app } from '../../app/zustand.svelte';
   import Icon from '../../app/components/Icon.svelte';
@@ -10,7 +10,8 @@
    * Hilfe nach Fehlern in vier Schritten: zeigen, hervorheben, selbst vergleichen, nochmal.
    * Darstellung: Punktefeld mit a Reihen zu je b Punkten, zerlegt in Kernaufgaben (z. B. 7·8 = 5·8 + 2·8).
    */
-  let { aufgabe, gewaehlt, onfertig }: HilfeProps = $props();
+  let { aufgabe: allgemein, gewaehlt, onfertig }: HilfeProps = $props();
+  const aufgabe = $derived(alsEinmaleins(allgemein));
 
   const a = $derived(aufgabe.a);
   const bb = $derived(aufgabe.b);
@@ -90,7 +91,7 @@
       <h2 id="hilfe-titel">
         {#if schritt === 1}Schauen wir genau hin{:else if schritt === 2}So geht es leichter{:else if schritt === 3}Jetzt du{:else}Super!{/if}
       </h2>
-      <button class="rund" onclick={sag} aria-label="Vorlesen"><Icon name="laut" /></button>
+      <button class="rund" onclick={() => app.sprich(SPRECHTEXT[schritt] ?? '', true)} aria-label="Vorlesen"><Icon name="laut" /></button>
     </div>
 
     {#if schritt === 1}

@@ -1,10 +1,14 @@
 import { BUDEN } from '../domain/buden';
 import { dartbude } from './dartbude';
+import { dosenwerfen } from './dosenwerfen';
+import { einmaleinsTurbo } from './turbo';
 import type { BudeDefinition } from './typen';
 
 /** Anmeldung aller spielbaren Buden. Muss zu `spielbar` im Budenregister passen (wird getestet). */
 export const BUDEN_DEFINITIONEN: Readonly<Record<string, BudeDefinition>> = {
   dartbude,
+  'einmaleins-turbo': einmaleinsTurbo,
+  dosenwerfen,
 };
 
 export function budeDefinition(id: string): BudeDefinition {

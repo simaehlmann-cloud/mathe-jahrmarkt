@@ -1,4 +1,4 @@
-import type { GasseId, Stufe } from '../domain/buden';
+import type { Stufe } from '../domain/buden';
 import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
 import type { Aussehen } from '../domain/aussehen';
 import { MAX_PROFILE, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
@@ -14,7 +14,6 @@ export type Bildschirm =
   | { name: 'laden' }
   | { name: 'start' }
   | { name: 'jahrmarkt' }
-  | { name: 'gasse'; gasse: GasseId }
   | { name: 'bude'; bude: string }
   | { name: 'spiel'; bude: string; stufe: Stufe; n?: number }
   | { name: 'profil' }
@@ -28,6 +27,9 @@ class AppZustand {
   bildschirm = $state<Bildschirm>({ name: 'laden' });
   meldung = $state<string | null>(null);
   ladefehler = $state(false);
+  /** Wo die Figur auf dem Jahrmarkt steht (nur für diese Sitzung) und welche Bude zuletzt besucht wurde. */
+  karteOrt: { x: number; y: number } | null = null;
+  letzteBude: string | null = null;
   /** Sätze, die Flinka beim nächsten Bildschirm sagen soll (z. B. nach einer neuen Stufe). */
   flinka = $state<string[] | null>(null);
 
@@ -153,8 +155,10 @@ class AppZustand {
     this.klang.spiele(art, this.einstellungen.lautEffekte);
   }
 
-  sprich(text: string): void {
+  /** Spricht nur, wenn die Stimme oben eingeschaltet ist. `erbeten`: das Kind hat ausdrücklich auf „Vorlesen“ getippt. */
+  sprich(text: string, erbeten = false): void {
     const e = this.einstellungen;
+    if (!e.stimmeAn && !erbeten) return;
     void this.sprache.sprich(text, { lautstaerke: e.lautSprache, tempo: e.sprechtempo, stimme: e.stimme });
   }
 

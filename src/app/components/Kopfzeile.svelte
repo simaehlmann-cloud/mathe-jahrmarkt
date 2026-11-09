@@ -26,6 +26,27 @@
       <span class="taler" aria-label="{p.taler} Taler"><Icon name="taler" groesse={26} />{p.taler}</span>
       <button class="rund" onclick={() => app.zeige({ name: 'profil' })} aria-label="Mein Mathe-Profil"><Icon name="profil" /></button>
     {/if}
+    <div class="ton" role="group" aria-label="Ton">
+      <button
+        class="schalter"
+        class:an={app.einstellungen.musikAn}
+        aria-pressed={app.einstellungen.musikAn}
+        aria-label="Musik"
+        onclick={() => app.aendereEinstellungen({ musikAn: !app.einstellungen.musikAn })}
+      ><Icon name={app.einstellungen.musikAn ? 'musik' : 'musikAus'} groesse={20} /></button>
+      <button
+        class="schalter"
+        class:an={app.einstellungen.stimmeAn}
+        aria-pressed={app.einstellungen.stimmeAn}
+        aria-label="Vorlesen"
+        onclick={() => {
+          const an = !app.einstellungen.stimmeAn;
+          app.aendereEinstellungen({ stimmeAn: an });
+          if (an) app.sprich('Hallo! Ich lese dir jetzt vor.');
+          else void app.sprache.stopp();
+        }}
+      ><Icon name={app.einstellungen.stimmeAn ? 'laut' : 'stumm'} groesse={20} /></button>
+    </div>
     <button class="rund schloss" onclick={() => app.zeige({ name: 'eltern' })} aria-label="Elternbereich"><Icon name="schloss" groesse={20} /></button>
   </div>
 </header>
@@ -87,6 +108,32 @@
     border: 3px solid var(--tinte);
     min-height: 40px;
   }
+  .ton {
+    display: flex;
+    border: 3px solid var(--tinte);
+    border-radius: 22px;
+    background: var(--papier);
+    overflow: hidden;
+    flex: none;
+  }
+  .schalter {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: none;
+    color: var(--tinte);
+    opacity: 0.55;
+    padding: 0;
+  }
+  .schalter + .schalter {
+    border-left: 2px solid var(--tinte);
+  }
+  .schalter.an {
+    opacity: 1;
+    background: var(--senf);
+  }
   .schloss {
     width: 40px;
     height: 40px;
@@ -110,8 +157,16 @@
       height: 32px;
     }
     .rechts :global(.rund) {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
+    }
+    .schalter {
+      width: 34px;
+      height: 36px;
+    }
+    .taler {
+      font-size: 1rem;
+      padding: 2px 8px 2px 4px;
     }
   }
 </style>

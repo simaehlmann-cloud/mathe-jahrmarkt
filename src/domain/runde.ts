@@ -2,7 +2,7 @@ import type { Gewichtung } from './aufgaben/einmaleins';
 import type { Aufgabe } from './aufgaben/typen';
 import type { Stufe } from './buden';
 import { AUFGABEN_PRO_RUNDE } from './fortschritt/fortschritt';
-import { bestimmeUrsache, zaehltFuerProfil, type Ursache } from './lernprofil/fehlerursache';
+import { ZU_SCHNELL_MS, bestimmeUrsache, zaehltFuerProfil, type Ursache } from './lernprofil/fehlerursache';
 import type { Ereignis } from './lernprofil/lernprofil';
 import type { Runde } from './profil';
 import type { Rng } from './rng';
@@ -83,14 +83,20 @@ export class Rundensteuerung {
     return this.durchhaltePunkte;
   }
 
-  antworte(wert: number, ms: number): Antwort {
+  /**
+   * @param bonus Zusatzpunkte, die eine Bude für eine richtige Hauptaufgabe vergibt (z. B. Turbo).
+   */
+  antworte(wert: number, ms: number, bonus = 0): Antwort {
     if (this.phase === 'fertig') throw new Error('Runde ist schon beendet');
     const a = this.aufgabe;
-    const option = a.optionen.find((o) => o.wert === wert);
+    // Bei freier Eingabe ist jede Zahl erlaubt; unbekannte Fehler haben kein Muster.
+    const option = a.optionen.find((o) => o.wert === wert) ?? (a.eingabe === 'ziffern' ? { wert, fehlerArt: 'sonstige' as const } : undefined);
     if (!option) throw new Error(`Antwort ${wert} gehört nicht zur Aufgabe ${a.text}`);
     const richtig = wert === a.antwort;
     const uebung = this.phase === 'probe';
-    const ursache = bestimmeUrsache({ richtig, fehlerArt: option.fehlerArt, ms, uebung });
+    // Beim Eintippen ist Raten unwahrscheinlich; „zu schnell“ gilt nur fürs Antippen von Auswahlen.
+    const msSignal = a.eingabe === 'ziffern' ? Math.max(ms, ZU_SCHNELL_MS) : ms;
+    const ursache = bestimmeUrsache({ richtig, fehlerArt: option.fehlerArt, ms: msSignal, uebung });
 
     if (this.phase === 'probe') {
       if (richtig) this.phase = 'haupt';
@@ -130,7 +136,7 @@ export class Rundensteuerung {
     if (richtig) {
       this.richtig++;
       this.serie++;
-      const punkte = PUNKTE_RICHTIG + Math.min(MAX_SERIENBONUS, (this.serie - 1) * PUNKTE_SERIE);
+      const punkte = PUNKTE_RICHTIG + Math.min(MAX_SERIENBONUS, (this.serie - 1) * PUNKTE_SERIE) + Math.max(0, bonus);
       this.punkteSumme += punkte;
       return { richtig, ursache, hilfe: false, wiederholen: false, punkte, durchgehalten: false, ereignis };
     }

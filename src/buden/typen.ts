@@ -8,8 +8,8 @@ import type { Klangart } from '../services/klang';
 
 export interface SzenenKontext {
   reduziert: boolean;
-  /** Das Kind hat eine Antwort gewählt. */
-  onAntwort: (wert: number) => void;
+  /** Das Kind hat eine Antwort gewählt. `bonus`: Zusatzpunkte der Bude (z. B. Turbo). */
+  onAntwort: (wert: number, bonus?: number) => void;
   klang: (art: Klangart) => void;
 }
 
@@ -44,4 +44,6 @@ export interface BudeDefinition {
   hilfe: Component<HilfeProps>;
   /** Kurze Anleitung, die vor der ersten Runde vorgelesen wird. */
   anleitung: string;
+  /** Text, solange die Grafik lädt. */
+  ladetext: string;
 }

@@ -1,6 +1,6 @@
 import type { Stufe } from '../buden';
 import type { Rng } from '../rng';
-import type { Aufgabe, FehlerArt, Option, Rechenart } from './typen';
+import { istEinmaleins, type Aufgabe, type EinmaleinsAufgabe, type FehlerArt, type Option, type Rechenart } from './typen';
 
 /** Kernaufgaben des kleinen 1×1 nach KC: Aufgaben mit einem Faktor 1, 2, 5 oder 10. */
 export const KERN_FAKTOREN: readonly number[] = [1, 2, 5, 10];
@@ -28,8 +28,8 @@ export function faktenDerStufe(stufe: Stufe): Fakt[] {
   return liste;
 }
 
-/** Gewichtung, mit der ein Fakt gezogen wird. Höher = häufiger. */
-export type Gewichtung = (fakt: Fakt) => number;
+/** Gewichtung, mit der eine Aufgabenart (Schlüssel wie „7x8“) gezogen wird. Höher = häufiger. */
+export type Gewichtung = (schluessel: string) => number;
 
 const gleichverteilt: Gewichtung = () => 1;
 
@@ -43,8 +43,8 @@ let zaehler = 0;
 const neueId = (): string => `a${++zaehler}`;
 
 /** Erzeugt eine Aufgabe der Stufe. Die Gewichtung kommt aus der Adaptivität. */
-export function einmaleinsAufgabe(stufe: Stufe, rng: Rng, gewichtung: Gewichtung = gleichverteilt): Aufgabe {
-  const fakt = rng.weighted(faktenDerStufe(stufe), (f) => stufenGewicht(stufe, f) * gewichtung(f));
+export function einmaleinsAufgabe(stufe: Stufe, rng: Rng, gewichtung: Gewichtung = gleichverteilt): EinmaleinsAufgabe {
+  const fakt = rng.weighted(faktenDerStufe(stufe), (f) => stufenGewicht(stufe, f) * gewichtung(faktSchluessel(f.a, f.b)));
   const art: Rechenart = stufe === 'gold' ? rng.weighted<Rechenart>(['mal', 'geteilt', 'platzhalter'], (r) => (r === 'mal' ? 2 : 1)) : 'mal';
   return baueAufgabe(fakt, art, rng);
 }
@@ -53,19 +53,34 @@ export function einmaleinsAufgabe(stufe: Stufe, rng: Rng, gewichtung: Gewichtung
  * Ähnliche Aufgabe nach einem Fehler: dieselbe Reihe, Nachbarfaktor, gleiche Rechenart.
  * So wendet das Kind die Hilfe sofort an.
  */
-export function aehnlicheAufgabe(vorher: Aufgabe, rng: Rng): Aufgabe {
+export function aehnlicheAufgabe(vorherAllgemein: Aufgabe, rng: Rng): EinmaleinsAufgabe {
+  const vorher = alsEinmaleins(vorherAllgemein);
   const kandidaten: Fakt[] = [];
   for (const d of [-1, 1]) {
     const nb = vorher.b + d;
     if (nb >= 1 && nb <= 10) kandidaten.push({ a: vorher.a, b: nb });
   }
   const fakt = rng.pick(kandidaten);
-  return baueAufgabe(fakt, vorher.art, rng);
+  return baueAufgabe(fakt, vorher.art, rng, { eingabe: vorher.eingabe, analog: vorher.analog, tausch: false });
 }
 
-export function baueAufgabe(fakt: Fakt, art: Rechenart, rng: Rng): Aufgabe {
+export function alsEinmaleins(a: Aufgabe): EinmaleinsAufgabe {
+  if (!istEinmaleins(a)) throw new Error(`Keine Einmaleins-Aufgabe: ${a.text}`);
+  return a;
+}
+
+export interface Bauoptionen {
+  eingabe?: EinmaleinsAufgabe['eingabe'];
+  analog?: EinmaleinsAufgabe['analog'];
+  /** Tauschaufgabe erzwingen oder verbieten; ohne Angabe zufällig. */
+  tausch?: boolean;
+}
+
+export function baueAufgabe(fakt: Fakt, art: Rechenart, rng: Rng, o: Bauoptionen = {}): EinmaleinsAufgabe {
+  if (o.analog && art !== 'mal') throw new Error('Analogaufgaben gibt es nur als Malaufgabe');
+  if (o.analog) return baueAnalog(fakt, o.analog.seite, rng, o.eingabe);
   // Tauschaufgabe: in der Hälfte der Fälle Faktoren vertauscht anzeigen (nur bei Mal).
-  const tausch = art === 'mal' && rng.next() < 0.5;
+  const tausch = art === 'mal' && (o.tausch ?? rng.next() < 0.5);
   const a = tausch ? fakt.b : fakt.a;
   const b = tausch ? fakt.a : fakt.b;
   const produkt = a * b;
@@ -94,7 +109,8 @@ export function baueAufgabe(fakt: Fakt, art: Rechenart, rng: Rng): Aufgabe {
     text,
     sprechtext,
     antwort,
-    optionen: optionenFuer(art, a, b, rng),
+    optionen: o.eingabe === 'ziffern' ? fehlerkatalog(antwort, distraktoren(art, a, b)) : optionenFuer(art, a, b, rng),
+    ...(o.eingabe ? { eingabe: o.eingabe } : {}),
     kompetenz: 'kopfrechnen',
     dimension: art === 'mal' ? 'sicherheit' : 'wissen',
     fakt: faktSchluessel(a, b),
@@ -103,6 +119,67 @@ export function baueAufgabe(fakt: Fakt, art: Rechenart, rng: Rng): Aufgabe {
     b,
     kern: istKern(a, b),
   };
+}
+
+/**
+ * Analogaufgabe: 7 · 80 = 560 aus 7 · 8 = 56. Typische Fehler: Null vergessen (56) oder zu viel (5600),
+ * Fehler der Grundaufgabe mal 10.
+ */
+function baueAnalog(fakt: Fakt, seite: 'a' | 'b', rng: Rng, eingabe: EinmaleinsAufgabe['eingabe']): EinmaleinsAufgabe {
+  const { a, b } = fakt;
+  const antwort = a * b * 10;
+  const links = seite === 'a' ? a * 10 : a;
+  const rechts = seite === 'b' ? b * 10 : b;
+  const fehler: { wert: number; fehlerArt: FehlerArt }[] = [
+    { wert: a * b, fehlerArt: 'stelle' },
+    { wert: a * b * 100, fehlerArt: 'stelle' },
+    ...distraktoren('mal', a, b).filter((d) => d.wert > 0).map((d) => ({ wert: d.wert * 10, fehlerArt: d.fehlerArt })),
+  ];
+  return {
+    id: neueId(),
+    text: `${links} · ${rechts}`,
+    sprechtext: `${links} mal ${rechts}`,
+    antwort,
+    optionen: eingabe === 'ziffern' ? fehlerkatalog(antwort, fehler) : auswahlAus(antwort, fehler, rng),
+    ...(eingabe ? { eingabe } : {}),
+    kompetenz: 'kopfrechnen',
+    dimension: 'anwendung',
+    fakt: faktSchluessel(a, b),
+    art: 'mal',
+    a,
+    b,
+    kern: istKern(a, b),
+    analog: { seite },
+  };
+}
+
+/** Bei freier Eingabe: alle typischen Fehler als unsichtbare Optionen, damit die Ursache erkannt wird. */
+export function fehlerkatalog(antwort: number, fehler: readonly { wert: number; fehlerArt: FehlerArt }[]): Option[] {
+  const gesehen = new Set<number>([antwort]);
+  const liste: Option[] = [{ wert: antwort }];
+  for (const f of fehler) {
+    if (f.wert < 0 || gesehen.has(f.wert)) continue;
+    gesehen.add(f.wert);
+    liste.push({ wert: f.wert, fehlerArt: f.fehlerArt });
+  }
+  return liste;
+}
+
+function auswahlAus(antwort: number, fehler: readonly { wert: number; fehlerArt: FehlerArt }[], rng: Rng): Option[] {
+  const katalog = fehlerkatalog(antwort, fehler).slice(1);
+  const falsche = rng.shuffle(katalog).slice(0, OPTIONEN_PRO_AUFGABE - 1);
+  return rng.shuffle([{ wert: antwort }, ...falsche]);
+}
+
+/**
+ * Einmaleins-Turbo: freie Eingabe mit Ziffernfeld. Bronze Kernaufgaben, Silber das ganze 1×1,
+ * Gold zu zwei Dritteln Analogaufgaben wie 7 · 80 oder 70 · 8.
+ */
+export function turboAufgabe(stufe: Stufe, rng: Rng, gewichtung: Gewichtung = gleichverteilt): EinmaleinsAufgabe {
+  const fakten = faktenDerStufe(stufe).filter((f) => stufe !== 'gold' || (f.a > 1 && f.b > 1 && f.a < 10 && f.b < 10));
+  const fakt = rng.weighted(fakten, (f) => stufenGewicht(stufe, f) * gewichtung(faktSchluessel(f.a, f.b)));
+  if (stufe === 'gold' && rng.next() < 2 / 3) return baueAufgabe(fakt, 'mal', rng, { eingabe: 'ziffern', analog: { seite: rng.next() < 0.5 ? 'a' : 'b' } });
+  return baueAufgabe(fakt, 'mal', rng, { eingabe: 'ziffern' });
 }
 
 /** Falsche Antworten aus typischen Fehlvorstellungen, ergänzt um nahe Zahlen. */

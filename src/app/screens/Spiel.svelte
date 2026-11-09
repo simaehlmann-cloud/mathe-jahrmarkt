@@ -62,14 +62,14 @@
     if (app.einstellungen.automatischVorlesen) app.sprich(phase === 'probe' ? `Probewurf. ${a.sprechtext}` : a.sprechtext);
   }
 
-  async function antwort(wert: number) {
+  async function antwort(wert: number, bonus = 0) {
     if (!szene || hilfe || ende || beschaeftigt) return;
     beschaeftigt = true;
     szene.sperre(true);
     void app.sprache.stopp();
     const ms = performance.now() - gezeigtUm;
     const a = aufgabe;
-    const erg = runde.antworte(wert, ms);
+    const erg = runde.antworte(wert, ms, bonus);
     if (erg.richtig) {
       void vibriere('leicht');
       await szene.treffer(wert);
@@ -144,7 +144,7 @@
     def
       .erstelleSzene(host, {
         reduziert: app.einstellungen.animationenReduziert || matchMedia('(prefers-reduced-motion: reduce)').matches,
-        onAntwort: (w) => void antwort(w),
+        onAntwort: (w, bonus) => void antwort(w, bonus),
         klang: (k) => app.spieleKlang(k),
       })
       .then((s) => {
@@ -196,7 +196,7 @@
       {/if}
       <span class="aufgabe">{aufgabe.text}{aufgabe.art === 'mal' ? ' = ?' : ''}</span>
     </div>
-    <button class="rund" onclick={() => app.sprich(aufgabe.sprechtext)} aria-label="Aufgabe vorlesen"><Icon name="laut" /></button>
+    <button class="rund" onclick={() => app.sprich(aufgabe.sprechtext, true)} aria-label="Aufgabe vorlesen"><Icon name="laut" /></button>
   </div>
   <div class="status">
     <span class="stufe">{info.name} · {STUFEN_NAME[stufe]}</span>
@@ -209,13 +209,13 @@
   </div>
 
   <div class="buehne" bind:this={host}>
-    {#if !bereit && !fehlerBeimLaden}<p class="laden">Bruno bläst die Ballons auf …</p>{/if}
+    {#if !bereit && !fehlerBeimLaden}<p class="laden">{def.ladetext}</p>{/if}
     {#if fehlerBeimLaden}<p class="laden">Die Bude konnte nicht starten. Bitte die App neu öffnen.</p>{/if}
     {#if hinweis && !hilfe}<p class="hinweis" role="status">{hinweis}</p>{/if}
   </div>
 
-  <!-- Für Bildschirmleser und Tastatur: dieselben Antworten als Knöpfe -->
-  <div class="nur-leser">
+  <!-- Für Bildschirmleser und Tastatur: dieselben Antworten als Knöpfe (bei freier Eingabe hat die Bude ein Ziffernfeld) -->
+  <div class="nur-leser" hidden={aufgabe.eingabe === 'ziffern'}>
     {#each aufgabe.optionen as o (o.wert)}
       <button onclick={() => void antwort(o.wert)} disabled={!bereit || !!hilfe || !!ende}>{o.wert}</button>
     {/each}
@@ -236,7 +236,7 @@
           <h2 id="ende-titel">{ende.geschafft ? (ende.erster ? `${STUFEN_NAME[stufe]} geschafft!` : 'Stark gespielt!') : 'Runde geschafft!'}</h2>
           {#if ende.rekord}<p class="rekord">Neuer Rekord!</p>{/if}
           <p class="gross">{ende.punkte} Punkte</p>
-          <p>{ende.richtig} von {AUFGABEN_PRO_RUNDE} beim ersten Wurf getroffen.</p>
+          <p>{ende.richtig} von {AUFGABEN_PRO_RUNDE} beim ersten Versuch richtig.</p>
           <p class="taler"><Icon name="taler" groesse={26} /> +{ende.taler} Taler</p>
           {#if !ende.geschafft}<p class="klein">Mit 8 Treffern schaffst du die Stufe. Du kommst näher!</p>{/if}
           <div class="knoepfe">

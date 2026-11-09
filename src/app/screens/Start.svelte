@@ -7,13 +7,23 @@
   import { app } from '../zustand.svelte';
 
   let anlegen = $state(app.bestand.profile.length === 0);
+  /** Profil anlegen in zwei Schritten: erst der Name, dann die Figur. */
+  let schritt = $state<'name' | 'figur'>('name');
   let name = $state('');
   let figur = $state<FigurId>('fuchs');
   let aussehen = $state<Aussehen>(standardAussehen());
   let voll = $derived(app.bestand.profile.length >= MAX_PROFILE);
 
-  function speichern(e: SubmitEvent) {
+  /** Enter auf der Handytastatur führt zum nächsten Schritt, nicht direkt ins Spiel. */
+  function weiter(e: SubmitEvent) {
     e.preventDefault();
+    if (name.trim().length === 0) return;
+    (document.activeElement as HTMLElement | null)?.blur();
+    schritt = 'figur';
+    requestAnimationFrame(() => document.querySelector('.start')?.scrollTo({ top: 0 }));
+  }
+
+  function speichern() {
     if (app.profilAnlegen(name, figur, aussehen)) {
       app.spieleKlang('jubel');
       app.zeige({ name: 'jahrmarkt' });
@@ -55,22 +65,41 @@
         {/if}
       </div>
     {:else}
-      <form class="inhalt" onsubmit={speichern}>
-        <h2>Wie heißt du?</h2>
-        <label class="nur-leser" for="name">Spitzname</label>
-        <input id="name" bind:value={name} maxlength={MAX_NAME} placeholder="Spitzname" autocomplete="off" autocapitalize="words" />
-        <p class="klein">Ein Spitzname reicht. Er bleibt nur auf diesem Gerät.</p>
-        <h2>Gestalte deine Figur</h2>
-        <Baukasten bind:figur bind:aussehen />
-        <div class="knoepfe">
-          {#if app.bestand.profile.length > 0}
-            <button type="button" class="ticket hell" onclick={() => (anlegen = false)}>Zurück</button>
-          {/if}
-          <button type="submit" class="ticket" disabled={name.trim().length === 0}>Los geht’s</button>
+      {#if schritt === 'name'}
+        <form class="inhalt" onsubmit={weiter}>
+          <h2>Wie heißt du?</h2>
+          <label class="nur-leser" for="name">Spitzname</label>
+          <input
+            id="name"
+            bind:value={name}
+            maxlength={MAX_NAME}
+            placeholder="Spitzname"
+            autocomplete="off"
+            autocapitalize="words"
+            enterkeyhint="next"
+          />
+          <p class="klein">Ein Spitzname reicht. Er bleibt nur auf diesem Gerät.</p>
+          <div class="knoepfe">
+            {#if app.bestand.profile.length > 0}
+              <button type="button" class="ticket hell" onclick={() => (anlegen = false)}>Zurück</button>
+            {/if}
+            <button type="submit" class="ticket" disabled={name.trim().length === 0}>Weiter</button>
+          </div>
+        </form>
+      {:else}
+        <div class="inhalt">
+          <h2>Gestalte deine Figur, {name.trim()}!</h2>
+          <Baukasten bind:figur bind:aussehen />
         </div>
-      </form>
+      {/if}
     {/if}
   </div>
+  {#if anlegen && schritt === 'figur'}
+    <div class="aktion">
+      <button type="button" class="ticket hell" onclick={() => (schritt = 'name')}>Zurück</button>
+      <button type="button" class="ticket" onclick={speichern}>Los geht’s</button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -159,6 +188,22 @@
   .klein {
     font-size: 0.95rem;
     color: var(--tinte-weich);
+  }
+  .aktion {
+    position: sticky;
+    bottom: 0;
+    width: min(100%, 44rem);
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    padding: 12px 0 calc(4px + var(--unten));
+    margin-top: auto;
+    background: linear-gradient(to bottom, transparent, rgb(255 253 247 / 0.92) 35%);
+    z-index: 3;
+  }
+  .aktion .ticket {
+    flex: 1;
+    max-width: 16rem;
   }
   .knoepfe {
     display: flex;

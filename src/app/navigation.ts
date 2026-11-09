@@ -1,4 +1,3 @@
-import { budeInfo } from '../domain/buden';
 import type { Bildschirm } from './zustand.svelte';
 
 /**
@@ -15,13 +14,12 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
       return hatProfil ? { name: 'jahrmarkt' } : 'jahrmarktVerlassen';
     case 'jahrmarkt':
       return 'jahrmarktVerlassen';
-    case 'gasse':
     case 'profil':
     case 'andenken':
     case 'eltern':
       return hatProfil ? { name: 'jahrmarkt' } : { name: 'start' };
     case 'bude':
-      return { name: 'gasse', gasse: budeInfo(b.bude).gasse };
+      return { name: 'jahrmarkt' };
     case 'spiel':
       return { name: 'bude', bude: b.bude };
     case 'figur':

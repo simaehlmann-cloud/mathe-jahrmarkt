@@ -31,6 +31,8 @@ export function bestimmeUrsache(s: Antwortsignal): Ursache | undefined {
     case 'nachbaraufgabe':
       return 'unsicher';
     case 'umkehr':
+    case 'stelle':
+    case 'buendel':
       return 'konzept';
     default:
       return 'unsicher';

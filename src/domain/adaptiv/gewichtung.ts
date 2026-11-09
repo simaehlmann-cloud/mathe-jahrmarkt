@@ -1,10 +1,11 @@
-import { faktSchluessel, type Fakt, type Gewichtung } from '../aufgaben/einmaleins';
+import type { Gewichtung } from '../aufgaben/einmaleins';
 import type { Ereignis } from '../lernprofil/lernprofil';
 
 /** Wie viele jüngste Versuche pro Fakt zählen. */
 const JUENGSTE = 5;
 
 /**
+ * Gilt für jeden Aufgabenschlüssel (Einmaleins-Fakt wie „7x8“, Stellenwert-Art wie „stw:null“).
  * Fakten mit jüngsten Fehlern kommen häufiger, sicher gelöste seltener, neue Fakten etwas häufiger.
  * Das Gewicht bleibt zwischen 0,5 und 4, damit nie ein Fakt ganz verschwindet oder alles dominiert.
  */
@@ -17,8 +18,8 @@ export function faktGewichtung(ereignisse: readonly Ereignis[]): Gewichtung {
     if (liste.length > JUENGSTE) liste.shift();
     verlauf.set(e.fakt, liste);
   }
-  return (f: Fakt): number => {
-    const liste = verlauf.get(faktSchluessel(f.a, f.b));
+  return (schluessel: string): number => {
+    const liste = verlauf.get(schluessel);
     if (!liste || liste.length === 0) return 1.5;
     const fehler = liste.filter((r) => !r).length;
     if (fehler === 0) return liste.length >= 3 ? 0.5 : 1;
