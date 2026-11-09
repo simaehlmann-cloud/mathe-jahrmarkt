@@ -113,7 +113,7 @@ export function baueDivision(stufe: Stufe, rng: Rng, form?: string): AuswahlAufg
 
 /* ---------- Pizzabäckerei: Brüche ---------- */
 
-const NENNER_NAME: Record<number, string> = { 2: 'ein Halb', 3: 'ein Drittel', 4: 'ein Viertel', 5: 'ein Fünftel', 6: 'ein Sechstel', 8: 'ein Achtel', 10: 'ein Zehntel', 12: 'ein Zwölftel' };
+const NENNER_NAME: Record<number, string> = { 2: 'die Hälfte', 3: 'ein Drittel', 4: 'ein Viertel', 5: 'ein Fünftel', 6: 'ein Sechstel', 8: 'ein Achtel', 10: 'ein Zehntel', 12: 'ein Zwölftel' };
 const NENNER = [2, 3, 4, 5, 6, 8, 10, 12];
 const bruch = (z: number, n: number): string => `${z}/${n}`;
 

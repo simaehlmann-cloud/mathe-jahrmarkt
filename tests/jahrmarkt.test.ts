@@ -246,3 +246,258 @@ describe('Spiel-Buden', () => {
     }
   });
 });
+
+import { Rundensteuerung } from '../src/domain/runde';
+import { einmaleinsAufgabe } from '../src/domain/aufgaben/einmaleins';
+import { PAUSE_GUELTIG_MS, mitPause, ohnePause, pauseFuer, pruefePausen } from '../src/domain/pause';
+
+describe('Unterbrochene Runde fortsetzen', () => {
+  const neu = (fortsetzen?: Parameters<typeof mitPause>[1]) =>
+    new Rundensteuerung({ bude: 'dartbude', stufe: 'bronze', rng: createRng(4), erzeuge: einmaleinsAufgabe, aehnlich: (a) => a, gewichtung: () => 1, fortsetzen, jetzt: () => 1000 });
+  it('Zwischenstand nach drei Aufgaben, Fortsetzen zählt weiter bis 10', () => {
+    const r = neu();
+    expect(r.zwischenstand()).toBeUndefined();
+    for (let i = 0; i < 3; i++) {
+      r.antworte(r.aktuelle.antwort, 5000);
+      r.weiter();
+    }
+    const z = r.zwischenstand()!;
+    expect(z).toMatchObject({ gestellt: 3, richtig: 3, serie: 3 });
+    expect(z.punkte).toBeGreaterThan(300);
+    const r2 = neu({ ...z, bude: 'dartbude', stufe: 'bronze', am: 0, ergebnisse: [true, true, true] });
+    expect(r2.aktuellePhase).toBe('haupt');
+    expect(r2.nummer).toBe(4);
+    let n = 0;
+    while (r2.aktuellePhase !== 'fertig' && n++ < 30) {
+      r2.antworte(r2.aktuelle.antwort, 5000);
+      r2.weiter();
+    }
+    const e = r2.ergebnis();
+    expect(e.gesamt).toBe(10);
+    expect(e.richtig).toBe(10);
+    expect(e.punkte).toBeGreaterThan(z.punkte);
+  });
+  it('Pausen: je Bude und Stufe eine, gilt einen Tag, Speicherdaten werden geprüft', () => {
+    let p = profil();
+    const pause = { bude: 'kasse', stufe: 'bronze' as const, am: 1000, gestellt: 4, richtig: 3, serie: 1, punkte: 420, durchhalte: 0, ergebnisse: [true, true, false, true] };
+    p = mitPause(p, pause);
+    p = mitPause(p, { ...pause, gestellt: 5 });
+    expect(p.pausen).toHaveLength(1);
+    expect(pauseFuer(p, 'kasse', 'bronze', 2000)?.gestellt).toBe(5);
+    expect(pauseFuer(p, 'kasse', 'silber', 2000)).toBeUndefined();
+    expect(pauseFuer(p, 'kasse', 'bronze', 1000 + PAUSE_GUELTIG_MS)).toBeUndefined();
+    expect(ohnePause(p, 'kasse', 'bronze').pausen).toHaveLength(0);
+    expect(pruefePausen([pause, { ...pause, gestellt: 0 }, { ...pause, richtig: 9 }, 'x'])).toEqual([pause]);
+  });
+});
+
+import { frischmacher } from '../src/domain/auftraege';
+import { KARTEN, gesammelt, neueKarten, offeneFeiern, spieltageDieseWoche, wochenKennung } from '../src/domain/belohnungen';
+import { BLITZ_STUFEN, blitzAufgabe, blitzBloecke, pruefeBlitz } from '../src/domain/blitz';
+
+describe('Frischmacher, Wochenziel, Feiern, Sammelalbum, Blitzrechnen', () => {
+  it('Frischmacher: geschaffte Bude ohne Runde seit 10 Tagen kommt als Auftrag wieder', () => {
+    let p = profil();
+    p = rundeVerbuchen(p, { bude: 'kasse', stufe: 'bronze', start: Date.parse('2026-10-01T10:00'), dauerMs: 1, punkte: 900, richtig: 9, gesamt: 10 }).profil;
+    p = rundeVerbuchen(p, { bude: 'waage', stufe: 'bronze', start: Date.parse('2026-11-08T10:00'), dauerMs: 1, punkte: 900, richtig: 9, gesamt: 10 }).profil;
+    const jetzt = Date.parse('2026-11-09T12:00');
+    expect(frischmacher(p, false, jetzt).map((f) => f.bude)).toEqual(['kasse']);
+    const a = neueAuftraege(p, false, '2026-11-09');
+    expect(a.liste.find((x) => x.frisch)?.bude).toBe('kasse');
+    expect(a.liste).toHaveLength(3);
+    expect(frischmacher(p, false, Date.parse('2026-10-05T12:00'))).toHaveLength(0);
+  });
+  it('Kalenderwoche nach ISO und Spieltage der Woche', () => {
+    expect(wochenKennung(new Date(2026, 10, 9))).toBe('2026-W46');
+    expect(wochenKennung(new Date(2027, 0, 1))).toBe('2026-W53');
+    expect(wochenKennung(new Date(2026, 0, 1))).toBe('2026-W01');
+    let p = profil();
+    for (const d of ['2026-11-09T09:00', '2026-11-09T18:00', '2026-11-11T10:00', '2026-11-02T10:00'])
+      p = rundeVerbuchen(p, { bude: 'kasse', stufe: 'bronze', start: Date.parse(d), dauerMs: 1, punkte: 100, richtig: 1, gesamt: 10 }).profil;
+    expect(spieltageDieseWoche(p, new Date(2026, 10, 12))).toBe(2);
+  });
+  it('Feiern: Gasse fertig, danach nicht noch einmal', () => {
+    let p = profil();
+    for (const b of BUDEN.filter((x) => x.gasse === 'forschergasse')) p = geschafft(p, b.id, 'bronze');
+    expect(offeneFeiern(p)).toEqual([{ art: 'gasse', gasse: 'forschergasse', name: 'Forschergasse' }]);
+    expect(offeneFeiern({ ...p, belohnt: ['gasse:forschergasse'] })).toEqual([]);
+  });
+  it('Sammelkarten: eindeutige Kennungen, neue Karten werden erkannt', () => {
+    expect(new Set(KARTEN.map((k) => k.id)).size).toBe(KARTEN.length);
+    let p = profil();
+    expect(gesammelt(p)).toBe(0);
+    p = geschafft(p, 'kasse', 'bronze');
+    expect(neueKarten(p).map((k) => k.id)).toEqual(['bude:kasse']);
+    expect(neueKarten({ ...p, album: ['bude:kasse'] })).toEqual([]);
+    expect(KARTEN.some((k) => k.seltenheit === 'legendaer')).toBe(true);
+  });
+  it('Blitzrechnen: richtige ganze Antworten, Belohnung, Speicherdaten', () => {
+    const rng = createRng(12);
+    for (const st of BLITZ_STUFEN)
+      for (let i = 0; i < 500; i++) {
+        const a = blitzAufgabe(st.id, rng);
+        expect(Number.isInteger(a.antwort) && a.antwort > 0, a.text).toBe(true);
+      }
+    expect(blitzBloecke(10, true)).toBe(8);
+    expect(blitzBloecke(0, true)).toBe(0);
+    expect(pruefeBlitz({ rekorde: { leicht: 12, mittel: -1, quatsch: 3 }, zuletzt: 5 })).toEqual({ rekorde: { leicht: 12 }, zuletzt: 5 });
+  });
+});
+
+import { KNOBEL_ARTEN, WOCHENRAETSEL, knobelRunde, raetselDerWoche } from '../src/domain/knobel';
+
+describe('Knobelzelt', () => {
+  it('jede Knobelaufgabe hat 2–3 Schritte mit ganzzahligen, nicht negativen Antworten', () => {
+    const rng = createRng(31);
+    for (const stufe of [1, 2, 3] as const)
+      for (let i = 0; i < 200; i++)
+        for (const bauer of KNOBEL_ARTEN) {
+          const a = bauer(rng, stufe);
+          expect(a.schritte.length, a.id).toBeGreaterThanOrEqual(1);
+          expect(a.schritte.length).toBeLessThanOrEqual(3);
+          for (const s of a.schritte) {
+            expect(Number.isInteger(s.antwort) && s.antwort >= 0, `${a.id}: ${s.frage} = ${s.antwort}`).toBe(true);
+            expect(s.tipp.length).toBeGreaterThan(5);
+          }
+        }
+    expect(new Set(knobelRunde(createRng(1), 2).map((a) => a.id)).size).toBe(5);
+  });
+  it('Rätsel der Woche: jede Woche eines, gleich in derselben Woche, Lösungen stimmen', () => {
+    expect(raetselDerWoche('2026-W46')).toBe(raetselDerWoche('2026-W46'));
+    expect(raetselDerWoche('2026-W46')).not.toBe(raetselDerWoche('2026-W47'));
+    for (const r of WOCHENRAETSEL) {
+      expect(Number.isInteger(r.antwort)).toBe(true);
+      expect(r.loesung).toContain(String(r.antwort === 2000 ? '2 000' : r.antwort));
+    }
+  });
+});
+
+import { INSEL, LANDSCHAFT, START, boeden, istBoden, kaufeEinrichtung, leereInsel, nimm, oberkante, pruefeInsel, setze, wegAufInsel, TUER_OBEN } from '../src/domain/insel';
+
+describe('Bauinsel', () => {
+  const bau = (s: ReturnType<typeof leereInsel>, x: number, y: number, art: number, n = 1) => {
+    let st = s;
+    for (let i = 0; i < n; i++) {
+      const e = setze(st, x, y, art, 100);
+      if (!e.ok) throw new Error(`${x},${y}: ${e.grund}`);
+      st = e.stand;
+    }
+    return st;
+  };
+  it('Landschaft: Start ist begehbar, Wasser und Bäume nicht, Hügel hat Höhe', () => {
+    const s = leereInsel();
+    expect(istBoden(s, START.x, START.y, START.z)).toBe(true);
+    const wasser = LANDSCHAFT.art.indexOf('wasser');
+    expect(wasser).toBeGreaterThan(0);
+    expect(boeden(s, wasser % INSEL, Math.floor(wasser / INSEL))).toEqual([]);
+    const baum = LANDSCHAFT.baum.indexOf(true);
+    expect(boeden(s, baum % INSEL, Math.floor(baum / INSEL))).toEqual([]);
+    expect(Math.max(...LANDSCHAFT.hoehe)).toBe(2);
+    // Auf den Hügel kommt man zu Fuß
+    expect(wegAufInsel(s, START, { x: 4, y: 4, z: 2 }).length).toBeGreaterThan(0);
+  });
+  it('Mauer versperrt den Weg, eine Tür öffnet ihn, ohne Treppe kommt man nicht auf einen Block', () => {
+    let s = leereInsel();
+    // Mauer quer über die Insel (Zeile 15), zwei Blöcke hoch, außer am Weg wird sie ganz geschlossen
+    for (let x = 0; x < INSEL; x++) if (!LANDSCHAFT.baum[15 * INSEL + x]) s = bau(s, x, 15, 1, 2);
+    const ziel = { x: 12, y: 12, z: 0 };
+    expect(wegAufInsel(s, START, ziel)).toEqual([]);
+    // Tür statt Mauer an einer Stelle
+    let t = s;
+    for (let i = 0; i < 2; i++) {
+      const e = nimm(t, 12, 15, 100);
+      if (e.ok) t = e.stand;
+    }
+    t = { ...t, inventar: { '101': 1 } };
+    const tuer = setze(t, 12, 15, 101, 100);
+    expect(tuer.ok).toBe(true);
+    if (!tuer.ok) return;
+    expect(tuer.stand.stapel[15 * INSEL + 12]).toEqual([101, TUER_OBEN]);
+    const weg = wegAufInsel(tuer.stand, START, ziel);
+    expect(weg.length).toBeGreaterThan(0);
+    expect(weg.some((p) => p.x === 12 && p.y === 15)).toBe(true);
+  });
+  it('Treppe führt eine Ebene hinauf, hinunter springen geht', () => {
+    let s = bau(leereInsel(), 12, 18, 2);
+    expect(wegAufInsel(s, START, { x: 12, y: 18, z: 1 })).toEqual([]);
+    s = { ...s, inventar: { '103': 1 } };
+    const e = setze(s, 12, 19, 103, 100);
+    expect(e.ok).toBe(true);
+    if (!e.ok) return;
+    const hoch = wegAufInsel(e.stand, START, { x: 12, y: 18, z: 1 });
+    expect(hoch.length).toBeGreaterThan(0);
+    expect(wegAufInsel(e.stand, { x: 12, y: 18, z: 1 }, START).length).toBeGreaterThan(0);
+  });
+  it('Bauen kostet Blöcke, Abbauen gibt sie zurück; Einrichtung aus dem Inventar; Grenzen', () => {
+    const s = leereInsel();
+    const a = setze(s, 5, 15, 3, 2);
+    expect(a.ok && a.bloecke).toBe(1);
+    if (!a.ok) return;
+    const b = nimm(a.stand, 5, 15, 1);
+    expect(b.ok && b.bloecke).toBe(2);
+    expect(setze(s, 5, 15, 3, 0)).toEqual({ ok: false, grund: 'keineBloecke' });
+    expect(setze(s, 5, 15, 110, 5)).toEqual({ ok: false, grund: 'keinTeil' });
+    expect(setze(s, START.x, START.y, 3, 5)).toEqual({ ok: false, grund: 'figur' });
+    const wasser = LANDSCHAFT.art.indexOf('wasser');
+    expect(setze(s, wasser % INSEL, Math.floor(wasser / INSEL), 3, 5)).toEqual({ ok: false, grund: 'feld' });
+    let hoch = s;
+    for (let i = 0; i < 8; i++) hoch = (setze(hoch, 5, 15, 1, 99) as { stand: typeof s }).stand;
+    expect(oberkante(hoch, 5, 15)).toBe(8);
+    expect(setze(hoch, 5, 15, 1, 99)).toEqual({ ok: false, grund: 'hoch' });
+    const k = kaufeEinrichtung(s, 30, 110);
+    expect(k.ok && k.taler).toBe(5);
+    if (!k.ok) return;
+    const bett = setze(k.stand, 5, 15, 110, 0);
+    expect(bett.ok).toBe(true);
+    if (!bett.ok) return;
+    const zurueck = nimm(bett.stand, 5, 15, 0);
+    expect(zurueck.ok && zurueck.stand.inventar['110']).toBe(1);
+    expect(kaufeEinrichtung(s, 3, 110).ok).toBe(false);
+  });
+  it('Speicherdaten werden geprüft; die Figur fällt beim Abbauen auf den Boden darunter', () => {
+    expect(pruefeInsel(null)).toEqual(leereInsel());
+    let s = bau(leereInsel(), 8, 18, 1, 2);
+    s = { ...s, figur: { x: 8, y: 18, z: 2 } };
+    const e = nimm(s, 8, 18, 0);
+    expect(e.ok && e.stand.figur).toEqual({ x: 8, y: 18, z: 1 });
+    const g = pruefeInsel(JSON.parse(JSON.stringify({ ...s, inventar: { '101': 2, '7': 3, '110': -1 } })));
+    expect(g.inventar).toEqual({ '101': 2 });
+    expect(g.figur).toEqual(s.figur);
+    expect(pruefeInsel({ ...s, figur: { x: 8, y: 18, z: 0 } }).figur).toEqual(START);
+  });
+});
+
+import { setzeAn, nimmAn, LUFT } from '../src/domain/insel';
+
+describe('Bauinsel: Haus mit Dach', () => {
+  it('Wände, Tür, Dach über dem leeren Raum; die Figur geht hinein und steht unter dem Dach', () => {
+    let s: ReturnType<typeof leereInsel> = { ...leereInsel(), inventar: { '101': 1 } };
+    const n = (e: ReturnType<typeof setzeAn>) => {
+      if (!e.ok) throw new Error(e.grund);
+      return e.stand;
+    };
+    // Raum 3 × 3 (x 14–16, y 14–16) mit Wänden außen herum (x 13–17, y 13–17), zwei hoch
+    for (let x = 13; x <= 17; x++)
+      for (let y = 13; y <= 17; y++) {
+        const rand = x === 13 || x === 17 || y === 13 || y === 17;
+        if (!rand || (x === 15 && y === 17)) continue;
+        s = n(setzeAn(s, x, y, 0, 3, 99));
+        s = n(setzeAn(s, x, y, 1, 3, 99));
+      }
+    s = n(setzeAn(s, 15, 17, 0, 101, 99));
+    // Dach in Ebene 2 über alles, auch über den leeren Raum (Halt durch die Nachbarn)
+    for (let y = 13; y <= 17; y++) for (let x = 13; x <= 17; x++) s = n(setzeAn(s, x, y, 2, 2, 99));
+    expect(s.stapel[15 * INSEL + 15]).toEqual([LUFT, LUFT, 2]);
+    expect(istBoden(s, 15, 15, 0)).toBe(true);
+    const weg = wegAufInsel(s, START, { x: 15, y: 15, z: 0 });
+    expect(weg.length).toBeGreaterThan(0);
+    // Ein Block ohne jeden Halt schwebt
+    expect(setzeAn(leereInsel(), 5, 18, 3, 1, 9)).toEqual({ ok: false, grund: 'schwebt' });
+    // Abbauen in der Mitte lässt das Dach stehen, Tür verschwindet ganz
+    const ohneTuer = nimmAn(s, 15, 17, 1, 0);
+    expect(ohneTuer.ok && ohneTuer.stand.stapel[17 * INSEL + 15]).toEqual([LUFT, LUFT, 2]);
+    expect(ohneTuer.ok && ohneTuer.stand.inventar['101']).toBe(1);
+    // Speicherdaten mit Luft bleiben erhalten
+    expect(pruefeInsel(JSON.parse(JSON.stringify(s))).stapel[15 * INSEL + 15]).toEqual([LUFT, LUFT, 2]);
+  });
+});

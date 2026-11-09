@@ -5,6 +5,7 @@
   import {
     ALLEE_X,
     ANDENKEN_X,
+    KNOBEL_X,
     BUDE_BREITE,
     BUDE_HOEHE,
     BUDEN_ORTE,
@@ -29,7 +30,7 @@
   } from '../../domain/karte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import Sprechblase from '../components/Sprechblase.svelte';
-  import { ENTDECKUNGEN, GASSE_BEGRUESSUNG, INTRO, NOCH_IM_AUFBAU, ABENDMARKT_ZU } from '../geschichte';
+  import { AUFTRAG_ERKLAERUNG, ENTDECKUNGEN, GASSE_BEGRUESSUNG, INTRO, NOCH_IM_AUFBAU, ABENDMARKT_ZU } from '../geschichte';
   import BudeStand from '../grafik/BudeStand.svelte';
   import Flinka from '../grafik/Flinka.svelte';
   import Laeufer from '../grafik/Laeufer.svelte';
@@ -38,6 +39,8 @@
   import Icon from '../components/Icon.svelte';
   import { STUFEN_NAME } from '../../domain/buden';
   import { gasseFarbe } from '../../domain/auftraege';
+  import { FEIER_BLOECKE, WOCHENZIEL_BLOECKE, WOCHENZIEL_TAGE, feierSchluessel, offeneFeiern, spieltageDieseWoche, wochenKennung } from '../../domain/belohnungen';
+  import Feier from '../components/Feier.svelte';
 
   /**
    * Der begehbare Jahrmarkt. Das Kind tippt auf eine Bude (oder einen Weg),
@@ -52,6 +55,16 @@
   let auftraege = $derived(p?.auftraege?.liste ?? []);
   let auftragsBuden = $derived(new Set(auftraege.filter((a) => !a.erledigt).map((a) => a.bude)));
   let erledigt = $derived(auftraege.filter((a) => a.erledigt).length);
+  let feiern = $derived(p && p.gesehen.intro ? offeneFeiern(p) : []);
+  let tage = $derived(p ? spieltageDieseWoche(p, new Date()) : 0);
+  let wocheGeschafft = $derived(p ? p.belohnt.includes(`woche:${wochenKennung(new Date())}`) : false);
+
+  function feierFertig() {
+    const f = feiern[0];
+    if (!f) return;
+    const k = feierSchluessel(f);
+    app.aendereProfil((q) => (q.belohnt.includes(k) ? q : { ...q, belohnt: [...q.belohnt, k], bau: { ...q.bau, bloecke: q.bau.bloecke + FEIER_BLOECKE } }));
+  }
 
   // Startpunkt: vor der zuletzt besuchten Bude, sonst am Eingang
   let pos = $state<Punkt>(app.karteOrt ?? budenOrt(app.letzteBude ?? '')?.vorne ?? EINGANG);
@@ -151,8 +164,8 @@
       app.letzteBude = id;
       app.zeige({ name: 'bude', bude: id });
     };
-    const gruss = GASSE_BEGRUESSUNG[gasse];
-    if (p && gruss && !p.gesehen.gassen.includes(gasse)) {
+    const gruss = GASSE_BEGRUESSUNG(gasse, info.name, info.mechanik);
+    if (p && !p.gesehen.gassen.includes(gasse)) {
       dialog = {
         saetze: gruss,
         danach: () => {
@@ -163,6 +176,11 @@
       return;
     }
     betreten();
+  }
+
+  function zumKnobelzelt() {
+    app.spieleKlang('tipp');
+    laufeZu({ x: KNOBEL_X, y: FESTPLATZ_Y }, () => app.zeige({ name: 'knobel' }));
   }
 
   function zumAndenkenstand() {
@@ -203,6 +221,12 @@
       dialog = {
         saetze: INTRO(p.name),
         danach: () => app.aendereProfil((q) => ({ ...q, gesehen: { ...q.gesehen, intro: true } })),
+      };
+    } else if (p && p.gesehen.intro && dialog === null && auftraege.length > 0 && !p.gesehen.hinweise.includes('auftraege')) {
+      // Einmal erklären, was die Fähnchen bedeuten
+      dialog = {
+        saetze: AUFTRAG_ERKLAERUNG,
+        danach: () => app.aendereProfil((q) => (q.gesehen.hinweise.includes('auftraege') ? q : { ...q, gesehen: { ...q.gesehen, hinweise: [...q.gesehen.hinweise, 'auftraege'] } })),
       };
     }
   });
@@ -246,9 +270,14 @@
         <!-- Boden: Wiese, Wege, Festplatz, Zaun des Sternenmarkts -->
         <svg class="boden" viewBox="0 0 {WELT_BREITE} {WELT_HOEHE}" width={WELT_BREITE} height={WELT_HOEHE} aria-hidden="true">
           <defs>
-            <pattern id="gras" width="60" height="60" patternUnits="userSpaceOnUse">
-              <rect width="60" height="60" fill="#9fd88f" />
-              <path d="M10 20 l3 -7 l3 7 M40 48 l3 -7 l3 7 M44 12 l2 -5 l2 5" stroke="#7fc06e" stroke-width="2" fill="none" />
+            <pattern id="gras" width="120" height="120" patternUnits="userSpaceOnUse">
+              <rect width="120" height="120" fill="#9fd88f" />
+              <rect x="0" y="0" width="60" height="60" fill="#a6dc95" opacity="0.6" />
+              <rect x="60" y="60" width="60" height="60" fill="#a6dc95" opacity="0.6" />
+              <path d="M10 20 l3 -7 l3 7 M40 48 l3 -7 l3 7 M44 12 l2 -5 l2 5 M80 92 l3 -7 l3 7 M100 30 l2 -5 l2 5 M22 96 l3 -7 l3 7" stroke="#7fc06e" stroke-width="2" fill="none" />
+              <circle cx="30" cy="80" r="3" fill="#fff" /><circle cx="30" cy="80" r="1.2" fill="#ffc62b" />
+              <circle cx="96" cy="70" r="3" fill="#ffd1dc" /><circle cx="96" cy="70" r="1.2" fill="#e23a4e" />
+              <circle cx="70" cy="18" r="2.6" fill="#fff" /><circle cx="70" cy="18" r="1" fill="#ffc62b" />
             </pattern>
             <pattern id="pflaster" width="40" height="40" patternUnits="userSpaceOnUse">
               <rect width="40" height="40" fill="#ecd6aa" />
@@ -294,6 +323,17 @@
               <circle cx="18" cy="-4" r="32" fill="#4fbf78" />
               <circle cx="0" cy="-26" r="30" fill="#5ccc85" />
             </g>
+          {/each}
+          <!-- Büsche an den Enden der Querwege -->
+          {#each REIHEN as r (r.index)}
+            {@const [l, re] = reihenSpanne(r)}
+            {#each [l - 70, re + 70] as bx, k (k)}
+              <g transform="translate({bx} {r.y + 10})">
+                <ellipse cx="0" cy="26" rx="34" ry="7" fill="#1f2a6b" opacity="0.1" />
+                <circle cx="-14" cy="8" r="18" fill="#3fae6a" /><circle cx="12" cy="6" r="20" fill="#4fbf78" /><circle cx="0" cy="-8" r="16" fill="#5ccc85" />
+                <circle cx="-6" cy="-6" r="3" fill="#e23a4e" /><circle cx="10" cy="4" r="3" fill="#ffc62b" />
+              </g>
+            {/each}
           {/each}
           <!-- Laternen an der Allee -->
           {#each REIHEN as r (r.index)}
@@ -357,7 +397,7 @@
                 <button class="katze-knopf" onclick={katzeEntdeckt} aria-label="Katze auf dem Dach"></button>
               {/if}
               <div class="schild" class:zu={!info.spielbar}>{info.name}</div>
-              {#if auftragsBuden.has(o.id)}<div class="auftrag-marke" aria-hidden="true"><Icon name="auftrag" groesse={30} /></div>{/if}
+              {#if auftragsBuden.has(o.id)}<div class="auftrag-fahne" aria-hidden="true"><span class="stange"></span><span class="tuch">Auftrag</span></div>{/if}
             </div>
           {/if}
         {/each}
@@ -365,7 +405,6 @@
         <!-- Festplatz: Riesenrad, Andenkenstand, Eingang, Flinka -->
         <div class="riesenrad" style="left: {RIESENRAD_X - 170}px; top: {FESTPLATZ_Y - 470}px; z-index: {FESTPLATZ_Y - 40}">
           <Riesenrad {gondeln} />
-          <p class="fortschritt"><strong>{laufend} von {TAGESBUDEN.length}</strong> Buden laufen wieder</p>
           {#if p.deko.includes('ballons')}
             <svg class="ballons" viewBox="0 0 60 110" aria-hidden="true">
               <path d="M30 108 L18 40 M30 108 L32 30 M30 108 L46 44" stroke="#4a5394" stroke-width="1.5" fill="none" />
@@ -375,6 +414,11 @@
             </svg>
           {/if}
         </div>
+
+        <!-- Fortschrittsschild neben dem Hauptweg: auch auf schmalen Handys ganz sichtbar -->
+        <p class="fortschritt" style="left: {ALLEE_X - 215}px; top: {FESTPLATZ_Y - 150}px; z-index: {FESTPLATZ_Y - 35}">
+          <strong>{laufend} von {TAGESBUDEN.length}</strong> Buden<br />laufen wieder
+        </p>
 
         <button class="andenken" style="left: {ANDENKEN_X - 100}px; top: {FESTPLATZ_Y - 250}px; z-index: {FESTPLATZ_Y - 30}" onclick={zumAndenkenstand} aria-label="Andenkenstand">
           <svg viewBox="0 0 200 220" aria-hidden="true">
@@ -391,6 +435,22 @@
             <rect x="20" y="156" width="160" height="52" rx="6" fill="#b9763f" stroke="#1f2a6b" stroke-width="4" />
           </svg>
           <span class="schild">Andenkenstand</span>
+        </button>
+
+ <button class="knobelzelt" style="left: {KNOBEL_X - 90}px; top: {FESTPLATZ_Y - 236}px; z-index: {FESTPLATZ_Y - 30}" onclick={zumKnobelzelt} aria-label="Knobelzelt">
+          <svg viewBox="0 0 180 200" aria-hidden="true">
+            <ellipse cx="90" cy="194" rx="84" ry="7" fill="#1f2a6b" opacity="0.12" />
+            <path d="M10 160 L90 20 L170 160 Z" fill="#7b5ea7" stroke="#1f2a6b" stroke-width="4" stroke-linejoin="round" />
+            <path d="M50 160 L90 20 L130 160 Z" fill="#fffdf7" />
+            <path d="M70 160 L90 20 L110 160 Z" fill="#7b5ea7" />
+            <path d="M90 20 V4" stroke="#1f2a6b" stroke-width="4" /><path d="M90 4 L112 10 L90 16 Z" fill="#ffc62b" stroke="#1f2a6b" stroke-width="2" />
+            <path d="M74 160 Q90 120 106 160 Z" fill="#2b2f5e" />
+            <rect x="6" y="158" width="168" height="34" rx="6" fill="#b9763f" stroke="#1f2a6b" stroke-width="4" />
+            <circle cx="90" cy="110" r="22" fill="#ffc62b" stroke="#1f2a6b" stroke-width="3" />
+            <text x="90" y="121" text-anchor="middle" font-size="30" font-weight="900" fill="#1f2a6b">?</text>
+          </svg>
+          <span class="schild">Knobelzelt</span>
+          {#if p && !p.belohnt.includes(`raetsel:${wochenKennung(new Date())}`)}<span class="neu-raetsel" aria-hidden="true">Rätsel</span>{/if}
         </button>
 
         <div class="eingang" style="left: {EINGANG.x - 190}px; top: {WELT_HOEHE - 200}px" aria-hidden="true">
@@ -426,22 +486,32 @@
       <div class="markise"></div>
       <div class="inhalt">
         <h2 id="auftraege-titel">Tagesaufträge</h2>
+        <div class="wochenziel" aria-label="Wochenziel: an {Math.min(tage, WOCHENZIEL_TAGE)} von {WOCHENZIEL_TAGE} Tagen gespielt">
+          <span>Wochenziel</span>
+          {#each Array(WOCHENZIEL_TAGE) as _, i (i)}<span class="tag" class:an={i < tage} aria-hidden="true"></span>{/each}
+          <small>{wocheGeschafft ? 'geschafft!' : `${Math.min(tage, WOCHENZIEL_TAGE)} von ${WOCHENZIEL_TAGE} Tagen · +${WOCHENZIEL_BLOECKE} Blöcke`}</small>
+        </div>
         <p class="klein">Spiel eine Runde mit mindestens 7 Treffern. Pro Auftrag: 15 Taler und 10 Blöcke. Alle drei: 20 Blöcke extra.</p>
         <ul>
           {#each auftraege as a (a.bude)}
             {@const info = budeInfo(a.bude)}
             <li class:fertig={a.erledigt} style="--f: {gasseFarbe(a.bude)}">
               <span class="haken" aria-hidden="true">{#if a.erledigt}<Icon name="haken" groesse={20} />{/if}</span>
-              <span class="was"><strong>{info.name}</strong><small>{STUFEN_NAME[a.stufe]}</small></span>
+              <span class="was"><strong>{info.name}</strong><small>{STUFEN_NAME[a.stufe]}{#if a.frisch} · <span class="frisch">Frischmacher</span>{/if}</small></span>
               {#if !a.erledigt}
                 <button class="ticket rot klein" onclick={() => { auftraegeOffen = false; zurBude(a.bude); }}>Hin</button>
               {:else}<span class="erledigt">erledigt</span>{/if}
             </li>
           {/each}
         </ul>
+        <button class="aufwaermen" onclick={() => { auftraegeOffen = false; app.zeige({ name: 'blitz' }); }}><Icon name="blitz" groesse={22} /> Zum Aufwärmen: Blitzrechnen (1 Minute)</button>
         <button class="ticket hell" onclick={() => (auftraegeOffen = false)}>Schließen</button>
       </div>
     </div>
+  {/if}
+
+  {#if feiern[0] && !dialog}
+    {#key feierSchluessel(feiern[0])}<Feier feier={feiern[0]} onweiter={feierFertig} />{/key}
   {/if}
 
   {#if dialog}
@@ -573,13 +643,18 @@
     pointer-events: none;
   }
   .fortschritt {
+    position: absolute;
+    width: 190px;
+    box-sizing: border-box;
+    pointer-events: none;
     background: var(--papier);
     border: 3px solid var(--tinte);
     border-radius: 14px;
     padding: 4px 16px;
-    font-size: 1.6rem;
-    margin-top: -6px;
-    white-space: nowrap;
+    font-size: 1.25rem;
+    line-height: 1.15;
+    margin: 0;
+    text-align: center;
   }
   .ballons {
     position: absolute;
@@ -596,6 +671,29 @@
   }
   .andenken .schild {
     bottom: -34px;
+  }
+  .knobelzelt {
+    position: absolute;
+    width: 180px;
+    border: 0;
+    background: none;
+    padding: 0;
+  }
+  .knobelzelt .schild {
+    bottom: -34px;
+  }
+  .neu-raetsel {
+    position: absolute;
+    right: -6px;
+    top: 30px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: var(--markise);
+    color: #fff;
+    font-weight: 900;
+    font-size: 1.1rem;
+    border: 3px solid #fff;
+    animation: hupf 0.8s ease-in-out infinite alternate;
   }
   .eingang {
     position: absolute;
@@ -703,22 +801,55 @@
   .leiste .rund-klein {
     padding-inline: 10px;
   }
-  .auftrag-marke {
+  /* Tagesauftrag: Fähnchen am Dach der Bude */
+  .auftrag-fahne {
     position: absolute;
-    right: 4px;
-    top: -82px;
-    width: 46px;
-    height: 46px;
-    display: grid;
-    place-items: center;
-    background: var(--senf);
-    color: var(--tinte);
-    border: 3px solid var(--tinte);
-    border-radius: 50%;
-    box-shadow: 0 3px 0 var(--tinte);
-    animation: hupf 0.8s ease-in-out infinite alternate;
+    right: 8px;
+    top: -118px;
+    width: 92px;
+    height: 76px;
     pointer-events: none;
     z-index: 3;
+  }
+  .auftrag-fahne .stange {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 6px;
+    height: 76px;
+    border-radius: 3px;
+    background: var(--tinte);
+  }
+  .auftrag-fahne .stange::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: -8px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--senf);
+    border: 3px solid var(--tinte);
+  }
+  .auftrag-fahne .tuch {
+    position: absolute;
+    left: 6px;
+    top: 4px;
+    padding: 4px 18px 4px 10px;
+    background: var(--senf);
+    border: 3px solid var(--tinte);
+    border-left: 0;
+    clip-path: polygon(0 0, 100% 0, 86% 50%, 100% 100%, 0 100%);
+    font-weight: 900;
+    font-size: 1.15rem;
+    color: var(--tinte);
+    transform-origin: left center;
+    animation: wehen 1.6s ease-in-out infinite alternate;
+  }
+  @keyframes wehen {
+    to {
+      transform: skewY(-4deg) scaleX(0.94);
+    }
   }
   .schleier {
     position: absolute;
@@ -784,6 +915,44 @@
   .klein {
     font-size: 0.95rem;
     margin: 0;
+  }
+  .wochenziel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-weight: 900;
+  }
+  .wochenziel .tag {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 3px solid var(--tinte);
+    background: #fff;
+  }
+  .wochenziel .tag.an {
+    background: var(--wiese);
+  }
+  .wochenziel small {
+    font-weight: 700;
+    color: var(--tinte-weich);
+  }
+  .frisch {
+    color: #17a398;
+    font-weight: 900;
+  }
+  .aufwaermen {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 6px 12px;
+    border: 3px dashed var(--tinte);
+    border-radius: 12px;
+    background: #fff8dc;
+    color: var(--tinte);
+    font: inherit;
+    font-weight: 900;
   }
   .ticket.klein {
     min-height: 40px;

@@ -90,6 +90,8 @@ export const WELT_HOEHE = letzteReihe.y + FESTPLATZ_HOEHE;
 export const EINGANG: Punkt = { x: ALLEE_X, y: FESTPLATZ_Y };
 export const ANDENKEN_X = ALLEE_X + 360;
 export const RIESENRAD_X = ALLEE_X - 380;
+/** Knobelzelt rechts neben dem Andenkenstand. */
+export const KNOBEL_X = ALLEE_X + 610;
 /** Tor im Zaun vor dem Sternenmarkt (auf der Allee). */
 export const TOR: Punkt = { x: ALLEE_X, y: OBEN + ZAUN_PLATZ };
 /** Die Allee reicht vom Festplatz bis zum Sternenmarkt. */

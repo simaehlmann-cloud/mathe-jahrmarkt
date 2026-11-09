@@ -16,7 +16,7 @@ const BILDER = process.env.BILDER ?? 'e2e-bilder';
 const PORT = 4179;
 mkdirSync(BILDER, { recursive: true });
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
+const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe', detached: true });
 await new Promise((ok, fehler) => {
   server.stdout.on('data', (d) => String(d).includes(String(PORT)) && ok());
   server.on('exit', fehler);
@@ -64,6 +64,16 @@ try {
       await page.getByRole('button', { name: 'Menü' }).click();
       await page.locator('nav.menue').getByRole('button', { name: punkt }).click();
     };
+    // Bude antippen; beim ersten Besuch einer Gasse begrüßt Flinka (Sprechblase wegtippen)
+    const oeffne = async (titel) => {
+      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      const spielen = page.getByRole('button', { name: /spielen$/ });
+      const blase = page.getByRole('button', { name: /Weiter|Los geht/ });
+      await Promise.race([spielen.first().waitFor(), blase.first().waitFor()]);
+      for (let i = 0; i < 4 && (await blase.count()); i++) await blase.last().click();
+    };
+    // TEIL=2 überspringt den ersten Durchgang (schneller beim Entwickeln)
+    if (process.env.TEIL !== '2') {
 
     await page.goto(`http://localhost:${PORT}/`);
     await page.getByText('Wie heißt du?').waitFor();
@@ -163,11 +173,13 @@ try {
     await page.getByRole('button', { name: 'Öffnen' }).click();
     await page.getByRole('heading', { name: /Die letzten 7 Tage/ }).waitFor();
     await foto('13-eltern-bericht');
+    const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Bericht als PDF' }).click()]);
+    pruefe(/^mathe-jahrmarkt-bericht-.*\.pdf$/.test(pdf.suggestedFilename()), `${name}: Eltern-Bericht als PDF (${pdf.suggestedFilename()})`);
     await page.getByRole('button', { name: 'Zusatzpaket' }).click();
     await foto('14-eltern-paket');
     await page.getByRole('button', { name: /freischalten/ }).click();
-    await page.getByText('noch nicht verfügbar').waitFor();
-    pruefe(true, 'Store-Version bietet ohne native Anbindung keinen Scheinkauf an');
+    await page.getByText('Der Kauf ist gerade nicht möglich').waitFor();
+    pruefe(true, 'Web-Version ohne Store bietet keinen Scheinkauf an');
     await page.getByRole('button', { name: 'Elternbereich schließen' }).click();
     await menue('Mein Mathe-Profil');
     await foto('15-mathe-profil');
@@ -294,7 +306,7 @@ try {
     const budeTesten = async (titel, kurz, probe) => {
       await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
-      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      await oeffne(titel);
       await page.getByRole('button', { name: 'Bronze spielen' }).click();
       await page.locator('canvas').waitFor();
       await page.waitForTimeout(900);
@@ -331,7 +343,7 @@ try {
     const eigeneBude = async (titel, kurz, probe, falsch) => {
       await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
-      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      await oeffne(titel);
       await page.getByRole('button', { name: 'Bronze spielen' }).click();
       await page.locator('.schild').waitFor();
       await page.waitForTimeout(900);
@@ -399,7 +411,7 @@ try {
     const auswahlBudeTesten = async (titel, kurz) => {
       await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
-      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      await oeffne(titel);
       await page.getByRole('button', { name: 'Bronze spielen' }).click();
       await page.locator('.wahl').first().waitFor();
       await page.waitForTimeout(700);
@@ -451,6 +463,7 @@ try {
     await eigeneBude('Spiegelkabinett', '36-spiegel', spiegeln, () => page.getByRole('button', { name: 'Fertig' }).click());
 
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
+    }
     await ctx.close();
 
     // ---------- Zweiter Durchgang mit Zusatzpaket und Silber überall: Spiel-Buden, Sternenmarkt, Bauplatz, Check, Aufträge ----------
@@ -496,6 +509,84 @@ try {
       });
       await page.goto(`http://localhost:${PORT}/`);
       await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      // Alle Gassen laufen: Feiern für jede Gasse und das Sommerfest
+      let feiern = 0;
+      for (let i = 0; i < 10; i++) {
+        const f = page.locator('.feier');
+        await page.waitForTimeout(500);
+        if (!(await f.count())) break;
+        if (feiern === 0) await foto('52a-gassenfeier');
+        if (await page.getByText('Das Sommerfest kann beginnen!').isVisible()) await foto('52b-sommerfest');
+        await f.getByRole('button', { name: 'Weiter' }).click();
+        feiern++;
+      }
+      pruefe(feiern === 6, `${name}: fünf Gassenfeiern und das Sommerfest (${feiern})`);
+      // Sammelalbum: neue Karten
+      await page.getByRole('button', { name: /Menü, \d+ neue Sammelkarten/ }).click();
+      await page.locator('nav.menue').getByRole('button', { name: /Sammelalbum/ }).click();
+      await page.locator('.raster .platz').first().waitFor();
+      await page.waitForTimeout(900);
+      await foto('52c-album');
+      pruefe((await page.locator('.raster .karte.offen').count()) >= 30, `${name}: Sammelalbum zeigt die gesammelten Karten`);
+      await page.locator('.raster .platz').first().click();
+      await foto('52d-karte');
+      await page.getByRole('button', { name: 'Schließen' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      pruefe((await page.getByRole('button', { name: /neue Sammelkarten/ }).count()) === 0, `${name}: angesehene Karten sind nicht mehr neu`);
+      // Blitzrechnen: eine Minute, Aufgaben aus dem Text lösen
+      await page.getByRole('button', { name: 'Menü' }).click();
+      await page.locator('nav.menue').getByRole('button', { name: 'Blitzrechnen' }).click();
+      await page.getByRole('button', { name: /^Leicht/ }).click();
+      await page.locator('.aufgabe').waitFor({ timeout: 8000 });
+      let geloest = 0;
+      const ablauf = Date.now() + 15000;
+      while (Date.now() < ablauf) {
+        const t = (await page.locator('.aufgabe span').textContent()).trim();
+        const m = /^(\d+) ([·+−]) (\d+)$/.exec(t);
+        if (!m) break;
+        const [a, op, b] = [Number(m[1]), m[2], Number(m[3])];
+        const ergebnis = op === '·' ? a * b : op === '+' ? a + b : a - b;
+        for (const z of String(ergebnis)) await page.getByRole('button', { name: `Ziffer ${z}` }).click();
+        geloest++;
+      }
+      await foto('52e-blitz');
+      await page.getByText('Zeit um!').or(page.getByText('Neuer Rekord!')).waitFor({ timeout: 70000 });
+      await foto('52f-blitz-ende');
+      pruefe(geloest >= 5 && (await page.locator('.gross').textContent()).includes(`${geloest} richtig`), `${name}: Blitzrechnen zählt ${geloest} richtige`);
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      // Knobelzelt: über die Karte erreichbar; jeder Schritt wird nach drei Fehlversuchen gezeigt
+      await page.getByRole('button', { name: 'Knobelzelt' }).click();
+      await page.getByRole('button', { name: /^Leicht/ }).click();
+      await page.locator('.geschichte').waitFor();
+      await foto('52g-knobel');
+      for (let i = 0; i < 60 && !(await page.getByText('Knobelrunde geschafft!').isVisible()); i++) {
+        if (await page.getByRole('button', { name: /Nächste Aufgabe|^Fertig$/ }).isVisible()) {
+          if (i < 8) await foto('52h-knobel-geloest');
+          await page.getByRole('button', { name: /Nächste Aufgabe|^Fertig$/ }).click();
+          continue;
+        }
+        await page.getByRole('button', { name: 'Ziffer 9' }).click();
+        await page.getByRole('button', { name: 'Ziffer 9' }).click();
+        await page.getByRole('button', { name: 'Ziffer 9' }).click();
+        await page.locator('.tasten button.ok').click();
+        await page.waitForTimeout(120);
+      }
+      pruefe(await page.getByText('Knobelrunde geschafft!').isVisible(), `${name}: Knobelrunde bis zum Ende spielbar`);
+      await page.getByRole('button', { name: 'Noch eine Runde' }).click();
+      await page.getByRole('button', { name: /Rätsel der Woche/ }).click();
+      await page.getByRole('button', { name: 'Tipp 1' }).click();
+      for (let i = 0; i < 3; i++) {
+        await page.getByRole('button', { name: 'Ziffer 1' }).click();
+        await page.getByRole('button', { name: 'Ziffer 1' }).click();
+        await page.getByRole('button', { name: 'Ziffer 1' }).click();
+        await page.locator('.tasten button.ok').click();
+      }
+      await page.getByRole('button', { name: 'Lösung zeigen' }).click();
+      await foto('52i-raetsel');
+      pruefe(await page.getByText('Die Lösung:').isVisible(), `${name}: Rätsel der Woche mit Tipps und Lösung`);
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
       await page.getByRole('button', { name: 'Menü' }).click();
       pruefe(await page.getByText('Jahrmarkt-Manager').isVisible(), `${name}: Rang aus 48 Sternen ist Jahrmarkt-Manager`);
       await foto('52-menue');
@@ -525,6 +616,35 @@ try {
       await foto('54-bauauftrag');
       await page.getByRole('button', { name: 'Nächster Auftrag' }).click();
       await foto('55-bauauftrag-2');
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Bauinsel: Block setzen, daraufsetzen, wieder abbauen, Landschaft bleibt, laufen
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      await menue(/Bauinsel/);
+      await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached' });
+      const inselFeld = (x, y, z, seite = 'oben') => page.locator(`[data-feld="${x},${y},${z}"] polygon[data-seite="${seite}"]`).first().dispatchEvent('click');
+      const inselLager = async () => Number((await page.locator('.lager').textContent()).match(/(\d+)/)?.[1]);
+      const inselVorher = await inselLager();
+      await page.getByRole('radio', { name: 'Bauen', exact: true }).click();
+      await inselFeld(10, 19, -1);
+      await inselFeld(10, 19, 0);
+      await inselFeld(10, 19, 1, 'links');
+      pruefe((await inselLager()) === inselVorher - 3, `${name}: Bauinsel – drei Blöcke gesetzt (auch seitlich)`);
+      await page.getByRole('radio', { name: 'Abbauen', exact: true }).click();
+      await inselFeld(10, 19, 1);
+      pruefe((await inselLager()) === inselVorher - 2, `${name}: Bauinsel – ein Block zurück ins Lager`);
+      await page.locator('[data-feld="4,4,1"]').first().waitFor({ state: 'attached' }).catch(() => {});
+      const huegel = page.locator('[data-feld^="4,4,"] polygon[data-seite="oben"]').last();
+      if (await huegel.count()) {
+        await huegel.dispatchEvent('click');
+        pruefe((await inselLager()) === inselVorher - 2, `${name}: Bauinsel – Landschaft lässt sich nicht abbauen`);
+      }
+      await page.getByRole('radio', { name: 'Laufen', exact: true }).click();
+      await inselFeld(12, 17, -1);
+      await page.waitForTimeout(1200);
+      await foto('55b-bauinsel');
+      await page.getByRole('button', { name: 'Ansicht drehen' }).click();
+      await page.getByRole('button', { name: 'Wo bin ich?' }).click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
 
       // Jahrmarkt-Check
@@ -591,6 +711,17 @@ try {
         await klick('1 € zurücklegen');
         await klick('Bezahlen');
       });
+      // Abgebrochene Runde: beim nächsten Besuch weiterspielen
+      await page.getByRole('button', { name: 'Süßigkeitenkasse öffnen' }).click();
+      await page.getByRole('radio', { name: /Bronze/ }).click();
+      await page.getByRole('button', { name: 'Bronze spielen' }).click();
+      await page.getByRole('heading', { name: 'Weiterspielen?' }).waitFor();
+      await foto('60b-weiterspielen');
+      await page.getByRole('button', { name: /^Weiterspielen/ }).click();
+      await leserKnoepfe().first().waitFor({ state: 'attached' });
+      pruefe((await page.locator('li.richtig, li.falsch').count()) > 0 && !(await page.getByText('Probewurf').isVisible()), `${name}: Runde wird ohne Probewurf mit dem alten Stand fortgesetzt`);
+      await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
       await spielBude('Uhr-Karussell', '61-uhr', 'Gold', async () => {
         await klick('Eine Stunde vor');
         await klick('5 Minuten vor');
@@ -640,7 +771,7 @@ try {
   }
 } finally {
   await browser.close();
-  server.kill();
+  try { process.kill(-server.pid); } catch { server.kill(); } // ganze Prozessgruppe, sonst läuft vite weiter (Windows: nur der Startprozess)
 }
 console.log(fehler ? `${fehler} Fehler` : 'Alles in Ordnung');
 process.exit(fehler ? 1 : 0);

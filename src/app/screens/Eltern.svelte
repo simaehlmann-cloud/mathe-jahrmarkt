@@ -6,6 +6,7 @@
   import { wochenbericht } from '../../domain/lernprofil/bericht';
   import { STATUS_TEXT, einschaetzen, elternSaetze } from '../../domain/lernprofil/lernprofil';
   import { SUBTRAKTION_NAMEN, type Schrift, type Subtraktionsverfahren } from '../../services/datenbestand';
+  import { berichtDateiname, elternbericht } from '../../domain/elternbericht';
   import { PREIS_ANZEIGE } from '../../services/kauf';
   import { sicherungEinspielen, sicherungErstellen } from '../../services/sicherung';
   import type { Stimme } from '../../services/sprache';
@@ -50,6 +51,22 @@
     return alt.status === 'kennenlernen' ? undefined : alt.status;
   }
 
+  let pdfLaeuft = $state(false);
+  async function berichtAlsPdf() {
+    if (!kind) return;
+    pdfLaeuft = true;
+    try {
+      const { berichtPdf, pdfWeitergeben } = await import('../../services/pdf');
+      const jetzt = Date.now();
+      const bytes = await berichtPdf(elternbericht(kind, app.paket, jetzt));
+      await pdfWeitergeben(bytes, berichtDateiname(kind.name, jetzt));
+    } catch {
+      app.melde('Der Bericht ließ sich gerade nicht erstellen.');
+    } finally {
+      pdfLaeuft = false;
+    }
+  }
+
   async function kaufen() {
     kaufLaeuft = true;
     try {
@@ -57,8 +74,10 @@
       if (e === 'gekauft') {
         app.aendere((b) => ({ ...b, paket: { gekauft: true, seit: Date.now() } }));
         app.melde('Danke! Das Zusatzpaket ist freigeschaltet.');
+      } else if (e === 'ausstehend') {
+        app.melde('Der Kauf wartet noch auf die Zahlung. Sobald sie da ist, wird das Paket freigeschaltet.');
       } else if (e === 'nichtVerfuegbar') {
-        app.melde('Der Kauf ist in dieser Version noch nicht verfügbar.');
+        app.melde('Der Kauf ist gerade nicht möglich. Bitte prüfen Sie die Internetverbindung und das Store-Konto.');
       } else if (e === 'fehler') {
         app.melde('Der Kauf hat nicht geklappt. Bitte später erneut versuchen.');
       }
@@ -164,6 +183,10 @@
             {#if bericht.buden.length}<p>Gespielt: {bericht.buden.join(', ')}.</p>{/if}
             {#if bericht.sicherer.length}<p class="gut">Sicherer geworden: {bericht.sicherer.map((k) => KOMPETENZEN[k].name).join(', ')}.</p>{/if}
             {#if bericht.ueben.length}<p>Üben lohnt sich bei: {bericht.ueben.map((k) => KOMPETENZEN[k].name).join(', ')}.</p>{/if}
+            <button class="ticket hell" disabled={pdfLaeuft} onclick={berichtAlsPdf}>{pdfLaeuft ? 'Bericht wird erstellt …' : 'Bericht als PDF'}</button>
+            <p class="hinweis">
+              Für Gespräche mit der Lehrkraft: Wochenbericht, Fortschritt an den Buden{app.paket ? ', Jahrmarkt-Check und Lernprofil' : ''} auf ein bis drei Seiten.
+            </p>
           </section>
           <section>
             <h2>Fortschritt je Bude</h2>
@@ -225,11 +248,12 @@
               <li>Jahrmarkt-Check mit persönlichem Rundgang</li>
               <li>Lernprofil in Sätzen, Tipps für zu Hause, Vorher-Nachher</li>
               <li>Sternenmarkt mit Bonusbuden für Klasse 5</li>
+              <li>Bauinsel zum freien Bauen mit Einrichtung</li>
             </ul>
             <button class="ticket rot" disabled={kaufLaeuft} onclick={kaufen}>Für {preis} freischalten</button>
           {/if}
           <button class="ticket hell" onclick={wiederherstellen}>Käufe wiederherstellen</button>
-          <p class="hinweis">Die App enthält keine Werbung und sendet keine Daten. Alles bleibt auf diesem Gerät.</p>
+          <p class="hinweis">Die App enthält keine Werbung und sendet keine Daten. Alles bleibt auf diesem Gerät. Der Kauf selbst läuft über den App Store bzw. Google Play.</p>
         </section>
       {:else if reiter === 'einstellungen'}
         <section class="einstellungen">
@@ -280,7 +304,7 @@
           <label class="wahl">
             Stimme
             <select value={app.einstellungen.stimme} onchange={(e) => app.aendereEinstellungen({ stimme: (e.target as HTMLSelectElement).value })}>
-              <option value="">Automatisch (beste deutsche Stimme)</option>
+              <option value="">Standard{stimmen.some((x) => x.name === 'Frau 2') ? ' (Frau 2)' : ''}</option>
               {#each stimmen as st (st.uri)}<option value={st.uri}>{st.name}</option>{/each}
             </select>
           </label>

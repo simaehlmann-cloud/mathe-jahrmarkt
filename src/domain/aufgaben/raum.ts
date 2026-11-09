@@ -50,7 +50,7 @@ export function baueSpiegel(stufe: Stufe, rng: Rng, form?: string): AuswahlAufga
   const fehler: Fehler[] = ([{ wert: maske(verschoben, achse), fehlerArt: 'sonstige' }] as Fehler[]).filter((f) => f.wert !== antwort);
   return auswahlAufgabe(
     {
-      bude: 'spiegelkabinett', form: achse, stufe, text: 'Ergänze spiegelbildlich!', sprechtext: `Färbe die Kästchen so, dass das Muster an der ${achse === 'schraeg' ? 'schrägen' : achse} Achse gespiegelt ist.`,
+      bude: 'spiegelkabinett', form: achse, stufe, text: 'Ergänze spiegelbildlich!', sprechtext: `Färbe die Kästchen so, dass das Muster an der ${achse === 'schraeg' ? 'schrägen' : achse === 'senkrecht' ? 'senkrechten' : 'waagerechten'} Achse gespiegelt ist.`,
       antwort, fehler, frei: true, kompetenz: 'raum', dimension: achse === 'schraeg' ? 'anwendung' : 'sicherheit',
       idee: 'Jedes Kästchen hat sein Spiegelbild genau gleich weit von der Achse entfernt, auf der anderen Seite.',
       schritte: ['Nimm ein gefärbtes Kästchen und zähle, wie weit es von der Achse weg ist.', 'Auf der anderen Seite gehst du genauso weit weg und färbst dort.'],

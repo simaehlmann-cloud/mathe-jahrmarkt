@@ -10,6 +10,10 @@
   import Start from './screens/Start.svelte';
   import Bauplatz from './screens/Bauplatz.svelte';
   import JahrmarktCheck from './screens/JahrmarktCheck.svelte';
+  import Sammelalbum from './screens/Sammelalbum.svelte';
+  import Blitzrechnen from './screens/Blitzrechnen.svelte';
+  import Knobelzelt from './screens/Knobelzelt.svelte';
+  import Bauinsel from './screens/Bauinsel.svelte';
   import { erstelleMusik } from '../services/musik';
   import { app } from './zustand.svelte';
 
@@ -67,7 +71,7 @@
   {:else if b.name === 'bude'}
     {#key b.bude}<BudeVorplatz bude={b.bude} />{/key}
   {:else if b.name === 'spiel'}
-    {#key `${b.bude}-${b.stufe}-${b.n ?? 0}`}<Spiel bude={b.bude} stufe={b.stufe} />{/key}
+    {#key `${b.bude}-${b.stufe}-${b.n ?? 0}`}<Spiel bude={b.bude} stufe={b.stufe} fortsetzen={b.fortsetzen ?? false} />{/key}
   {:else if b.name === 'profil'}
     <MatheProfil />
   {:else if b.name === 'andenken'}
@@ -80,6 +84,14 @@
     <Bauplatz />
   {:else if b.name === 'check'}
     <JahrmarktCheck />
+  {:else if b.name === 'album'}
+    <Sammelalbum />
+  {:else if b.name === 'blitz'}
+    <Blitzrechnen />
+  {:else if b.name === 'knobel'}
+    <Knobelzelt />
+  {:else if b.name === 'insel'}
+    <Bauinsel />
   {/if}
 
   {#if app.ladefehler && b.name !== 'laden'}
@@ -96,6 +108,7 @@
 <style>
   .welt {
     position: relative;
+    zoom: var(--z, 1);
     height: 100%;
     /* clip: Auch beim Antippen weit unten (scrollIntoView) verrutscht die ganze Seite nicht */
     overflow: clip;

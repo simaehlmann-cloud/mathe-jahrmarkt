@@ -121,19 +121,35 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Oberfläche | Wolken lagen über neuen Bildschirmen | eigene Ebene für Bauplatz und Check |
 | Ablauftest | Sternenmarkt und Spiel-Buden | zweiter Durchgang mit eingespieltem Stand (Paket, Silber überall): alle acht Spiele, Bauplatz, Bauauftrag, Check, Aufträge |
 
+## Neu in 0.10.0 geprüft
+
+| Bereich | Befund | Lösung |
+| --- | --- | --- |
+| Geschichte | Gassen-Begrüßung nannte eine andere Bude als die erste Station | neutrale Begrüßung je Gasse plus ein Satz zur ersten Bude und ihrer Mechanik |
+| Oberfläche | gelber Kreis über Buden war unverständlich | Fähnchen „Auftrag“ mit einmaliger Erklärung |
+| Spielfluss | abgebrochene Runde ging verloren | Zwischenstand je Bude und Stufe, 24 Stunden gültig, ohne erneuten Probewurf (Tests) |
+| Vorlesen | zu viele gleich benannte Stimmen („Deutsch (Deutschland)“) | höchstens vier: Frau 1/2, Mann 1/2 nach Stimmkennung; Standard Frau 2 (Tests) |
+| Mathematik | Katalog aller Generatoren durchgesehen | elf Text- und Ablenkerfehler behoben (Dosenwerfen, Schätz-Bude, Kasse, Achterbahn, Spiegelkabinett, Riesenrad, Murmeln, Pizza, Knobelzelt); Liste im Dokument „Aufgabenkatalog“ |
+| Bauinsel | Dach ließ sich nicht bauen, weil Blöcke immer oben auf den Stapel kamen | Luftlöcher im Stapel, Bauen an der angetippten Seitenfläche, Tür als zweihohes Teil; Landschaft bleibt geschützt (Tests, Ablauftest) |
+| Kauf | nativer Kauf fehlte | StoreKit 2 / Google Play Billing, „schon gekauft“ und ausstehende Zahlung behandelt, stille Wiederherstellung (Tests mit nachgebildetem Plugin) |
+| Kauf | Test-APK konnte das Paket nicht freischalten | Test-APK mit gekennzeichnetem Testkauf (`VITE_TESTKAUF=1`); Store-Check verbietet ihn in anderen Builds |
+| Datenschutz | PDF-Bibliothek bringt Adressen und optionale Teile mit | HTML-Rendering, SVG und core-js durch ein leeres Modul ersetzt; die zwei verbleibenden Adressen sind nie aufgerufene Texte und im Store-Check ausdrücklich erlaubt |
+| Leistung | Bauinsel mit 576 Feldern als SVG | bei 6-facher CPU-Drosselung: Öffnen 1 s, Block setzen 0,15–0,5 s, Laufen 46 Bilder/s, Karte 57 Bilder/s |
+| Tablet | Oberfläche auf dem iPad zu klein | Zoom 1,2 bzw. 1,4 für die ganze Oberfläche, PixiJS mit passender Auflösung |
+| Oberfläche | Fortschrittsschild unter dem Riesenrad wurde am Rand abgeschnitten | zweizeilig und schmaler |
+
 ## Offen
 
 | Stufe | Befund | Vorschlag |
 | --- | --- | --- |
-| kritisch vor Veröffentlichung | Nativer Kauf fehlt; die App zeigt in der Store-Version ehrlich „noch nicht verfügbar“ | Fahrplan Schritt 6 |
-| wichtig | Der Paketstatus liegt nur lokal; nach Neuinstallation hilft „Käufe wiederherstellen“ erst mit nativem Kauf | mit Schritt 6 beim Start still prüfen |
+| kritisch vor Veröffentlichung | Kauf ist angebunden, aber noch nicht mit echten Store-Konten geprüft | Produkt anlegen, Sandbox (iOS) und Lizenz-Tester (Android) |
 | wichtig | Sprachausgabe hängt von installierten Systemstimmen ab; ohne deutsche Offline-Stimme bleibt es still | Hinweis im Elternbereich ist da; später eingesprochene Aufnahmen |
-| Verbesserung | Gassen-Abschlussanimation und Sommerfest sind im Fortschritt angelegt, aber noch ohne Darstellung | jetzt möglich, da alle Buden gebaut sind |
-| Verbesserung | Sicherung läuft über Kopieren und Einfügen von Text | Teilen-Dialog über ein Capacitor-Plugin |
+| Verbesserung | Bauaufträge auf der Bauinsel selbst | bisher führt ein Knopf zum Bauplatz |
+| Verbesserung | Sicherung läuft über Kopieren und Einfügen von Text | das Teilen-Plugin ist jetzt da (PDF), Sicherung als Datei wäre der nächste Schritt |
 
 ## Prüfstand
 
-- 48 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
+- 146 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
 - Typprüfung ohne Fehler und Warnungen (`svelte-check --fail-on-warnings`)
-- 45 Store-Regel-Prüfungen
-- Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Figuren-Baukasten, Neustart mit Fortschritt und Figur, keine Konsolenfehler
+- 54 Store-Regel-Prüfungen
+- Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Figuren-Baukasten, Neustart mit Fortschritt und Figur, keine Konsolenfehler; zweiter Durchgang mit Zusatzpaket: Feiern, Sammelalbum, Blitzrechnen, Knobelzelt, Rätsel, Rang, Bauplatz, Bauinsel, Check, Weiterspielen, acht Spiel-Buden, Eltern-PDF

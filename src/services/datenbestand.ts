@@ -2,6 +2,9 @@ import { pruefeAussehen } from '../domain/aussehen';
 import { pruefeAuftraege } from '../domain/auftraege';
 import { pruefeBau } from '../domain/bau';
 import { pruefeCheck } from '../domain/check';
+import { pruefePausen } from '../domain/pause';
+import { pruefeBlitz } from '../domain/blitz';
+import { pruefeInsel } from '../domain/insel';
 import { STUFEN } from '../domain/buden';
 import { FIGUREN, MAX_PROFILE, bereinigeName, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
 import type { Ereignis, Wochenwert } from '../domain/lernprofil/lernprofil';
@@ -163,10 +166,16 @@ function pruefeProfil(x: unknown): Profil | undefined {
       intro: bool(gesehen.intro),
       entdeckungen: liste(gesehen.entdeckungen, (e) => (typeof e === 'string' ? e : undefined)),
       gassen: liste(gesehen.gassen, (e) => (typeof e === 'string' ? e : undefined)),
+      hinweise: liste(gesehen.hinweise, (e) => (typeof e === 'string' ? e : undefined)),
     },
     bau: pruefeBau(x.bau),
     auftraege: pruefeAuftraege(x.auftraege),
     check: pruefeCheck(x.check),
+    pausen: pruefePausen(x.pausen),
+    belohnt: liste(x.belohnt, (e) => (typeof e === 'string' ? e : undefined)).slice(-500),
+    album: liste(x.album, (e) => (typeof e === 'string' ? e : undefined)).slice(-500),
+    blitz: pruefeBlitz(x.blitz),
+    insel: pruefeInsel(x.insel),
   };
 }
 

@@ -4,6 +4,7 @@ import type { Aussehen } from '../domain/aussehen';
 import { MAX_PROFILE, fortschrittZurueckgesetzt, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
 import { randomSeed } from '../domain/rng';
 import { auftraegeFuerTag, tagKennung } from '../domain/auftraege';
+import { WOCHENZIEL_BLOECKE, wochenzielBelohnung } from '../domain/belohnungen';
 import { leererBestand, type Datenbestand, type Einstellungen } from '../services/datenbestand';
 import { erstelleKauf, keinKauf, type KaufService } from '../services/kauf';
 import { erstelleKlang, type Klangart } from '../services/klang';
@@ -16,13 +17,17 @@ export type Bildschirm =
   | { name: 'start' }
   | { name: 'jahrmarkt' }
   | { name: 'bude'; bude: string }
-  | { name: 'spiel'; bude: string; stufe: Stufe; n?: number }
+  | { name: 'spiel'; bude: string; stufe: Stufe; n?: number; fortsetzen?: boolean }
   | { name: 'profil' }
   | { name: 'andenken' }
   | { name: 'figur' }
   | { name: 'eltern' }
   | { name: 'bauplatz' }
-  | { name: 'check' };
+  | { name: 'check' }
+  | { name: 'album' }
+  | { name: 'blitz' }
+  | { name: 'knobel' }
+  | { name: 'insel' };
 
 /** Zentraler Zustand. Jede Änderung am Bestand läuft über `aendere`, damit sie gespeichert wird. */
 class AppZustand {
@@ -64,6 +69,12 @@ class AppZustand {
     this.ladefehler = wiederhergestellt;
     this.plan = new Speicherplan(speicher, 400, () => this.melde('Speichern hat nicht geklappt. Der Fortschritt wird beim nächsten Mal erneut gesichert.'));
     this.kauf = await erstelleKauf();
+    // Still im Hintergrund: ein Kauf von einem anderen Gerät oder ein inzwischen bezahlter, ausstehender Kauf.
+    if (this.kauf.art === 'store' && !this.bestand.paket.gekauft) {
+      void this.kauf.wiederherstellen().then((ja) => {
+        if (ja) this.aendere((b) => ({ ...b, paket: { gekauft: true, seit: b.paket.seit ?? Date.now() } }));
+      });
+    }
     this.bildschirm = this.profil ? { name: 'jahrmarkt' } : { name: 'start' };
     // Beim Wechsel in den Hintergrund sofort sichern.
     document.addEventListener('visibilitychange', () => {
@@ -124,6 +135,17 @@ class AppZustand {
     if (p.auftraege?.tag === tag) return;
     const neu = auftraegeFuerTag(p, this.paket, tag, p.check?.empfehlung ?? []);
     this.aendereProfil((q) => ({ ...q, auftraege: neu }));
+  }
+
+  /** Wochenziel prüfen und einmal pro Woche belohnen. True, wenn es gerade erreicht wurde. */
+  wochenzielPruefen(): boolean {
+    const p = this.profil;
+    if (!p) return false;
+    const neu = wochenzielBelohnung(p, new Date());
+    if (!neu) return false;
+    this.aendereProfil(() => neu);
+    this.melde(`Wochenziel geschafft: 3 Spieltage! +${WOCHENZIEL_BLOECKE} Blöcke`);
+    return true;
   }
 
   speichereSofort(): Promise<void> {

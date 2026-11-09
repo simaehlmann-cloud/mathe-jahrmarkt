@@ -13,6 +13,24 @@ export interface Tagesauftrag {
   bude: string;
   stufe: Stufe;
   erledigt: boolean;
+  /** Frischmacher: Geschafftes nach längerer Pause wiederholen. */
+  frisch?: boolean;
+}
+
+/** Nach so vielen Tagen ohne Runde kommt eine geschaffte Bude als Frischmacher wieder. */
+export const FRISCH_TAGE = 10;
+
+/** Buden mit geschaffter Stufe, an denen seit FRISCH_TAGE Tagen keine Runde gespielt wurde, mit der höchsten geschafften freien Stufe. */
+export function frischmacher(p: Profil, paket: boolean, jetzt: number): { bude: string; stufe: Stufe }[] {
+  const liste: { bude: string; stufe: Stufe; zuletzt: number }[] = [];
+  for (const b of BUDEN) {
+    const geschafft = STUFEN.filter((s) => istGeschafft(p, b.id, s) && stufeFreigabe(p, b.id, s, paket).frei);
+    const stufe = geschafft[geschafft.length - 1];
+    if (!stufe) continue;
+    const zuletzt = Math.max(0, ...p.runden.filter((r) => r.bude === b.id).map((r) => r.start));
+    if (jetzt - zuletzt >= FRISCH_TAGE * 86400000) liste.push({ bude: b.id, stufe, zuletzt });
+  }
+  return liste.sort((a, b) => a.zuletzt - b.zuletzt).map(({ bude, stufe }) => ({ bude, stufe }));
 }
 export interface AuftragsTag {
   tag: string;
@@ -55,14 +73,21 @@ export function neueAuftraege(p: Profil, paket: boolean, tag: string, empfehlung
     const auswahl = neueGasse.length ? neueGasse : rest;
     if (auswahl.length) gewaehlt.push(rng.pick(auswahl));
   };
-  // 1. Empfehlung aus dem Jahrmarkt-Check, 2. angefangene Bude, 3. etwas Neues
+  // 1. Empfehlung aus dem Jahrmarkt-Check, 2. Frischmacher (lange nicht geübt), 3. angefangene Bude, 4. etwas Neues
   nimm(empfehlung);
+  const frisch = frischmacher(p, paket, new Date(`${tag}T12:00:00`).getTime() || Date.now()).filter((f) => !gewaehlt.includes(f.bude));
+  const frischWahl = frisch.length ? frisch[rng.int(0, Math.min(2, frisch.length - 1))] : undefined;
+  if (frischWahl && gewaehlt.length < 3) gewaehlt.push(frischWahl.bude);
   nimm(offen.filter((id) => (p.fortschritt[id] && Object.values(p.fortschritt[id] ?? {}).some((s) => s && s.gespielt > 0)) && !istGeschafft(p, id, 'bronze')));
   nimm(offen.filter((id) => !p.fortschritt[id]));
   while (gewaehlt.length < 3 && gewaehlt.length < offen.length) nimm(offen);
   return {
     tag,
-    liste: gewaehlt.map((bude) => ({ bude, stufe: auftragsStufe(p, bude, paket) ?? 'bronze', erledigt: false })),
+    liste: gewaehlt.map((bude) =>
+      frischWahl && bude === frischWahl.bude
+        ? { bude, stufe: frischWahl.stufe, erledigt: false, frisch: true }
+        : { bude, stufe: auftragsStufe(p, bude, paket) ?? 'bronze', erledigt: false },
+    ),
     bonus: false,
   };
 }
@@ -101,7 +126,7 @@ export function pruefeAuftraege(x: unknown): AuftragsTag | null {
   const liste = o.liste
     .filter((a): a is Record<string, unknown> => typeof a === 'object' && a !== null)
     .filter((a) => typeof a.bude === 'string' && BUDEN.some((b) => b.id === a.bude) && STUFEN.includes(a.stufe as Stufe))
-    .map((a) => ({ bude: a.bude as string, stufe: a.stufe as Stufe, erledigt: a.erledigt === true }))
+    .map((a) => ({ bude: a.bude as string, stufe: a.stufe as Stufe, erledigt: a.erledigt === true, ...(a.frisch === true ? { frisch: true } : {}) }))
     .slice(0, 3);
   return { tag: o.tag, liste, bonus: o.bonus === true };
 }

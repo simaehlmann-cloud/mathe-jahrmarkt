@@ -42,7 +42,7 @@
     if (gesperrt || gelegt.length >= 30) return;
     gelegt = [...gelegt, g].sort((x, y) => y - x);
     zustand = '';
-    kontext.klang('pop');
+    kontext.klang(g >= 500 ? 'pop' : 'muenze');
   }
   function zurueck(i: number) {
     if (gesperrt) return;

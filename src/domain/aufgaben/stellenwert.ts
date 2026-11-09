@@ -208,7 +208,8 @@ export function typischeFehler(form: Form, antwort: number, bausteine: readonly 
       if (ziffernOhneNull !== antwort) f.push({ wert: ziffernOhneNull, fehlerArt: 'stelle' });
       // Geschrieben wie gesprochen: dreitausendfünfzig → 300050
       const gesprochen = Number(bausteine.map((b) => String(b.anzahl * 10 ** b.stelle)).join(''));
-      if (gesprochen !== antwort && bausteine.length > 1) f.push({ wert: gesprochen, fehlerArt: 'stelle' });
+      // Nur bei kurzen Zahlen glaubwürdig: 15-stellige Ablenker wären sofort auszuschließen.
+      if (gesprochen !== antwort && bausteine.length > 1 && String(gesprochen).length <= String(antwort).length + 3) f.push({ wert: gesprochen, fehlerArt: 'stelle' });
       // Zahlendreher bei Zehnern und Einern (siebenundvierzig → 74)
       const z = Math.floor(antwort / 10) % 10;
       const e = antwort % 10;

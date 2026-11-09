@@ -15,17 +15,22 @@
   import { AUFTRAG_BLOECKE, AUFTRAG_TALER, BONUS_BLOECKE, auftragPruefen, tagKennung } from '../../domain/auftraege';
   import { bloeckeFuerRunde } from '../../domain/bau';
   import { rang } from '../../domain/rang';
+  import { mitPause, ohnePause, pauseFuer } from '../../domain/pause';
+  import { KARTEN, WOCHENZIEL_BLOECKE, wochenzielBelohnung } from '../../domain/belohnungen';
   import { app } from '../zustand.svelte';
 
-  let props: { bude: string; stufe: Stufe } = $props();
+  let props: { bude: string; stufe: Stufe; fortsetzen?: boolean } = $props();
   // Der Bildschirm wird für jede Runde neu erzeugt ({#key} in App.svelte), Bude und Stufe stehen daher fest.
-  const { bude, stufe } = (() => ({ bude: props.bude, stufe: props.stufe }))();
+  const { bude, stufe, fortsetzen } = (() => ({ bude: props.bude, stufe: props.stufe, fortsetzen: props.fortsetzen === true }))();
 
   const info = budeInfo(bude);
   const def = budeDefinition(bude);
   const profilStart = app.profil;
   const ersteRunde = !profilStart || Object.values(profilStart.fortschritt[bude] ?? {}).every((s) => !s || s.gespielt === 0);
   const rng = createRng(randomSeed());
+  // Unterbrochene Runde fortsetzen, sonst einen alten Zwischenstand verwerfen (neu starten)
+  const pause = fortsetzen && profilStart ? pauseFuer(profilStart, bude, stufe, Date.now()) : undefined;
+  if (!pause && profilStart && profilStart.pausen.some((q) => q.bude === bude && q.stufe === stufe)) app.aendereProfil((q) => ohnePause(q, bude, stufe));
   const runde = new Rundensteuerung({
     bude,
     stufe,
@@ -33,7 +38,8 @@
     erzeuge: def.erzeuge,
     aehnlich: def.aehnlich,
     gewichtung: def.gewichtung(profilStart?.ereignisse ?? []),
-    probe: ersteRunde ? def.probe(rng) : undefined,
+    probe: !pause && ersteRunde ? def.probe(rng) : undefined,
+    fortsetzen: pause,
   });
 
   let host: HTMLDivElement;
@@ -47,11 +53,11 @@
   );
   let phase = $state(runde.aktuellePhase);
   let nummer = $state(runde.nummer);
-  let punkte = $state(0);
-  let ergebnisse = $state<boolean[]>([]);
+  let punkte = $state(pause?.punkte ?? 0);
+  let ergebnisse = $state<boolean[]>(pause ? [...pause.ergebnisse] : []);
   let hinweis = $state<string | null>(null);
   let hilfe = $state<{ aufgabe: Aufgabe; gewaehlt: number } | null>(null);
-  let ende = $state<{ punkte: number; richtig: number; taler: number; rekord: boolean; geschafft: boolean; erster: boolean; bloecke: number; auftraege: number; bonus: boolean; neuerRang: string | null } | null>(null);
+  let ende = $state<{ punkte: number; richtig: number; taler: number; rekord: boolean; geschafft: boolean; erster: boolean; bloecke: number; auftraege: number; bonus: boolean; neuerRang: string | null; wochenziel: boolean; karten: string[] } | null>(null);
   let bereit = $state(false);
   let fehlerBeimLaden = $state(false);
   let gezeigtUm = 0;
@@ -125,7 +131,7 @@
     if (!p) return;
     verbuche();
     const r = runde.ergebnis();
-    const vorher = app.profil ?? p;
+    const vorher = ohnePause(app.profil ?? p, bude, stufe);
     const rangVorher = rang(vorher);
     const e = rundeVerbuchen(vorher, r);
     // Blöcke für den Bauplatz und Tagesaufträge
@@ -133,12 +139,17 @@
     const a = auftragPruefen(e.profil.auftraege, { bude, stufe, richtig: r.richtig }, tagKennung(new Date()));
     const auftragsTaler = (a?.neu.length ?? 0) * AUFTRAG_TALER;
     const auftragsBloecke = (a?.neu.length ?? 0) * AUFTRAG_BLOECKE + (a?.bonus ? BONUS_BLOECKE : 0);
+    const mitRunde = { ...e.profil, auftraege: a ? a.stand : e.profil.auftraege };
+    // Wochenziel: drei Spieltage in dieser Woche (einmal pro Woche belohnt)
+    const mitZiel = wochenzielBelohnung(mitRunde, new Date());
+    const wochenziel = !!mitZiel;
+    const basis = mitZiel ?? mitRunde;
     const nachher = {
-      ...e.profil,
-      taler: e.profil.taler + auftragsTaler,
-      bau: { ...e.profil.bau, bloecke: e.profil.bau.bloecke + bloecke + auftragsBloecke },
-      auftraege: a ? a.stand : e.profil.auftraege,
+      ...basis,
+      taler: basis.taler + auftragsTaler,
+      bau: { ...basis.bau, bloecke: basis.bau.bloecke + bloecke + auftragsBloecke },
     };
+    const extra = wochenziel ? WOCHENZIEL_BLOECKE : 0;
     app.aendereProfil(() => nachher);
     void app.speichereSofort();
     const rangNachher = rang(nachher);
@@ -149,7 +160,9 @@
       rekord: e.neuerRekord,
       geschafft: e.geschafft,
       erster: e.ersterErfolg,
-      bloecke: bloecke + auftragsBloecke,
+      bloecke: bloecke + auftragsBloecke + extra,
+      wochenziel,
+      karten: KARTEN.filter((k) => k.hat(nachher) && !k.hat(vorher)).map((k) => k.titel),
       auftraege: a?.neu.length ?? 0,
       bonus: a?.bonus ?? false,
       neuerRang: rangNachher.stufe > rangVorher.stufe ? rangNachher.name : null,
@@ -160,8 +173,10 @@
   }
 
   function zurueck() {
-    // Abgebrochene Runde: Antworten zählen fürs Lernprofil, die Runde selbst nicht.
+    // Abgebrochene Runde: Antworten zählen fürs Lernprofil, die Runde selbst nicht. Der Stand wird zum Weiterspielen gemerkt.
     verbuche();
+    const z = ende ? undefined : runde.zwischenstand();
+    if (z) app.aendereProfil((q) => mitPause(q, { ...z, bude, stufe, am: Date.now(), ergebnisse: ergebnisse.slice(0, z.gestellt) }));
     app.zeige({ name: 'bude', bude });
   }
 
@@ -273,6 +288,8 @@
           <p>{ende.richtig} von {AUFGABEN_PRO_RUNDE} beim ersten Versuch richtig.</p>
           <p class="taler"><span><Icon name="taler" groesse={26} /> +{ende.taler} Taler</span>{#if ende.bloecke}<span><Icon name="block" groesse={24} /> +{ende.bloecke} Blöcke</span>{/if}</p>
           {#if ende.auftraege}<p class="auftrag"><Icon name="auftrag" groesse={22} /> {ende.bonus ? 'Alle Tagesaufträge erledigt!' : 'Tagesauftrag erledigt!'}</p>{/if}
+          {#if ende.wochenziel}<p class="auftrag"><Icon name="stern" groesse={22} /> Wochenziel geschafft: 3 Spieltage!</p>{/if}
+          {#each ende.karten as k (k)}<p class="karte-neu">Neue Sammelkarte: <strong>{k}</strong></p>{/each}
           {#if ende.neuerRang}<p class="rang"><Icon name="stern" groesse={24} /> Neuer Rang: <strong>{ende.neuerRang}</strong></p>{/if}
           {#if !ende.geschafft}<p class="klein">Mit 8 Treffern schaffst du die Stufe. Du kommst näher!</p>{/if}
           <div class="knoepfe">
@@ -459,6 +476,10 @@
     gap: 6px;
     align-items: center;
     justify-content: center;
+  }
+  .karte-neu {
+    font-weight: 800;
+    color: #7b5ea7;
   }
   .auftrag {
     font-weight: 900;

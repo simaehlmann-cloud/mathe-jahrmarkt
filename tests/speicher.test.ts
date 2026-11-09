@@ -149,7 +149,7 @@ describe('Sicherungsdatei', () => {
   });
 });
 
-import { stimmenWert, waehleStimmen } from '../src/services/sprache';
+import { geschlecht, standardStimme, stimmenWert, waehleStimmen } from '../src/services/sprache';
 
 describe('Stimmenwahl', () => {
   const v = (name: string, lang = 'de-DE', localService = true, def = false) => ({ name, voiceURI: name, lang, localService, default: def });
@@ -159,10 +159,26 @@ describe('Stimmenwahl', () => {
     expect(stimmenWert(v('Anna', 'de-DE', false))).toBeLessThan(0);
     expect(stimmenWert(v('de-de-x-deb-local'))).toBeGreaterThanOrEqual(0);
   });
-  it('bevorzugt hochwertige Stimmen vor kompakten', () => {
+  it('bevorzugt hochwertige Stimmen vor kompakten und zeigt jede Stimme nur einmal', () => {
     const liste = waehleStimmen([v('Anna (kompakt)'), v('Anna (Enhanced)'), v('de-de-x-nfh-network'), v('Thomas', 'fr-FR')]);
-    expect(liste.map((s) => s.name)).toEqual(['Anna (Enhanced)', 'Anna (kompakt)']);
+    expect(liste).toHaveLength(1);
+    expect(liste[0]?.name).toBe('Frau 1');
     expect(liste[0]?.index).toBe(1);
+  });
+  it('höchstens vier unterscheidbare Stimmen, auch wenn alle gleich heißen; Standard ist Frau 2', () => {
+    // So meldet ein Samsung-Handy mit Google-Sprachausgabe die Stimmen: Name überall gleich, Kennung verschieden
+    const s = (uri: string) => ({ name: 'Deutsch (Deutschland)', voiceURI: uri, lang: 'de-DE', localService: true, default: false });
+    const liste = waehleStimmen([
+      s('de-de-x-deb-local'), s('de-de-x-dea-local'), s('de-de-x-deg-local'), s('de-de-x-nfh-local'), s('de-de-x-def-local'),
+      s('de-de-x-deb-network'), s('de-DE-language'), s('de-de-x-dea-local'),
+    ]);
+    expect(liste.length).toBeLessThanOrEqual(4);
+    expect(liste.map((x) => x.name)).toEqual(['Frau 1', 'Frau 2', 'Mann 1', 'Mann 2']);
+    expect(new Set(liste.map((x) => x.uri)).size).toBe(liste.length);
+    expect(standardStimme(liste)?.name).toBe('Frau 2');
+    expect(geschlecht({ name: 'SMTf00', voiceURI: 'SMTf00' })).toBe('w');
+    expect(geschlecht({ name: 'Markus', voiceURI: 'Markus' })).toBe('m');
+    expect(standardStimme([])).toBeUndefined();
   });
   it('alte Einstellungen bekommen Tempo und Stimme', () => {
     const b = migriere({ schema: 2, profile: [], einstellungen: { lautSprache: 0.5 } });
@@ -184,5 +200,18 @@ describe('Flinkas Walzer', () => {
     }
     expect(frequenz(69)).toBe(440);
     expect(Math.round(frequenz(60))).toBe(262);
+  });
+});
+
+import { LICHTER_AN, PLAYLIST } from '../src/services/musik';
+describe('Lichter an', () => {
+  it('jeder Takt hat vier Schläge, Töne im spielbaren Bereich, Akkorde mit drei Tönen', () => {
+    expect(LICHTER_AN).toHaveLength(16);
+    for (const t of LICHTER_AN) {
+      expect(t.melodie.reduce((s, [, l]) => s + l, 0)).toBe(4);
+      for (const [m] of t.melodie) expect(m === 0 || (m >= 60 && m <= 90)).toBe(true);
+      expect(t.akkord).toHaveLength(3);
+    }
+    for (const s of PLAYLIST) expect(s.takte.every((t) => t.melodie.reduce((x, [, l]) => x + l, 0) === s.schlaege)).toBe(true);
   });
 });

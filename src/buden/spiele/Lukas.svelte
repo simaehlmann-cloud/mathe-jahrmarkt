@@ -39,7 +39,7 @@
   export async function treffer(w: number) {
     zustand = 'richtig';
     if (auswahl) gewaehlt = w;
-    kontext.klang('jubel');
+    kontext.klang(auswahl ? 'jubel' : 'glocke');
     await warte(kontext.reduziert ? 500 : 1100);
   }
   export async function daneben(w: number) {

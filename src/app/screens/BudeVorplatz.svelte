@@ -4,6 +4,7 @@
   import { stufeFreigabe } from '../../domain/fortschritt/kaufgrenze';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
+  import { pauseFuer } from '../../domain/pause';
   import Sprechblase from '../components/Sprechblase.svelte';
   import BudeStand from '../grafik/BudeStand.svelte';
   import Figur from '../grafik/Figur.svelte';
@@ -45,8 +46,15 @@
     else if (f.grund) app.melde(SPERRTEXT[f.grund]);
   }
 
+  let pause = $derived(p ? pauseFuer(p, bude, gewaehlt, Date.now()) : undefined);
+  let fragen = $state(false);
+
   function spielen() {
     if (!p || !stufeFreigabe(p, bude, gewaehlt, app.paket).frei) return;
+    if (pause) {
+      fragen = true;
+      return;
+    }
     app.zeige({ name: 'spiel', bude, stufe: gewaehlt });
   }
 
@@ -122,12 +130,53 @@
   <div class="aktion">
     <button class="ticket rot spielen" onclick={spielen}>{STUFEN_NAME[gewaehlt]} spielen</button>
   </div>
+  {#if fragen && pause}
+    <div class="ebene">
+      <div class="tafel weiter" role="dialog" aria-modal="true" aria-labelledby="weiter-titel">
+        <div class="markise"></div>
+        <div class="inhalt">
+          <h2 id="weiter-titel">Weiterspielen?</h2>
+          <p>Du hast hier aufgehört: {pause.gestellt} von 10 Aufgaben, {pause.richtig} davon richtig, {pause.punkte} Punkte.</p>
+          <div class="knoepfe">
+            <button class="ticket rot" onclick={() => app.zeige({ name: 'spiel', bude, stufe: gewaehlt, fortsetzen: true })}>Weiterspielen (Aufgabe {pause.gestellt + 1} von 10)</button>
+            <button class="ticket hell" onclick={() => app.zeige({ name: 'spiel', bude, stufe: gewaehlt })}>Neu starten</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
   {#if app.flinka}
     <Sprechblase saetze={app.flinka} onfertig={() => (app.flinka = null)} />
   {/if}
 {/if}
 
 <style>
+  .ebene {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: var(--oben) var(--rand-r) var(--unten) var(--rand);
+    background: rgb(31 42 107 / 0.35);
+  }
+  .weiter {
+    width: min(100%, 26rem);
+  }
+  .weiter .inhalt {
+    padding: 14px 18px 18px;
+    display: grid;
+    gap: 10px;
+    text-align: center;
+  }
+  .weiter h2,
+  .weiter p {
+    margin: 0;
+  }
+  .weiter .knoepfe {
+    display: grid;
+    gap: 8px;
+  }
   .vorplatz {
     flex: 1;
     min-height: 0;

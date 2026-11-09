@@ -35,6 +35,10 @@ jobs:
       - run: npm ci
       - name: Web-App bauen und prüfen
         run: npm run verify
+      - name: Test-Version mit Testkauf bauen (nie für den Store)
+        run: npm run build
+        env:
+          VITE_TESTKAUF: '1'
       - name: In das Android-Projekt kopieren
         run: npx cap sync android
 

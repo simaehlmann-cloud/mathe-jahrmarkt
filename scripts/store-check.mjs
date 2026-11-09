@@ -34,7 +34,10 @@ for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }))
 }
 
 /* 2. Keine Adressen außer Dokumentations- und Namensraum-Texten */
-const ERLAUBT = [/^https?:\/\/www\.w3\.org\//, /^https:\/\/svelte\.dev\/e\//, /^http:\/\/www\.pixijs\.com\/$/];
+// Der Testkauf gehört nur in die Test-APK (VITE_TESTKAUF=1), nie in eine Store-Version.
+if (!process.env.VITE_TESTKAUF) ok(!code.includes('(Testkauf)'), 'Testkauf ist im Bundle (VITE_TESTKAUF gesetzt?)');
+// jsPDF enthält zwei Adressen als Text, lädt sie aber nur bei Ausgabearten, die die App nicht nutzt (PDF-Vorschau im neuen Fenster).
+const ERLAUBT = [/^https?:\/\/www\.w3\.org\//, /^https:\/\/svelte\.dev\/e\//, /^http:\/\/www\.pixijs\.com\/$/, /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/pdfobject\//, /^http:\/\/jspdf\.default\.namespaceuri\/$/];
 const urls = [...new Set(code.match(/https?:\/\/[a-zA-Z0-9./_-]+/g) ?? [])];
 for (const u of urls) ok(ERLAUBT.some((r) => r.test(u)), `Unerwartete Adresse im Bundle: ${u}`);
 

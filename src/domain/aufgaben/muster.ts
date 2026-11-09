@@ -8,6 +8,15 @@ import type { AuswahlAufgabe } from './typen';
 
 /* ---------- Zahlenfolgen-Zug ---------- */
 
+/** „3 rote und 1 blaue Murmel“ – mit der richtigen Einzahl. */
+const tuete = (rot: number, blau: number): string => {
+  const verb = rot + blau === 1 ? 'ist' : 'sind';
+  if (rot === 1 && blau === 1) return `${verb} 1 rote und 1 blaue Murmel`;
+  if (blau === 1) return `${verb} ${rot} rote Murmeln und 1 blaue`;
+  if (rot === 1) return `${verb} 1 rote Murmel und ${blau} blaue`;
+  return `${verb} ${rot} rote und ${blau} blaue Murmeln`;
+};
+
 export function baueFolge(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe {
   const f = form ?? (stufe === 'bronze' ? 'plusminus' : stufe === 'silber' ? 'maldurch' : 'zweiRegeln');
   let folge: number[] = [];
@@ -174,7 +183,7 @@ export function baueRiesenrad(stufe: Stufe, rng: Rng, form?: string): AuswahlAuf
   const antwort = grund + preis * n;
   return auswahlAufgabe(
     {
-      bude: 'riesenradtechniker', form: f, stufe, text: `Was kosten ${n} Fahrten?`, sprechtext: `${grund ? `Der Eintritt kostet ${grund} Euro, ` : ''}jede Fahrt ${preis} Euro. Was kosten ${n} Fahrten?`,
+      bude: 'riesenradtechniker', form: f, stufe, text: `Was kosten ${n} Fahrten?`, sprechtext: `${grund ? `Der Eintritt kostet ${grund} Euro, jede Fahrt ${preis} Euro.` : `Jede Fahrt kostet ${preis} Euro.`} Was kosten ${n} Fahrten?`,
       antwort, fehler: [{ wert: preis * n, fehlerArt: 'sonstige' }, { wert: antwort + preis, fehlerArt: 'nachbaraufgabe' }, { wert: grund + preis + n, fehlerArt: 'operation' }].filter((x) => x.wert !== antwort) as Fehler[],
       format: (w) => `${w} €`, frei: true, kompetenz: 'muster', dimension: 'anwendung',
       idee: 'In der Tabelle kommt bei jeder Fahrt derselbe Betrag dazu.',
@@ -206,7 +215,7 @@ export function baueMurmeln(stufe: Stufe, rng: Rng, form?: string): AuswahlAufga
     return auswahlAufgabe(
       {
         bude: 'murmellabor', form: f, stufe, text: 'Wo ziehst du eher Rot?', ...c, anzahl: 3,
-        sprechtext: `In Tüte A sind ${a[0]} rote und ${a[1]} blaue Murmeln, in Tüte B ${b[0]} rote und ${b[1]} blaue. Aus welcher Tüte ziehst du eher eine rote?`,
+        sprechtext: `In Tüte A ${tuete(a[0], a[1])}, in Tüte B ${tuete(b[0], b[1])}. Aus welcher Tüte ziehst du eher eine rote?`,
         kompetenz: 'daten', dimension: 'anwendung',
         idee: 'Es kommt nicht nur auf die Zahl der roten an, sondern darauf, wie viele es insgesamt sind.',
         schritte: [`Tüte A: ${a[0]} von ${a[0] + a[1]} sind rot.`, `Tüte B: ${b[0]} von ${b[0] + b[1]} sind rot.`, `In Tüte ${richtig === 0 ? 'A' : 'B'} ist der Anteil Rot größer.`],

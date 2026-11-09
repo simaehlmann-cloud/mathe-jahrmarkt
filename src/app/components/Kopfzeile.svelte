@@ -3,12 +3,14 @@
   import Figur from '../grafik/Figur.svelte';
   import { app, type Bildschirm } from '../zustand.svelte';
   import { rang } from '../../domain/rang';
+  import { neueKarten } from '../../domain/belohnungen';
   import Icon from './Icon.svelte';
 
   /** Kopfzeile mit Zurück, Titel, Talern, Ton und dem Menü hinter der eigenen Figur. */
   let { titel, zurueck, mitte }: { titel?: string; zurueck?: () => void; mitte?: Snippet } = $props();
   let p = $derived(app.profil);
   let r = $derived(p ? rang(p) : null);
+  let neu = $derived(p ? neueKarten(p).length : 0);
   let offen = $state(false);
   function gehe(b: Bildschirm) {
     offen = false;
@@ -50,9 +52,10 @@
       ><Icon name={app.einstellungen.stimmeAn ? 'laut' : 'stumm'} groesse={20} /></button>
     </div>
     {#if p}
-      <button class="menue-knopf" onclick={() => (offen = !offen)} aria-label="Menü" aria-expanded={offen} aria-haspopup="true">
+      <button class="menue-knopf" onclick={() => (offen = !offen)} aria-label={neu ? `Menü, ${neu} neue Sammelkarten` : 'Menü'} aria-expanded={offen} aria-haspopup="true">
         <Figur figur={p.figur} groesse={38} aussehen={p.aussehen} />
         <Icon name="menue" groesse={18} />
+        {#if neu}<span class="marke" aria-hidden="true">{neu}</span>{/if}
       </button>
     {:else}
       <button class="rund schloss" onclick={() => app.zeige({ name: 'eltern' })} aria-label="Elternbereich"><Icon name="schloss" groesse={20} /></button>
@@ -71,7 +74,11 @@
         </div>
       </div>
       <button onclick={() => gehe({ name: 'profil' })}><Icon name="profil" groesse={22} />Mein Mathe-Profil</button>
+      <button onclick={() => gehe({ name: 'album' })}><Icon name="album" groesse={22} />Sammelalbum{#if neu}<span class="punkt">{neu} neu</span>{/if}</button>
+      <button onclick={() => gehe({ name: 'blitz' })}><Icon name="blitz" groesse={22} />Blitzrechnen</button>
+      <button onclick={() => gehe({ name: 'knobel' })}><Icon name="raetsel" groesse={22} />Knobelzelt</button>
       <button onclick={() => gehe({ name: 'bauplatz' })}><Icon name="block" groesse={22} />Bauplatz</button>
+      <button onclick={() => gehe({ name: 'insel' })}><Icon name="insel" groesse={22} />Bauinsel{#if !app.paket}<Icon name="schloss" groesse={16} />{/if}</button>
       <button onclick={() => gehe({ name: 'check' })}><Icon name="check" groesse={22} />Jahrmarkt-Check</button>
       <button onclick={() => gehe({ name: 'start' })}><Figur figur={p.figur} groesse={22} aussehen={p.aussehen} />Spieler wechseln</button>
       <button class="leise" onclick={() => gehe({ name: 'eltern' })}><Icon name="schloss" groesse={20} />Elternbereich</button>
@@ -118,6 +125,33 @@
     padding: 0 8px 0 2px;
     border-radius: 24px;
     min-height: 44px;
+  }
+  .menue-knopf {
+    position: relative;
+  }
+  .marke {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 11px;
+    background: var(--markise);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 900;
+    display: grid;
+    place-items: center;
+    border: 2px solid #fff;
+  }
+  .punkt {
+    margin-left: auto;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: var(--markise);
+    color: #fff;
+    font-size: 0.8rem;
   }
   .menue-schleier {
     position: fixed;

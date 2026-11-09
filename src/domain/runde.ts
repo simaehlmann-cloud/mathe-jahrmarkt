@@ -6,6 +6,7 @@ import { ZU_SCHNELL_MS, bestimmeUrsache, zaehltFuerProfil, type Ursache } from '
 import type { Ereignis } from './lernprofil/lernprofil';
 import type { Runde } from './profil';
 import type { Rng } from './rng';
+import type { Zwischenstand } from './pause';
 
 export const PUNKTE_RICHTIG = 100;
 export const PUNKTE_SERIE = 20;
@@ -23,6 +24,8 @@ export interface RundenKonfig {
   gewichtung: Gewichtung;
   /** Erste Runde in dieser Bude: vorher ein Probewurf, der nie gewertet wird. */
   probe?: Aufgabe | undefined;
+  /** Unterbrochene Runde fortsetzen: ohne Probewurf, mit den bisherigen Zählern. */
+  fortsetzen?: Zwischenstand | undefined;
   jetzt?: () => number;
 }
 
@@ -51,13 +54,25 @@ export class Rundensteuerung {
   private punkteSumme = 0;
   private ausstehendNochmal: Aufgabe | undefined;
   private durchhaltePunkte = 0;
+  /** Beantwortete Hauptaufgaben (für den Zwischenstand). */
+  private beantwortet = 0;
   readonly ereignisse: Ereignis[] = [];
 
   constructor(konfig: RundenKonfig) {
     this.k = konfig;
     this.jetzt = konfig.jetzt ?? Date.now;
     this.start = this.jetzt();
-    if (konfig.probe) {
+    const f = konfig.fortsetzen;
+    if (f) {
+      this.hauptGestellt = f.gestellt;
+      this.beantwortet = f.gestellt;
+      this.richtig = f.richtig;
+      this.serie = f.serie;
+      this.punkteSumme = f.punkte;
+      this.durchhaltePunkte = f.durchhalte;
+      this.phase = 'haupt';
+      this.aufgabe = this.neueHauptaufgabe();
+    } else if (konfig.probe) {
       this.phase = 'probe';
       this.aufgabe = konfig.probe;
     } else {
@@ -133,6 +148,7 @@ export class Rundensteuerung {
     }
 
     // Hauptaufgabe
+    this.beantwortet++;
     if (richtig) {
       this.richtig++;
       this.serie++;
@@ -161,6 +177,12 @@ export class Rundensteuerung {
     }
     this.aufgabe = this.neueHauptaufgabe();
     return this.aufgabe;
+  }
+
+  /** Stand zum Merken beim Abbrechen; undefined, wenn noch nichts oder schon alles beantwortet ist. */
+  zwischenstand(): Zwischenstand | undefined {
+    if (this.beantwortet < 1 || this.beantwortet >= AUFGABEN_PRO_RUNDE || this.phase === 'fertig') return undefined;
+    return { gestellt: this.beantwortet, richtig: this.richtig, serie: this.serie, punkte: this.punkteSumme, durchhalte: this.durchhaltePunkte };
   }
 
   ergebnis(): Runde {

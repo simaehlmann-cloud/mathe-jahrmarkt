@@ -131,6 +131,7 @@
     <div class="reiter" role="tablist">
       <button role="tab" aria-selected={ansicht === 'frei'} class:an={ansicht === 'frei'} onclick={() => (ansicht = 'frei')}>Frei bauen</button>
       <button role="tab" aria-selected={ansicht === 'auftrag'} class:an={ansicht === 'auftrag'} onclick={() => (ansicht = 'auftrag')}>Bauaufträge</button>
+      <button class="insel-knopf" onclick={() => app.zeige({ name: 'insel' })}>Zur Bauinsel</button>
     </div>
 
     {#if ansicht === 'frei'}
@@ -264,6 +265,10 @@
     color: var(--tinte);
     font: inherit;
     font-weight: 900;
+  }
+  .reiter .insel-knopf {
+    background: #e6f4ff;
+    border-style: dashed;
   }
   .reiter button.an,
   .modus button.an {

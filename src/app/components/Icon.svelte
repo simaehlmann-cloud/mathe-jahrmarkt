@@ -1,5 +1,5 @@
 <script lang="ts">
-  export type IconName = 'zurueck' | 'laut' | 'stumm' | 'musik' | 'musikAus' | 'schloss' | 'taler' | 'profil' | 'haken' | 'kreuz' | 'menue' | 'block' | 'auftrag' | 'check' | 'stern';
+  export type IconName = 'zurueck' | 'laut' | 'stumm' | 'musik' | 'musikAus' | 'schloss' | 'taler' | 'profil' | 'haken' | 'kreuz' | 'menue' | 'block' | 'auftrag' | 'check' | 'stern' | 'blitz' | 'album' | 'raetsel' | 'insel';
   let { name, groesse = 24 }: { name: IconName; groesse?: number } = $props();
 </script>
 
@@ -38,6 +38,19 @@
     <path d="M16 16 L21 21" stroke-width="3" />
   {:else if name === 'stern'}
     <path d="M12 3 L14.6 9 L21 9.5 L16 13.7 L17.6 20 L12 16.6 L6.4 20 L8 13.7 L3 9.5 L9.4 9 Z" fill="#ffc62b" stroke="#b07a00" stroke-width="1.8" />
+  {:else if name === 'insel'}
+    <path d="M2 17 Q12 12 22 17 L22 20 L2 20 Z" fill="#3c8fc2" stroke-width="1.8" />
+    <path d="M5 16 Q12 9 19 16" fill="#7cc96b" stroke-width="1.8" />
+    <path d="M12 12 V5 M12 5 Q15 3 17 6 M12 5 Q9 3 7 6" stroke-width="1.8" />
+  {:else if name === 'raetsel'}
+    <circle cx="12" cy="12" r="9.5" fill="#7b5ea7" stroke-width="2" />
+    <path d="M9.2 9.3 a2.9 2.9 0 1 1 4.3 2.5 c-1 .6 -1.5 1.2 -1.5 2.4" stroke="#fff" stroke-width="2.4" />
+    <circle cx="12" cy="17.4" r="1.4" fill="#fff" stroke="none" />
+  {:else if name === 'blitz'}
+    <path d="M13.5 2.5 L5 13.5 H11 L9.5 21.5 L19 9.5 H13 Z" fill="#ffc62b" stroke-width="2" />
+  {:else if name === 'album'}
+    <rect x="3.5" y="5" width="11" height="15" rx="2" stroke-width="2.2" transform="rotate(-8 9 12.5)" />
+    <rect x="9.5" y="4" width="11" height="15" rx="2" fill="#ffc62b" stroke-width="2.2" transform="rotate(8 15 11.5)" />
   {:else if name === 'haken'}
     <path d="M5 12.5 L10 17 L19 7" stroke-width="3" />
   {:else}

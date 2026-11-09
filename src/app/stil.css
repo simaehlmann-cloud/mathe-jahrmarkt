@@ -205,16 +205,14 @@ html[data-ruhig='1'] *::after {
   }
 }
 
-/* Spiel-Bühnen auf Tablets und im Querformat größer zeichnen (die Bedienelemente sind fürs Handy bemessen) */
-@media (min-width: 760px) and (min-height: 560px) {
-  .spielflaeche {
-    zoom: 1.2;
-    min-height: calc(100% / 1.2) !important;
+/* Tablets: Die ganze App wird größer gezeichnet (alle Maße sind fürs Handy bemessen). */
+@media (min-width: 760px) and (min-height: 700px) {
+  :root {
+    --z: 1.2;
   }
 }
-@media (min-width: 1000px) and (min-height: 700px) {
-  .spielflaeche {
-    zoom: 1.4;
-    min-height: calc(100% / 1.4) !important;
+@media (min-width: 1000px) and (min-height: 900px) {
+  :root {
+    --z: 1.4;
   }
 }

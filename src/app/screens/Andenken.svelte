@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DEKO, dekoKaufen } from '../../domain/deko';
+  import { EINRICHTUNG, kaufeEinrichtung } from '../../domain/insel';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import { app } from '../zustand.svelte';
@@ -18,6 +19,19 @@
     } else if (e.grund === 'zuWenig') {
       app.melde('Dafür brauchst du noch mehr Taler. Jede Runde bringt 10.');
     }
+  }
+
+  function kaufeTeil(id: number, name: string) {
+    const q = app.profil;
+    if (!q) return;
+    const e = kaufeEinrichtung(q.insel, q.taler, id);
+    if (!e.ok) {
+      app.melde('Dafür brauchst du noch mehr Taler.');
+      return;
+    }
+    app.aendereProfil((r) => ({ ...r, taler: e.taler, insel: e.stand }));
+    app.spieleKlang('muenze');
+    app.melde(`${name} liegt jetzt in deinem Bau-Inventar.`);
   }
 </script>
 
@@ -44,10 +58,52 @@
         </li>
       {/each}
     </ul>
+    <h2 class="titel">Einrichtung für die Bauinsel</h2>
+    {#if !app.paket}
+      <p class="erklaerung"><Icon name="schloss" groesse={18} /> Die Bauinsel gehört zum Zusatzpaket.</p>
+    {:else}
+      <p class="erklaerung">Kaufe Türen, Treppen und Möbel. Du setzt sie auf der Bauinsel wie Blöcke. Abbauen legt sie zurück ins Inventar.</p>
+      <ul class="moebel">
+        {#each EINRICHTUNG as e (e.id)}
+          <li>
+            <strong>{e.name}</strong>
+            <small>hast du: {p.insel.inventar[String(e.id)] ?? 0}</small>
+            <button class="ticket" disabled={p.taler < e.preis} onclick={() => kaufeTeil(e.id, e.name)} aria-label="{e.name} für {e.preis} Taler kaufen"><Icon name="taler" groesse={20} />{e.preis}</button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 {/if}
 
 <style>
+  .titel {
+    margin: 6px 0 0;
+  }
+  .moebel {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .moebel li {
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    background: var(--papier);
+    border: 3px solid var(--tinte);
+    border-radius: 12px;
+  }
+  .moebel small {
+    color: var(--tinte-weich);
+    font-weight: 700;
+  }
+  .moebel .ticket {
+    min-height: 44px;
+    font-size: 1rem;
+  }
   .seite {
     flex: 1;
     min-height: 0;

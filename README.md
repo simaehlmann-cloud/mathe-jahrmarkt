@@ -1,12 +1,12 @@
 # Mathe-Jahrmarkt – Fit für Klasse 5
 
-Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die Mathematik der weiterführenden Schule vorbereitet. Grundlage ist das Kerncurriculum Mathematik Grundschule Niedersachsen (in Kraft seit August 2025). Ein einmaliges Zusatzpaket (3,99 €) schaltet Silber- und Gold-Stufen, den Jahrmarkt-Check, das ausführliche Lernprofil und den Sternenmarkt frei.
+Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die Mathematik der weiterführenden Schule vorbereitet. Grundlage ist das Kerncurriculum Mathematik Grundschule Niedersachsen (in Kraft seit August 2025). Ein einmaliges Zusatzpaket (3,99 €) schaltet Silber- und Gold-Stufen, den Jahrmarkt-Check, das ausführliche Lernprofil, den Sternenmarkt und die Bauinsel frei.
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.9.0)
+## Stand dieser Version (0.10.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar. Neu in 0.9.0 (Zielgruppe Anfang Klasse 5): älterer Ton mit Menschen- und Roboterfiguren und Rängen, Menü hinter der eigenen Figur, acht Buden als echte Spiele, Tagesaufträge, Jahrmarkt-Check, Bauplatz mit Blöcken und Bauaufträgen.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar. Neu in 0.9.0 (Zielgruppe Anfang Klasse 5): älterer Ton mit Menschen- und Roboterfiguren und Rängen, Menü hinter der eigenen Figur, acht Buden als echte Spiele, Tagesaufträge, Jahrmarkt-Check, Bauplatz mit Blöcken und Bauaufträgen. Neu in 0.10.0: Gassen-Begrüßung passend zur ersten Bude, Auftragsfähnchen, Weiterspielen nach einer Pause, vier klar unterscheidbare Stimmen, Wochenziel, Frischmacher, Blitzrechnen, Knobelzelt mit Rätsel der Woche, Gassenfeiern und Sommerfest, Sammelalbum, Bauinsel, neue Musik und Klänge, Tablet-Ansicht, echter Kauf über App Store und Google Play, Eltern-Bericht als PDF.
 
 | Bereich | Stand |
 | --- | --- |
@@ -39,10 +39,19 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Elternbereich | Fortschritt je Profil zurücksetzen (Name und Figur bleiben), Elternsperre, Wochenbericht, Lernprofil mit Tipps, Zusatzpaket, Einstellungen, Profile, Sicherung als Text |
 | Barrierefreiheit | Vorlesen, Schriftgröße, Bewegung reduzieren, Antwortknöpfe für Bildschirmleser, Farben nie allein |
 | Ton | App startet still; Note und Lautsprecher oben schalten Musik und Vorlesen ein, die Wahl bleibt gespeichert |
-| Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
+| Musik | „Lichter an“ und „Flinkas Walzer“, eigene Kompositionen mit Marimba, Flächen, Bass, Arpeggien und Hall, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
 | Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
 | Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
-| Noch nicht | Gassen-Abschlussfeier, nativer Kauf |
+| Weiterspielen | Wer eine Runde abbricht, kann sie bis zu einem Tag lang an derselben Stelle fortsetzen („Aufgabe x von 10“) oder neu starten, ohne Probewurf |
+| Wochenziel und Frischmacher | Drei Spieltage pro Woche bringen 15 Blöcke; ein Tagesauftrag holt eine Bude zurück, die 10 Tage nicht gespielt wurde |
+| Blitzrechnen | 60 Sekunden Kopfrechnen in drei Stufen zum Aufwärmen, Blöcke für richtige Antworten, Rekord |
+| Knobelzelt | Sachaufgaben in Teilschritten mit Tipp und Rechnung (9 Arten, 3 Stufen), dazu jede Woche ein Rätsel mit zwei Tipps |
+| Feiern und Sammelalbum | Gassenfeier, wenn alle Buden einer Gasse Bronze haben, Sommerfest für alle; 42 Sammelkarten (normal, selten, legendär) |
+| Bauinsel | Zusatzpaket: Insel mit Wiese, Strand, See, Hügel und Bäumen; die Figur läuft verkleinert, steigt Treppen und geht durch Türen; Blöcke an jede Seite setzen und wieder abbauen, Dächer bauen, Einrichtung aus dem Andenkenstand; im Haus wird die Decke ausgeblendet |
+| Kauf | StoreKit 2 und Google Play Billing (Plugin `@capgo/native-purchases`), Produkt `de.maehlmann.mathejahrmarkt.zusatzpaket`, Käufe wiederherstellen, stille Wiederherstellung beim Start; die Test-APK hat einen gekennzeichneten Testkauf |
+| Eltern-Bericht | PDF mit Woche, Check, Fortschritt je Gasse und Lernprofil, über das Teilen-Menü oder als Download |
+| Tablet | Ab 760 px Breite wird die ganze Oberfläche größer (Faktor 1,2 bzw. 1,4) |
+| Noch nicht | Bauaufträge direkt auf der Bauinsel (bisher über den Bauplatz) |
 
 ## App-Symbol und Startbild
 
@@ -55,9 +64,10 @@ npm install
 npm run dev          # Entwicklung im Browser, mit gekennzeichnetem Testkauf
 npm run verify       # Typprüfung, Unit-Tests, Build, Store-Regeln
 npm run e2e          # Ablauftest in Chrome (vorher npm run build), Fotos in e2e-bilder/
+npm run store-bilder # Store-Screenshots für Telefon und iPad (vorher npm run build)
 ```
 
-Node 22 oder neuer. Für `npm run e2e` muss Chrome installiert sein (`CHROME_PFAD` setzen, falls nicht unter `/usr/bin/google-chrome`).
+Node 22 oder neuer. Für `npm run e2e` muss Chrome installiert sein (`CHROME_PFAD` setzen, falls nicht unter `/usr/bin/google-chrome`). `NUR=hoch` oder `NUR=quer` testet nur eine Ausrichtung, `TEIL=2` nur den zweiten Durchgang mit Zusatzpaket, `DROSSEL=4` simuliert ein langsames Gerät.
 
 ## Test-APK für Android
 
@@ -92,7 +102,7 @@ src/
                 Adaptivität, Lernprofil, Fortschritt, Kaufgrenze, Runde, Elternsperre
   services/     Speicher mit Migration, Sicherung, Kauf, Vorlesen, Klang, Haptik
 tests/          Unit-Tests der Domäne und der Services
-scripts/        Store-Regel-Prüfung, Ablauftest im Browser
+scripts/        Store-Regel-Prüfung, Ablauftest im Browser, Store-Screenshots, App-Symbole
 ```
 
 Grundregeln:
@@ -120,17 +130,18 @@ Für Auswahl-Aufgaben mit eigenem Bild reicht `auswahlBude()` aus `src/buden/gem
 
 - keine Analyse-, Werbe- oder Tracking-Pakete
 - keine Adressen im Bundle außer Dokumentationstexten, Content-Security-Policy ohne externe Verbindungen und ohne `unsafe-eval`
-- kein Testkauf im Produktions-Build
+- kein Testkauf im Produktions-Build (die Test-APK wird mit `VITE_TESTKAUF=1` gebaut, eine Store-Version nie)
 - keine Links nach außen, Kauf nur im Elternbereich hinter der nicht abschaltbaren Elternsperre
 
 ## Vor dem ersten TestFlight-Upload
 
 - [ ] App-Kennung `de.maehlmann.mathejahrmarkt` in `capacitor.config.ts` mit App Store Connect und Play Console abgleichen (lässt sich später nicht ändern)
-- [ ] Nativen Kauf anbinden (StoreKit 2, Google Play Billing) in `src/services/kauf.ts`, Produkt `…zusatzpaket` anlegen
+- [x] Nativen Kauf anbinden (StoreKit 2, Google Play Billing) in `src/services/kauf.ts`
+- [ ] Produkt `de.maehlmann.mathejahrmarkt.zusatzpaket` in App Store Connect (nicht verbrauchbar, Familienfreigabe) und Play Console anlegen, Kauf mit Sandbox bzw. Lizenz-Testern prüfen
 - [ ] App-Symbol und Startbild
 - [ ] Datenschutzhinweise der Kinder-Kategorie prüfen; die App sendet keine Daten
 - [ ] Apple-Datenschutzmanifest: Nutzung von UserDefaults (Grund CA92.1) über Capacitor Preferences prüfen
-- [ ] Android: Die Berechtigung INTERNET aus der Capacitor-Vorlage ist für die App nicht nötig und kann nach einem Gerätetest entfernt werden
-- [ ] Store-Texte und Screenshots
+- [ ] Android: INTERNET und BILLING werden für Google Play Billing gebraucht
+- [x] Store-Texte, Screenshots und Datenschutzerklärung (Dokument „Mathe-Jahrmarkt: Store-Einträge und Datenschutz“, Bilder mit `npm run store-bilder`)
 
 Die Review-Befunde stehen in [REVIEW.md](REVIEW.md).

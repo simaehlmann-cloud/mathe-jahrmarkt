@@ -326,7 +326,7 @@ import { fortschrittZurueckgesetzt } from '../src/domain/profil';
 describe('Fortschritt zurücksetzen', () => {
   it('setzt alles auf Anfang, Name und Figur bleiben', () => {
     const p = rundeVerbuchen(neuesProfil('p1', 'Mia', 'eule', 5), { bude: 'dartbude', stufe: 'bronze', start: 1, dauerMs: 60000, punkte: 1200, richtig: 9, gesamt: 10 }).profil;
-    const mitHut = { ...p, taler: 40, deko: ['hut'], aussehen: { fell: 2, tuch: 'rot' as const, extra: 'strohhut' as const }, gesehen: { intro: true, entdeckungen: ['katze'], gassen: ['zahlengasse'] } };
+    const mitHut = { ...p, taler: 40, deko: ['hut'], aussehen: { fell: 2, tuch: 'rot' as const, extra: 'strohhut' as const }, gesehen: { intro: true, entdeckungen: ['katze'], gassen: ['zahlengasse'], hinweise: ['auftraege'] } };
     const r = fortschrittZurueckgesetzt(mitHut);
     expect(r.id).toBe('p1');
     expect(r.name).toBe('Mia');
@@ -338,6 +338,6 @@ describe('Fortschritt zurücksetzen', () => {
     expect(r.deko).toEqual([]);
     expect(r.runden).toEqual([]);
     expect(r.ereignisse).toEqual([]);
-    expect(r.gesehen).toEqual({ intro: true, entdeckungen: [], gassen: [] });
+    expect(r.gesehen).toEqual({ intro: true, entdeckungen: [], gassen: [], hinweise: ['auftraege'] });
   });
 });

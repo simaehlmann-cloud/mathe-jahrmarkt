@@ -18,6 +18,10 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
     case 'andenken':
     case 'bauplatz':
     case 'check':
+    case 'album':
+    case 'blitz':
+    case 'knobel':
+    case 'insel':
     case 'eltern':
       return hatProfil ? { name: 'jahrmarkt' } : { name: 'start' };
     case 'bude':

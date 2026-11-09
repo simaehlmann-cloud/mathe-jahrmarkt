@@ -11,6 +11,8 @@ const pickForm = (formen: readonly string[], form: string | undefined, rng: Rng)
 /* ---------- Süßigkeitenkasse ---------- */
 
 const WAREN = ['Zuckerwatte', 'Lolli', 'Popcorn', 'Lebkuchenherz', 'Brezel', 'Apfel im Schokomantel', 'Gummibärchen', 'Limo'];
+/** Für Preise ab 5 €: Was kostet auf dem Jahrmarkt so viel? */
+const TEURE_WAREN = ['Ein Kuscheltier', 'Eine Fahrkarten-Mappe', 'Ein Leuchtschwert', 'Ein großes Lebkuchenherz', 'Ein Windrad', 'Ein Plüsch-Einhorn'];
 const MUENZEN = [200, 100, 50, 20, 10, 5, 2, 1];
 
 /** Betrag gierig in Münzen zerlegen. */
@@ -47,8 +49,9 @@ export function baueKasse(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
   }
   if (f === 'rueckgeld') {
     const schein = rng.pick([500, 1000, 2000]);
-    const preis = rng.int(Math.ceil(schein / 400), schein / 100 - 1) * 100 + rng.pick([15, 25, 35, 45, 55, 65, 85, 95]);
+    const preis = rng.int(Math.ceil(schein / 400), Math.min(schein / 100 - 1, 14)) * 100 + rng.pick([15, 25, 35, 45, 55, 65, 85, 95]);
     const rueck = schein - preis;
+    const wareR = preis >= 500 ? rng.pick(TEURE_WAREN) : ware;
     const fehler: Fehler[] = [
       { wert: rueck + 100, fehlerArt: 'uebertrag' },
       { wert: rueck - 10 > 0 ? rueck - 10 : rueck + 20, fehlerArt: 'uebertrag' },
@@ -57,12 +60,12 @@ export function baueKasse(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
     const ergaenzung = Math.ceil(preis / 100) * 100;
     return auswahlAufgabe(
       {
-        bude: 'kasse', form: f, stufe, text: 'Gib das Rückgeld!', sprechtext: `${ware} kostet ${euro(preis)}. Der Kunde bezahlt mit ${schein / 100} Euro. Lege das Rückgeld hin.`,
+        bude: 'kasse', form: f, stufe, text: 'Gib das Rückgeld!', sprechtext: `${wareR} kostet ${euro(preis)}. Der Kunde bezahlt mit ${schein / 100} Euro. Lege das Rückgeld hin.`,
         antwort: rueck, fehler, schritt: 10, format: (w) => euro(w), frei: true,
         kompetenz: 'groessen', dimension: 'anwendung',
         idee: 'Rückgeld findest du durch Ergänzen: erst bis zum vollen Euro, dann bis zum Schein.',
         schritte: [`${euro(preis)} + ${euro(ergaenzung - preis)} = ${euro(ergaenzung)}`, `${euro(ergaenzung)} + ${euro(schein - ergaenzung)} = ${euro(schein)}`, `Rückgeld: ${euro(ergaenzung - preis)} + ${euro(schein - ergaenzung)} = ${euro(rueck)}`],
-        daten: { ware, preis, schein, modus: 'rueckgeld', anzeige: 'euro' },
+        daten: { ware: wareR, preis, schein, modus: 'rueckgeld', anzeige: 'euro' },
       },
       rng,
     );
@@ -93,35 +96,40 @@ export function baueKasse(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
 /* ---------- Schätz-Bude ---------- */
 
 interface Ding {
-  name: string;
+  /** Was auf dem Plakat steht. */
+  ding: string;
+  frage: string;
+  /** Lösungssatz, {} steht für den Wert mit Einheit. */
+  satz: string;
   wert: number;
   einheit: string;
   /** Andere Einheiten derselben Größe, die als falsche Antworten dienen. */
   falsch: string[];
   art: 'laenge' | 'gewicht' | 'volumen' | 'zeit';
 }
+const D = (ding: string, frage: string, satz: string, wert: number, einheit: string, falsch: string[], art: Ding['art']): Ding => ({ ding, frage, satz, wert, einheit, falsch, art });
 const DINGE: Ding[] = [
-  { name: 'Ein Bleistift', wert: 15, einheit: 'cm', falsch: ['mm', 'm', 'km'], art: 'laenge' },
-  { name: 'Eine Zimmertür ist hoch', wert: 2, einheit: 'm', falsch: ['cm', 'mm', 'km'], art: 'laenge' },
-  { name: 'Eine Ameise', wert: 5, einheit: 'mm', falsch: ['cm', 'm', 'km'], art: 'laenge' },
-  { name: 'Ein Bus', wert: 12, einheit: 'm', falsch: ['cm', 'mm', 'km'], art: 'laenge' },
-  { name: 'Ein Fußballfeld', wert: 100, einheit: 'm', falsch: ['cm', 'mm', 'km'], art: 'laenge' },
-  { name: 'Eine Wanderung', wert: 8, einheit: 'km', falsch: ['m', 'cm', 'mm'], art: 'laenge' },
-  { name: 'Ein Schulheft ist breit', wert: 21, einheit: 'cm', falsch: ['mm', 'm', 'km'], art: 'laenge' },
-  { name: 'Ein Apfel wiegt', wert: 150, einheit: 'g', falsch: ['kg', 't'], art: 'gewicht' },
-  { name: 'Ein Kind wiegt', wert: 30, einheit: 'kg', falsch: ['g', 't'], art: 'gewicht' },
-  { name: 'Eine Tafel Schokolade', wert: 100, einheit: 'g', falsch: ['kg', 't'], art: 'gewicht' },
-  { name: 'Ein Elefant wiegt', wert: 5, einheit: 't', falsch: ['kg', 'g'], art: 'gewicht' },
-  { name: 'Ein Sack Kartoffeln', wert: 5, einheit: 'kg', falsch: ['g', 't'], art: 'gewicht' },
-  { name: 'In eine Milchtüte passt', wert: 1, einheit: 'l', falsch: ['ml'], art: 'volumen' },
-  { name: 'In einen Teelöffel passen', wert: 5, einheit: 'ml', falsch: ['l'], art: 'volumen' },
-  { name: 'In eine Badewanne passen', wert: 150, einheit: 'l', falsch: ['ml'], art: 'volumen' },
-  { name: 'In ein Glas passen', wert: 200, einheit: 'ml', falsch: ['l'], art: 'volumen' },
-  { name: 'Zähneputzen dauert', wert: 3, einheit: 'Minuten', falsch: ['Sekunden', 'Stunden', 'Tage'], art: 'zeit' },
-  { name: 'Eine Schulstunde dauert', wert: 45, einheit: 'Minuten', falsch: ['Sekunden', 'Stunden', 'Tage'], art: 'zeit' },
-  { name: 'Eine Nacht schlafen', wert: 10, einheit: 'Stunden', falsch: ['Minuten', 'Sekunden', 'Tage'], art: 'zeit' },
-  { name: 'Ein 50-Meter-Lauf dauert', wert: 10, einheit: 'Sekunden', falsch: ['Minuten', 'Stunden', 'Tage'], art: 'zeit' },
-  { name: 'Die Sommerferien dauern', wert: 42, einheit: 'Tage', falsch: ['Stunden', 'Minuten', 'Sekunden'], art: 'zeit' },
+  D('Ein Bleistift', 'Wie lang ist ein Bleistift?', 'Ein Bleistift ist ungefähr {} lang.', 15, 'cm', ['mm', 'm', 'km'], 'laenge'),
+  D('Eine Zimmertür', 'Wie hoch ist eine Zimmertür?', 'Eine Zimmertür ist ungefähr {} hoch.', 2, 'm', ['cm', 'mm', 'km'], 'laenge'),
+  D('Eine Ameise', 'Wie lang ist eine Ameise?', 'Eine Ameise ist ungefähr {} lang.', 5, 'mm', ['cm', 'm', 'km'], 'laenge'),
+  D('Ein Bus', 'Wie lang ist ein Bus?', 'Ein Bus ist ungefähr {} lang.', 12, 'm', ['cm', 'mm', 'km'], 'laenge'),
+  D('Ein Fußballfeld', 'Wie lang ist ein Fußballfeld?', 'Ein Fußballfeld ist ungefähr {} lang.', 100, 'm', ['cm', 'mm', 'km'], 'laenge'),
+  D('Eine Wanderung', 'Wie weit geht man bei einer Tageswanderung?', 'Bei einer Tageswanderung geht man ungefähr {}.', 8, 'km', ['m', 'cm', 'mm'], 'laenge'),
+  D('Ein Schulheft', 'Wie breit ist ein Schulheft?', 'Ein Schulheft ist ungefähr {} breit.', 21, 'cm', ['mm', 'm', 'km'], 'laenge'),
+  D('Ein Apfel', 'Wie schwer ist ein Apfel?', 'Ein Apfel wiegt ungefähr {}.', 150, 'g', ['kg', 't'], 'gewicht'),
+  D('Ein Kind', 'Wie schwer ist ein Kind in Klasse 4?', 'Ein Kind in Klasse 4 wiegt ungefähr {}.', 30, 'kg', ['g', 't'], 'gewicht'),
+  D('Eine Tafel Schokolade', 'Wie schwer ist eine Tafel Schokolade?', 'Eine Tafel Schokolade wiegt ungefähr {}.', 100, 'g', ['kg', 't'], 'gewicht'),
+  D('Ein Elefant', 'Wie schwer ist ein Elefant?', 'Ein Elefant wiegt ungefähr {}.', 5, 't', ['kg', 'g'], 'gewicht'),
+  D('Ein Sack Kartoffeln', 'Wie schwer ist ein Sack Kartoffeln?', 'Ein Sack Kartoffeln wiegt ungefähr {}.', 5, 'kg', ['g', 't'], 'gewicht'),
+  D('Eine Milchtüte', 'Wie viel passt in eine Milchtüte?', 'In eine Milchtüte passt ungefähr {}.', 1, 'l', ['ml'], 'volumen'),
+  D('Ein Teelöffel', 'Wie viel passt in einen Teelöffel?', 'In einen Teelöffel passen ungefähr {}.', 5, 'ml', ['l'], 'volumen'),
+  D('Eine Badewanne', 'Wie viel passt in eine Badewanne?', 'In eine Badewanne passen ungefähr {}.', 150, 'l', ['ml'], 'volumen'),
+  D('Ein Glas', 'Wie viel passt in ein Glas?', 'In ein Glas passen ungefähr {}.', 200, 'ml', ['l'], 'volumen'),
+  D('Zähneputzen', 'Wie lange dauert Zähneputzen?', 'Zähneputzen dauert ungefähr {}.', 3, 'Minuten', ['Sekunden', 'Stunden', 'Tage'], 'zeit'),
+  D('Eine Schulstunde', 'Wie lange dauert eine Schulstunde?', 'Eine Schulstunde dauert ungefähr {}.', 45, 'Minuten', ['Sekunden', 'Stunden', 'Tage'], 'zeit'),
+  D('Eine Nacht Schlaf', 'Wie lange schläft ein Kind in der Nacht?', 'Ein Kind schläft nachts ungefähr {}.', 10, 'Stunden', ['Minuten', 'Sekunden', 'Tage'], 'zeit'),
+  D('Ein 50-Meter-Lauf', 'Wie lange dauert ein 50-Meter-Lauf?', 'Ein 50-Meter-Lauf dauert ungefähr {}.', 10, 'Sekunden', ['Minuten', 'Stunden', 'Tage'], 'zeit'),
+  D('Die Sommerferien', 'Wie lange dauern die Sommerferien?', 'Die Sommerferien dauern ungefähr {}.', 42, 'Tage', ['Stunden', 'Minuten', 'Sekunden'], 'zeit'),
 ];
 
 export function baueSchaetzen(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe {
@@ -132,11 +140,11 @@ export function baueSchaetzen(stufe: Stufe, rng: Rng, form?: string): AuswahlAuf
   const c = codeAuswahl(texte, 0, rng);
   return auswahlAufgabe(
     {
-      bude: 'schaetzbude', form: f, stufe, text: `${ding.name} ungefähr …`, sprechtext: `${ding.name} ungefähr wie viel?`,
+      bude: 'schaetzbude', form: f, stufe, text: `${ding.frage.replace('?', '')} ungefähr?`, sprechtext: `${ding.frage.replace('?', '')} ungefähr?`,
       ...c, kompetenz: 'groessen', dimension: 'wissen',
       idee: 'Vergleiche mit etwas, das du kennst: 1 cm ist etwa ein Fingernagel breit, 1 m ein großer Schritt, 1 kg eine Packung Mehl, 1 l eine Milchtüte.',
-      schritte: [`${ding.name} ungefähr ${ding.wert} ${ding.einheit}.`],
-      daten: { ding: ding.name, art: ding.art },
+      schritte: [ding.satz.replace('{}', `${ding.wert} ${ding.einheit}`)],
+      daten: { ding: ding.ding, art: ding.art },
     },
     rng,
   );
@@ -250,9 +258,13 @@ export function baueMemory(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgab
 export function baueAchterbahn(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe {
   const f = pickForm(stufe === 'bronze' ? ['meter'] : stufe === 'silber' ? ['einheiten'] : ['umfang'], form, rng);
   if (f === 'umfang') {
-    const a = rng.int(3, 12) * 5;
-    const b = rng.int(2, 8) * 5;
+    const x = rng.int(3, 12) * 5;
+    const y = rng.int(2, 8) * 5;
+    // Länge ist die längere Seite
+    const a = Math.max(x, y);
+    const b = Math.min(x, y);
     const u = 2 * (a + b);
+    const figur = a === b ? `ein Quadrat mit ${a} Meter Seitenlänge` : `ein Rechteck, ${a} Meter lang und ${b} Meter breit`;
     const fehler: Fehler[] = [
       { wert: a + b, fehlerArt: 'sonstige' },
       { wert: a * b, fehlerArt: 'operation' },
@@ -260,7 +272,7 @@ export function baueAchterbahn(stufe: Stufe, rng: Rng, form?: string): AuswahlAu
     ];
     return auswahlAufgabe(
       {
-        bude: 'achterbahn', form: f, stufe, text: 'Schienen für die ganze Runde!', sprechtext: `Die Bahn fährt außen um ein Rechteck, ${a} Meter lang und ${b} Meter breit. Lege genau so viele Meter Schienen, wie die ganze Runde lang ist.`,
+        bude: 'achterbahn', form: f, stufe, text: 'Schienen für die ganze Runde!', sprechtext: `Die Bahn fährt außen um ${figur}. Lege genau so viele Meter Schienen, wie die ganze Runde lang ist.`,
         antwort: u, fehler, schritt: 10, format: (w) => `${w} m`, frei: true,
         kompetenz: 'groessen', dimension: 'anwendung',
         idee: 'Die Runde geht an allen vier Seiten entlang. Gegenüberliegende Seiten sind gleich lang.',

@@ -4,6 +4,9 @@ import type { Ereignis, Wochenwert } from './lernprofil/lernprofil';
 import { leererBau, type BauStand } from './bau';
 import type { AuftragsTag } from './auftraege';
 import type { CheckErgebnis } from './check';
+import type { Pause } from './pause';
+import { leererBlitz, type BlitzStand } from './blitz';
+import { leereInsel, type InselStand } from './insel';
 
 export type FigurId = 'mensch' | 'menschLang' | 'roboter' | 'fuchs' | 'eule' | 'igel' | 'katze' | 'baer' | 'hase';
 export const FIGUREN: readonly { id: FigurId; name: string }[] = [
@@ -60,13 +63,23 @@ export interface Profil {
   wochen: Wochenwert[];
   runden: Runde[];
   /** Gesehene Geschichte und Entdeckungen. */
-  gesehen: { intro: boolean; entdeckungen: string[]; gassen: string[] };
+  gesehen: { intro: boolean; entdeckungen: string[]; gassen: string[]; hinweise: string[] };
   /** Bauplatz: Blöcke, gebaute Welt, erledigte Bauaufträge. */
   bau: BauStand;
   /** Tagesaufträge des aktuellen Tages. */
   auftraege: AuftragsTag | null;
   /** Letzter Jahrmarkt-Check. */
   check: CheckErgebnis | null;
+  /** Unterbrochene Runden zum Weiterspielen. */
+  pausen: Pause[];
+  /** Schon vergebene Belohnungen (Wochenziel, Gassenfeiern, Rätsel …). */
+  belohnt: string[];
+  /** Angesehene Sammelkarten. */
+  album: string[];
+  /** Blitzrechnen: Rekorde je Stufe. */
+  blitz: BlitzStand;
+  /** Bauinsel (Zusatzpaket). */
+  insel: InselStand;
 }
 
 export const MAX_PROFILE = 4;
@@ -87,10 +100,15 @@ export function neuesProfil(id: string, name: string, figur: FigurId, jetzt: num
     ereignisse: [],
     wochen: [],
     runden: [],
-    gesehen: { intro: false, entdeckungen: [], gassen: [] },
+    gesehen: { intro: false, entdeckungen: [], gassen: [], hinweise: [] },
     bau: leererBau(),
     auftraege: null,
     check: null,
+    pausen: [],
+    belohnt: [],
+    album: [],
+    blitz: leererBlitz(),
+    insel: leereInsel(),
   };
 }
 
@@ -104,7 +122,7 @@ export function fortschrittZurueckgesetzt(p: Profil): Profil {
   return {
     ...neu,
     aussehen: { ...p.aussehen, extra: p.aussehen.extra === 'strohhut' ? 'keins' : p.aussehen.extra },
-    gesehen: { ...neu.gesehen, intro: p.gesehen.intro },
+    gesehen: { ...neu.gesehen, intro: p.gesehen.intro, hinweise: p.gesehen.hinweise },
   };
 }
 

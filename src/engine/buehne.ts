@@ -1,3 +1,6 @@
+/** Vergrößerung der App auf Tablets (CSS-Variable --z am Wurzelelement, siehe stil.css). */
+export const appZoom = (): number => Number(getComputedStyle(document.documentElement).getPropertyValue('--z')) || 1;
+
 // Die App läuft mit strenger Content-Security-Policy ohne 'unsafe-eval'.
 // Dieses Modul ersetzt die Shader-Erzeugung von PixiJS durch eine Variante ohne eval.
 import 'pixi.js/unsafe-eval';
@@ -35,7 +38,8 @@ export async function erstelleBuehne(host: HTMLElement, reduziert: boolean): Pro
     backgroundAlpha: 0,
     antialias: true,
     autoDensity: true,
-    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    // Auf Tablets ist die ganze App per CSS-Zoom vergrößert: Auflösung entsprechend erhöhen, sonst wird es unscharf
+    resolution: Math.min((window.devicePixelRatio || 1) * appZoom(), 3),
     preference: 'webgl',
   });
   host.appendChild(app.canvas);

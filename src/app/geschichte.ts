@@ -9,9 +9,24 @@ export const INTRO = (name: string): string[] => [
 
 export const ABENDMARKT_ZU = ['Der Sternenmarkt öffnet, wenn alle Buden Silber haben. Dort warten Aufgaben aus Klasse 5.'];
 
-export const GASSE_BEGRUESSUNG: Record<string, string[]> = {
-  zahlengasse: ['Willkommen in der Zahlengasse! Bruno von der Dartbude braucht Hilfe.'],
+/** Begrüßung beim ersten Besuch einer Gasse; der zweite Satz nennt die Bude, die das Kind gerade betritt. */
+const GASSE_SATZ: Record<string, string> = {
+  zahlengasse: 'Willkommen in der Zahlengasse! Hier geht es um große Zahlen und schnelles Rechnen.',
+  groessenmarkt: 'Willkommen auf dem Größenmarkt! Hier wird gemessen, gewogen und bezahlt.',
+  spiegelzelt: 'Willkommen in der Spiegelzelt-Gasse! Hier warten Formen, Spiegelbilder und Würfel.',
+  musterbahn: 'Willkommen an der Musterbahn! Wer die Regel findet, kommt weiter.',
+  forschergasse: 'Willkommen in der Forschergasse! Hier wird gezählt, verglichen und geschätzt.',
+  abendmarkt: 'Willkommen auf dem Sternenmarkt! Hier gibt es schon Aufgaben aus Klasse 5.',
 };
+export const GASSE_BEGRUESSUNG = (gasse: string, bude: string, mechanik: string): string[] => [
+  `${GASSE_SATZ[gasse] ?? 'Willkommen!'} Erste Station: ${bude} – ${mechanik}.`,
+];
+
+/** Erklärung der Auftragsfähnchen, einmal nach dem Intro. */
+export const AUFTRAG_ERKLAERUNG = [
+  'Siehst du die gelben Fähnchen über den Buden? Das sind deine drei Tagesaufträge.',
+  'Schaffst du dort eine Runde mit mindestens 7 Treffern, gibt es Taler und Blöcke. Unten links findest du die Liste.',
+];
 
 export const NOCH_IM_AUFBAU = ['Hier bauen wir noch auf. Diese Gasse öffnet bald!'];
 
