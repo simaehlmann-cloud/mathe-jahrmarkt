@@ -1,4 +1,4 @@
-# Code-Review Version 0.6.1
+# Code-Review Version 0.7.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -84,6 +84,17 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Daten | Kennung der Bude geändert | Migration 2 → 3 zieht Fortschritt, Runden und Lernprotokoll von „ueberschlagswaage“ nach „waage“ um (Test) |
 | Eltern | Fortschritt ließ sich nur durch Löschen des Profils entfernen | „Fortschritt zurücksetzen“ je Profil mit Rückfrage; Name und Figur bleiben (Test) |
 | Barrierefreiheit | Vergleichs-Antworten sind Codes (1, 2, 3) | Bildschirmleser hören <, = oder > |
+
+## Neu in 0.7.0 geprüft
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| Architektur | Rechenblatt, Lupe und Tresor brauchen echte Bedienelemente | Buden können statt einer PixiJS-Bühne eine Svelte-Komponente nutzen (`svelteSzene`); besser für Bildschirmleser und schwache Geräte |
+| Mathematik | Tresor-Hinweise | Hinweise werden so gewählt, dass genau eine Zahl übrig bleibt; Test prüft jede Zahl im Bereich gegen alle Hinweise |
+| Mathematik | Fehlerdetektiv | genau eine falsche Ergebnisziffer oder alles richtig (ca. 25 %); Test |
+| Mathematik | Subtraktion | Rechenweg in allen fünf Verfahren ergibt das richtige Ergebnis (Test) |
+| Didaktik | Rechen-Werkstatt verrät die Länge des Ergebnisses nicht (immer ein Kästchen mehr); Überträge sind Notiz, nicht Bewertung | |
+| Schichten | `schriftlich.ts` kennt den Typ des Subtraktionsverfahrens aus dem Datenbestand (nur Typ, keine Abhängigkeit zur Laufzeit) | später in die Domäne verschieben |
 
 ## Offen
 

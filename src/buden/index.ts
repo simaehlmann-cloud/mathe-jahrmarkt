@@ -1,10 +1,13 @@
 import { BUDEN } from '../domain/buden';
 import { dartbude } from './dartbude';
 import { dosenwerfen } from './dosenwerfen';
+import { fehlerdetektiv } from './detektiv';
 import { rechendomino } from './domino';
 import { seilbahn } from './seilbahn';
 import { einmaleinsTurbo } from './turbo';
+import { zahlenraetselTresor } from './tresor';
 import { waage } from './waage';
+import { rechenwerkstatt } from './werkstatt';
 import type { BudeDefinition } from './typen';
 
 /** Anmeldung aller spielbaren Buden. Muss zu `spielbar` im Budenregister passen (wird getestet). */
@@ -15,6 +18,9 @@ export const BUDEN_DEFINITIONEN: Readonly<Record<string, BudeDefinition>> = {
   seilbahn,
   waage,
   rechendomino,
+  rechenwerkstatt,
+  fehlerdetektiv,
+  tresor: zahlenraetselTresor,
 };
 
 export function budeDefinition(id: string): BudeDefinition {

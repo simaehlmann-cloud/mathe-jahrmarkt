@@ -313,3 +313,91 @@ describe('Gleichgewichts-Waage', () => {
     ]);
   });
 });
+
+import { STIMMT, baueDetektiv, detektivAufgabe, einZifferAnders, falscheStelle } from '../src/domain/aufgaben/detektiv';
+import { additionsSchritte, multiplikationsSchritte, ohneUebertrag, schriftlichAufgabe, subtraktionsSchritte } from '../src/domain/aufgaben/schriftlich';
+import { baueKombinatorik, baueRaetsel, codes } from '../src/domain/aufgaben/tresor';
+
+describe('Rechen-Werkstatt', () => {
+  it('Aufgaben mit Übertrag, Ergebnis stimmt, typische Fehler erkannt', () => {
+    const rng = createRng(61);
+    for (const stufe of STUFEN) {
+      for (let i = 0; i < 300; i++) {
+        const a = schriftlichAufgabe(stufe, rng);
+        const [x = 0, y = 0] = a.zahlen;
+        expect(a.antwort).toBe(a.op === '+' ? x + y : a.op === '−' ? x - y : x * y);
+        expect(a.antwort).toBeGreaterThan(0);
+        expect(a.eingabe).toBe('ziffern');
+        expect(a.optionen[0]?.wert).toBe(a.antwort);
+        if (a.op !== '·') expect(ohneUebertrag(a.op, x, y)).not.toBe(a.antwort);
+      }
+    }
+  });
+  it('Rechenwege Spalte für Spalte ergeben das Ergebnis', () => {
+    const add = additionsSchritte(467, 285);
+    expect(add.map((s) => s.ziffer).reverse().join('')).toBe('752');
+    for (const v of ['abziehen-entbuendeln', 'abziehen-erweitern', 'ergaenzen-entbuendeln', 'ergaenzen-erweitern', 'ergaenzen-auffuellen'] as const) {
+      expect(subtraktionsSchritte(703, 245, v).map((s) => s.ziffer).reverse().join('')).toBe('458');
+      expect(subtraktionsSchritte(912, 127, v).map((s) => s.ziffer).reverse().join('')).toBe('785');
+    }
+    expect(multiplikationsSchritte(234, 23)[2]).toContain('5 382');
+  });
+});
+
+describe('Fehlerdetektiv', () => {
+  it('genau eine falsche Ziffer, oder alles richtig', () => {
+    const rng = createRng(71);
+    let richtig = 0;
+    for (const stufe of STUFEN) {
+      for (let i = 0; i < 300; i++) {
+        const a = detektivAufgabe(stufe, rng);
+        pruefeOptionen(a);
+        if (a.antwort === STIMMT) {
+          richtig++;
+          expect(a.gezeigt).toBe(a.richtig);
+        } else {
+          expect(einZifferAnders(a.gezeigt, a.richtig)).toBe(true);
+          expect(a.antwort).toBe(falscheStelle(a.gezeigt, a.richtig) + 1);
+        }
+      }
+    }
+    expect(richtig).toBeGreaterThan(100);
+    expect(richtig).toBeLessThan(400);
+    const f = baueDetektiv('+', false, createRng(2));
+    expect(f.fehler).toBe('uebertrag');
+  });
+});
+
+describe('Zahlenrätsel-Tresor', () => {
+  it('Hinweise führen zu genau einer Zahl', () => {
+    const rng = createRng(81);
+    for (const drei of [false, true]) {
+      for (let i = 0; i < 60; i++) {
+        const a = baueRaetsel(drei, rng);
+        expect(a.hinweise.length).toBeGreaterThanOrEqual(2);
+        expect(a.hinweise.length).toBeLessThanOrEqual(4);
+        expect(String(a.antwort)).toHaveLength(drei ? 3 : 2);
+      }
+    }
+  });
+  it('Kombinatorik zählt richtig', () => {
+    expect(codes([1, 2, 3], 3, false)).toHaveLength(6);
+    expect(codes([1, 2, 3, 4], 2, true)).toHaveLength(16);
+    expect(codes([1, 2, 3, 4], 2, false)).toHaveLength(12);
+    const a = baueKombinatorik(createRng(4));
+    expect(a.antwort).toBe(a.moeglichkeiten?.length);
+  });
+});
+
+describe('Tresor: Prüfungen passen zu den Hinweisen', () => {
+  it('die Lösung erfüllt alle Hinweise, andere Zahlen nicht alle', () => {
+    const rng = createRng(91);
+    for (let i = 0; i < 80; i++) {
+      const a = baueRaetsel(i % 2 === 0, rng);
+      expect(a.pruefungen).toHaveLength(a.hinweise.length);
+      expect(a.pruefungen.every((p) => p(a.antwort))).toBe(true);
+      const bereich = a.stellen === 3 ? [100, 999] : [10, 99];
+      for (let n = bereich[0]!; n <= bereich[1]!; n++) if (n !== a.antwort) expect(a.pruefungen.every((p) => p(n))).toBe(false);
+    }
+  });
+});

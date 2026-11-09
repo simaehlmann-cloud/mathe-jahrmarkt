@@ -143,7 +143,50 @@ export interface GleichheitAufgabe extends AufgabeBasis {
   rechts: Term;
 }
 
-export type Aufgabe = EinmaleinsAufgabe | StellenwertAufgabe | ZahlenstrahlAufgabe | UeberschlagAufgabe | HalbschriftlichAufgabe | GleichheitAufgabe;
+/** Schriftliche Rechnung: Zahlen untereinander, Ergebnis Ziffer für Ziffer. */
+export interface SchriftlichAufgabe extends AufgabeBasis {
+  art: 'schriftlich';
+  op: '+' | '−' | '·';
+  /** Zahlen von oben nach unten (bei Mal: [Faktor, Faktor]). */
+  zahlen: number[];
+}
+
+/** Fehlerdetektiv: eine fertige schriftliche Rechnung, vielleicht mit einem Fehler in einer Ergebnisziffer. */
+export interface DetektivAufgabe extends AufgabeBasis {
+  art: 'detektiv';
+  op: '+' | '−' | '·';
+  zahlen: number[];
+  /** Das gezeigte (vielleicht falsche) Ergebnis. */
+  gezeigt: number;
+  /** Das richtige Ergebnis. */
+  richtig: number;
+  /** Welcher Fehler eingebaut ist (für die Hilfe). */
+  fehler: 'keiner' | 'uebertrag' | 'kleinerVonGroesser' | 'einmaleins' | 'verschoben';
+}
+
+/** Zahlenrätsel-Tresor: Hinweise führen zu genau einer Zahl, oder eine Abzählaufgabe (Kombinatorik). */
+export interface TresorAufgabe extends AufgabeBasis {
+  art: 'tresor';
+  form: 'raetsel' | 'kombinatorik';
+  hinweise: string[];
+  /** Prüfung je Hinweis (gleiche Reihenfolge), damit die Hilfe eine Zahl Hinweis für Hinweis prüfen kann. */
+  pruefungen: ((n: number) => boolean)[];
+  /** Anzahl der Rädchen am Schloss. */
+  stellen: number;
+  /** Bei Kombinatorik: alle Möglichkeiten (für die Hilfe). */
+  moeglichkeiten?: string[];
+}
+
+export type Aufgabe =
+  | EinmaleinsAufgabe
+  | StellenwertAufgabe
+  | ZahlenstrahlAufgabe
+  | UeberschlagAufgabe
+  | HalbschriftlichAufgabe
+  | GleichheitAufgabe
+  | SchriftlichAufgabe
+  | DetektivAufgabe
+  | TresorAufgabe;
 
 export function istEinmaleins(a: Aufgabe): a is EinmaleinsAufgabe {
   return a.art === 'mal' || a.art === 'geteilt' || a.art === 'platzhalter';

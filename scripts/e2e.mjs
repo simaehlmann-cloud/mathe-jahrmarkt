@@ -321,6 +321,74 @@ try {
     await budeTesten('Gleichgewichts-Waage', '26-waage', '200');
     await budeTesten('Rechendomino', '27-domino', '270');
 
+    // Buden mit eigener Bedienung: Rechenblatt, Lupe, Zahlenschloss
+    const eigeneBude = async (titel, kurz, probe, falsch) => {
+      await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      await page.getByRole('button', { name: 'Bronze spielen' }).click();
+      await page.locator('.schild').waitFor();
+      await page.waitForTimeout(900);
+      await foto(`${kurz}-probe`);
+      let id = await page.locator('.schild').getAttribute('data-aufgabe');
+      await probe();
+      await abwarten(id);
+      await page.waitForTimeout(400);
+      await foto(`${kurz}-aufgabe`);
+      let hilfe = false;
+      for (let i = 0; i < 8 && !hilfe; i++) {
+        await page.waitForTimeout(1000);
+        id = await page.locator('.schild').getAttribute('data-aufgabe');
+        await falsch();
+        await page.waitForTimeout(1600);
+        hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+        if (!hilfe) await abwarten(id);
+      }
+      if (hilfe) {
+        await foto(`${kurz}-hilfe-1`);
+        await page.getByRole('button', { name: 'Weiter' }).click();
+        await foto(`${kurz}-hilfe-2`);
+        await page.getByRole('button', { name: 'Weiter' }).click();
+        for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
+          if (await page.getByText('Super!').isVisible()) break;
+          await knopf.click();
+        }
+        await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+      }
+      pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
+    };
+    const taste = (z) => page.locator('.tasten button').filter({ hasText: new RegExp(`^${z}$`) }).click();
+    await eigeneBude(
+      'Rechen-Werkstatt',
+      '28-werkstatt',
+      async () => {
+        for (const z of ['6', '8', '3']) await taste(z); // 234 + 152 = 386, von rechts nach links
+        await page.getByRole('button', { name: 'Fertig' }).click();
+      },
+      async () => {
+        await taste('1');
+        await page.getByRole('button', { name: 'Fertig' }).click();
+      },
+    );
+    await eigeneBude(
+      'Fehlerdetektiv',
+      '29-detektiv',
+      () => page.getByRole('button', { name: 'Ziffer 8 an Stelle 2 ist falsch' }).click(), // 345 + 132 = 487 statt 477
+      async () => {
+        await page.getByRole('button', { name: 'Kann das stimmen? Überschlag' }).click();
+        await page.getByRole('button', { name: 'Alles richtig' }).click();
+      },
+    );
+    await eigeneBude(
+      'Zahlenrätsel-Tresor',
+      '30-tresor',
+      async () => {
+        for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Rad 1 höher' }).click();
+        await page.getByRole('button', { name: 'Öffnen' }).click();
+      },
+      () => page.getByRole('button', { name: 'Öffnen' }).click(),
+    );
+
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
   }
