@@ -48,10 +48,10 @@ describe('Kaufgrenze', () => {
     expect(stufeFreigabe(mitBronze, 'dartbude', 'silber', false).frei).toBe(false);
     expect(stufeFreigabe(mitBronze, 'dartbude', 'gold', true)).toEqual({ frei: false, grund: 'vorstufe' });
   });
-  it('nicht gebaute Buden und Abendmarkt sind gesperrt', () => {
+  it('nicht gebaute Buden und Sternenmarkt sind gesperrt', () => {
     expect(stufeFreigabe(profil(), 'seilbahn', 'bronze', true).grund).toBe('nichtSpielbar');
   });
-  it('Abendmarkt öffnet erst mit Paket und Silber überall', () => {
+  it('Sternenmarkt öffnet erst mit Paket und Silber überall', () => {
     let p = profil();
     expect(abendmarktOffen(p, true)).toBe(false);
     for (const b of TAGESBUDEN) {

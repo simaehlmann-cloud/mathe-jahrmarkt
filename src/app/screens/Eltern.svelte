@@ -216,7 +216,7 @@
               <li>Silber- und Gold-Stufe an allen Buden</li>
               <li>Jahrmarkt-Check mit persönlichem Rundgang</li>
               <li>Lernprofil in Sätzen, Tipps für zu Hause, Vorher-Nachher</li>
-              <li>Abendmarkt mit Bonusbuden für Klasse 5</li>
+              <li>Sternenmarkt mit Bonusbuden für Klasse 5</li>
             </ul>
             <button class="ticket rot" disabled={kaufLaeuft} onclick={kaufen}>Für {preis} freischalten</button>
           {/if}

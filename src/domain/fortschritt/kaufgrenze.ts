@@ -12,7 +12,7 @@ export interface Freigabe {
 /**
  * Die einzige Stelle, die entscheidet, ob eine Stufe spielbar ist.
  * Bronze ist immer frei. Silber und Gold brauchen das Zusatzpaket und die geschaffte Vorstufe.
- * Der Abendmarkt braucht das Paket und Silber an allen Tagesbuden.
+ * Der Sternenmarkt braucht das Paket und Silber an allen Tagesbuden.
  */
 export function stufeFreigabe(p: Profil, budeId: string, stufe: Stufe, paket: boolean): Freigabe {
   const info = budeInfo(budeId);

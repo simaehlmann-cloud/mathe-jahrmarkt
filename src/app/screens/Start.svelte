@@ -31,8 +31,8 @@
   }
 </script>
 
-<div class="start">
-  <div class="kopf">
+<div class="start" class:fest={anlegen && schritt === 'figur'}>
+  <div class="kopf" class:weg={anlegen && schritt === 'figur'}>
     <Flinka groesse={96} />
     <div>
       <h1>Mathe-Jahrmarkt</h1>
@@ -87,23 +87,22 @@
           </div>
         </form>
       {:else}
-        <div class="inhalt">
+        <div class="inhalt figur-schritt">
           <h2>Gestalte deine Figur, {name.trim()}!</h2>
           <Baukasten bind:figur bind:aussehen />
+          <div class="aktion">
+            <button type="button" class="ticket hell" onclick={() => (schritt = 'name')}>Zurück</button>
+            <button type="button" class="ticket" onclick={speichern}>Los geht’s</button>
+          </div>
         </div>
       {/if}
     {/if}
   </div>
-  {#if anlegen && schritt === 'figur'}
-    <div class="aktion">
-      <button type="button" class="ticket hell" onclick={() => (schritt = 'name')}>Zurück</button>
-      <button type="button" class="ticket" onclick={speichern}>Los geht’s</button>
-    </div>
-  {/if}
 </div>
 
 <style>
   .start {
+    min-height: 0;
     flex: 1;
     overflow: auto;
     padding: var(--oben) var(--rand-r) var(--unten) var(--rand);
@@ -189,21 +188,38 @@
     font-size: 0.95rem;
     color: var(--tinte-weich);
   }
+  /* Figur-Schritt: feste Höhe, nur die Auswahl im Baukasten blättert. */
+  .start.fest {
+    overflow: hidden;
+    padding-top: 6px;
+  }
+  .kopf.weg {
+    display: none;
+  }
+  .fest .karte {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .figur-schritt {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px 12px;
+  }
+  .figur-schritt h2 {
+    font-size: 1.3rem;
+  }
   .aktion {
-    position: sticky;
-    bottom: 0;
-    width: min(100%, 44rem);
+    flex: none;
     display: flex;
     gap: 10px;
-    justify-content: center;
-    padding: 12px 0 calc(4px + var(--unten));
-    margin-top: auto;
-    background: linear-gradient(to bottom, transparent, rgb(255 253 247 / 0.92) 35%);
-    z-index: 3;
   }
   .aktion .ticket {
     flex: 1;
-    max-width: 16rem;
   }
   .knoepfe {
     display: flex;

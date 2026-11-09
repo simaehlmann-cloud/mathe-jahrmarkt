@@ -18,7 +18,7 @@ export const GASSEN: readonly Gasse[] = [
   { id: 'spiegelzelt', name: 'Spiegelzelt-Gasse', farbe: '#7B5EA7' },
   { id: 'musterbahn', name: 'Musterbahn', farbe: '#F0A202' },
   { id: 'forschergasse', name: 'Forschergasse', farbe: '#3C78D8' },
-  { id: 'abendmarkt', name: 'Abendmarkt', farbe: '#2E2A4F' },
+  { id: 'abendmarkt', name: 'Sternenmarkt', farbe: '#2E2A4F' },
 ];
 
 export interface BudeKompetenz {
@@ -127,5 +127,5 @@ export const budeInfo = (id: string): BudeInfo => {
 
 export const budenDerGasse = (gasse: GasseId): BudeInfo[] => BUDEN.filter((x) => x.gasse === gasse);
 
-/** Die 24 Buden des Tages-Jahrmarkts (ohne Abendmarkt). */
+/** Die 24 Buden des Tages-Jahrmarkts (ohne Sternenmarkt). */
 export const TAGESBUDEN: readonly BudeInfo[] = BUDEN.filter((x) => x.gasse !== 'abendmarkt');

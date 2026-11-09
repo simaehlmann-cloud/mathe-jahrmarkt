@@ -1,6 +1,6 @@
 # Mathe-Jahrmarkt – Fit für Klasse 5
 
-Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die Mathematik der weiterführenden Schule vorbereitet. Grundlage ist das Kerncurriculum Mathematik Grundschule Niedersachsen (in Kraft seit August 2025). Ein einmaliges Zusatzpaket (3,99 €) schaltet Silber- und Gold-Stufen, den Jahrmarkt-Check, das ausführliche Lernprofil und den Abendmarkt frei.
+Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die Mathematik der weiterführenden Schule vorbereitet. Grundlage ist das Kerncurriculum Mathematik Grundschule Niedersachsen (in Kraft seit August 2025). Ein einmaliges Zusatzpaket (3,99 €) schaltet Silber- und Gold-Stufen, den Jahrmarkt-Check, das ausführliche Lernprofil und den Sternenmarkt frei.
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
@@ -10,7 +10,7 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 
 | Bereich | Stand |
 | --- | --- |
-| Jahrmarkt-Welt | begehbare Karte: Kind tippt auf eine Bude, die eigene Figur läuft über die Wege hin und geht hinein; alle 27 Buden an ihrem Platz, Straßenschilder je Gasse, Riesenrad als Fortschritt auf dem Festplatz, Abendmarkt hinter dem Zaun |
+| Jahrmarkt-Welt | begehbare Karte: Kind tippt auf eine Bude, die eigene Figur läuft über die Wege hin und geht hinein; alle 27 Buden an ihrem Platz, Straßenschilder je Gasse, Riesenrad als Fortschritt auf dem Festplatz, Sternenmarkt hinter dem Zaun |
 | Geschichte | Flinka mit Intro, Gassen-Begrüßung, Lob bei jeder neuen Stufe |
 | Einmaleins-Turbo | Ergebnis mit Ziffernfeld eintippen, Kart fährt mit jeder richtigen Antwort; freiwilliger Turbo mit Zeitleiste und Bonus; Gold mit Analogaufgaben (7 · 80) und eigener Hilfe |
 | Dosenwerfen | Stellenwerte bis 1 000 / 100 000 / 1 000 000: Stellentafel, Zahlwort, Ziffernwert, Entbündeln; falsche Dosen aus typischen Fehlern (Null vergessen, wie gesprochen, nicht gebündelt); Hilfe mit Stellenwerttafel |
@@ -25,7 +25,7 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
 | Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
 | Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
-| Noch nicht | übrige 21 Buden, Jahrmarkt-Check, Abendmarkt, nativer Kauf |
+| Noch nicht | übrige 21 Buden, Jahrmarkt-Check, Sternenmarkt, nativer Kauf |
 
 ## App-Symbol und Startbild
 

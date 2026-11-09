@@ -8,7 +8,7 @@ export const INTRO = (name: string): string[] => [
   'Tippe auf eine Bude, dann läufst du hin. Mit dem Finger kannst du den Jahrmarkt verschieben.',
 ];
 
-export const ABENDMARKT_ZU = ['Der Abendmarkt öffnet erst, wenn alle Buden Silber haben. Dann gibt es Aufgaben aus Klasse 5!'];
+export const ABENDMARKT_ZU = ['Der Sternenmarkt öffnet erst, wenn alle Buden Silber haben. Dann gibt es Aufgaben aus Klasse 5!'];
 
 export const GASSE_BEGRUESSUNG: Record<string, string[]> = {
   zahlengasse: ['Willkommen in der Zahlengasse! Bruno an der Dartbude wartet schon auf dich.'],

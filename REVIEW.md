@@ -1,4 +1,4 @@
-# Code-Review Version 0.5.0
+# Code-Review Version 0.5.1
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -56,6 +56,15 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | wichtig | doppelte Schlüssel in einer Liste brachen die Darstellung ab | eindeutige Schlüssel; der Ablauftest meldet Konsolenfehler jetzt auch beim Abbruch |
 | Barrierefreiheit | Buden auf der Karte sind echte Knöpfe („Dartbude öffnen“, „…, bald geöffnet“); bei „Bewegung reduzieren“ springt die Figur ohne Laufen | |
 | Leistung | Karte als skalierte Ebene mit nativem Wischen; Laufen per requestAnimationFrame, Kamera folgt weich | |
+
+## Neu in 0.5.1 (Test auf dem Samsung S25)
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| kritisch | Figur gestalten: mit großer Systemschrift war „Speichern“ nicht erreichbar | feste Höhe: Vorschau oben, nur die Auswahl blättert, Knöpfe immer sichtbar; Ablauftest prüft das mit 125 % Schrift |
+| wichtig | Lange Zahlwörter im Dosenwerfen liefen aus dem Schild | Umbruch an den Wortteilen (tausend, hundert, und), kleinere Schrift bei langen Aufgaben |
+| wichtig | Figur schaute beim Laufen immer nach vorne | Seitenansicht beim Laufen nach links/rechts, Hinterkopf beim Laufen nach oben, im Stehen Blick zum Kind |
+| Text | „Abendmarkt“ | heißt jetzt „Sternenmarkt“ (interne Kennung bleibt, keine Datenumstellung nötig) |
 
 ## Offen
 

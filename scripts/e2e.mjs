@@ -70,7 +70,8 @@ try {
     await foto('01b-figur-anlegen');
     const vorschau = await page.locator('.vorschau').boundingBox();
     pruefe(!!vorschau && vorschau.y >= 0 && vorschau.y + vorschau.height <= page.viewportSize().height, `${name}: Figur beim Anlegen sichtbar`);
-    pruefe(await page.getByRole('button', { name: 'Los geht’s' }).isVisible(), `${name}: „Los geht’s“ ohne Blättern sichtbar`);
+    const los = await page.getByRole('button', { name: 'Los geht’s' }).boundingBox();
+    pruefe(!!los && los.y + los.height <= page.viewportSize().height, `${name}: „Los geht’s“ ohne Blättern sichtbar`);
     await page.getByRole('button', { name: 'Los geht’s' }).click();
     await page.getByText('Ich bin Flinka').waitFor();
     await foto('02-intro');
@@ -171,6 +172,18 @@ try {
     await page.getByText('Brille', { exact: true }).click();
     await page.getByText('Blau', { exact: true }).click();
     await foto('16-baukasten');
+    // Auch mit großer Systemschrift (wie auf vielen Handys) bleiben Vorschau und Speichern sichtbar, ohne zu blättern
+    await page.evaluate(() => (document.documentElement.style.fontSize = '125%'));
+    await page.waitForTimeout(200);
+    await foto('16b-baukasten-grosse-schrift');
+    const imBild = async (loc) => {
+      const b = await loc.boundingBox();
+      const v = page.viewportSize();
+      return !!b && b.y >= 0 && b.y + b.height <= v.height + 1 && b.x >= 0 && b.x + b.width <= v.width + 1;
+    };
+    pruefe(await imBild(page.getByRole('button', { name: 'Speichern' })), `${name}: „Speichern“ bei großer Schrift sichtbar`);
+    pruefe(await imBild(page.locator('.vorschau')), `${name}: Vorschau bei großer Schrift sichtbar`);
+    await page.evaluate(() => (document.documentElement.style.fontSize = ''));
     await page.getByRole('button', { name: 'Speichern' }).click();
     await page.getByRole('heading', { name: 'Mein Mathe-Profil' }).waitFor();
 

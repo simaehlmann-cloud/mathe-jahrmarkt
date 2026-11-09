@@ -35,29 +35,38 @@
 {/if}
 
 <style>
+  /* Feste Höhe: Vorschau oben, Auswahl blättert, Knöpfe unten immer sichtbar. */
   .seite {
     flex: 1;
     min-height: 0;
-    overflow: auto;
-    padding: 4px var(--rand-r) var(--unten) var(--rand);
+    padding: 4px var(--rand-r) calc(6px + var(--unten)) var(--rand);
     position: relative;
     z-index: 1;
-    display: grid;
-    justify-items: center;
-    align-content: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .karte {
     width: min(100%, 44rem);
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   .inhalt {
-    padding: 12px 16px 16px;
-    display: grid;
-    gap: 14px;
+    flex: 1;
+    min-height: 0;
+    padding: 8px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
   .knoepfe {
+    flex: none;
     display: flex;
     gap: 10px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
+  }
+  .knoepfe .ticket {
+    flex: 1;
   }
 </style>

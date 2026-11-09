@@ -9,6 +9,7 @@
     aussehen = $bindable(),
     deko = [],
   }: { figur: FigurId; aussehen: Aussehen; deko?: readonly string[] } = $props();
+  // Der Baukasten füllt den Platz, den ihm die Seite gibt: Vorschau fest, nur die Auswahl blättert.
 
   function setze(teil: Partial<Aussehen>) {
     aussehen = { ...aussehen, ...teil };
@@ -19,7 +20,7 @@
 </script>
 
 <div class="baukasten">
-  <div class="vorschau" aria-hidden="true"><Figur {figur} {aussehen} groesse={120} /></div>
+  <div class="vorschau" aria-hidden="true"><Figur {figur} {aussehen} groesse={104} /></div>
 
   <div class="gruppen">
     <fieldset>
@@ -92,27 +93,36 @@
 
 <style>
   .baukasten {
-    display: grid;
-    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
-  @media (min-width: 640px) {
+  @media (orientation: landscape) and (min-width: 560px) {
     .baukasten {
-      grid-template-columns: auto 1fr;
-      align-items: start;
+      flex-direction: row;
+      align-items: flex-start;
     }
   }
-  /* Die Vorschau bleibt beim Blättern oben sichtbar. */
   .vorschau {
-    justify-self: center;
-    position: sticky;
-    top: 0;
-    z-index: 2;
+    flex: none;
+    align-self: center;
     background: radial-gradient(circle, #fff4cc 0 60%, transparent 61%);
-    padding: 10px;
+    padding: 6px;
   }
+  /* Nur die Auswahl blättert; Vorschau und Knöpfe bleiben immer sichtbar. */
   .gruppen {
+    flex: 1;
+    min-height: 0;
+    align-self: stretch;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     display: grid;
+    align-content: start;
     gap: 10px;
+    padding: 2px 2px 10px;
+    border-top: 2px dashed #e3d7bd;
   }
   fieldset {
     border: 0;

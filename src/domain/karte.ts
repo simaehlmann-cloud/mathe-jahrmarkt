@@ -3,7 +3,7 @@ import { BUDEN, GASSEN, type GasseId } from './buden';
 /**
  * Begehbarer Jahrmarkt: feste Karte in Weltkoordinaten.
  * Aufbau wie ein Kamm: eine Hauptallee in der Mitte, von der Querwege (Reihen) abgehen.
- * Unten der Festplatz mit Eingang und Riesenrad, ganz oben hinter dem Zaun der Abendmarkt.
+ * Unten der Festplatz mit Eingang und Riesenrad, ganz oben hinter dem Zaun der Sternenmarkt.
  * Jeder Ort auf den Wegen ist entweder auf der Allee oder auf einer Reihe;
  * der Weg zwischen zwei Orten führt daher immer über die Allee.
  */
@@ -41,13 +41,13 @@ const ALLEE_BREITE = 260;
 export const ALLEE_X = WELT_BREITE / 2;
 const REIHEN_ABSTAND = 360;
 const OBEN = 330;
-/** Zusätzlicher Platz unter dem Abendmarkt für Zaun und Tor. */
+/** Zusätzlicher Platz unter dem Sternenmarkt für Zaun und Tor. */
 const ZAUN_PLATZ = 170;
 export const FESTPLATZ_HOEHE = 760;
 /** Breite des Weges (für die Darstellung). */
 export const WEG_BREITE = 64;
 
-/** Reihen von oben (Abendmarkt) nach unten. Die Zahlengasse hat zwei Reihen. */
+/** Reihen von oben (Sternenmarkt) nach unten. Die Zahlengasse hat zwei Reihen. */
 const AUFTEILUNG: { gasse: GasseId; buden: string[] }[] = (() => {
   const von = (g: GasseId) => BUDEN.filter((b) => b.gasse === g).map((b) => b.id);
   const zahl = von('zahlengasse');
@@ -90,9 +90,9 @@ export const WELT_HOEHE = letzteReihe.y + FESTPLATZ_HOEHE;
 export const EINGANG: Punkt = { x: ALLEE_X, y: FESTPLATZ_Y };
 export const ANDENKEN_X = ALLEE_X + 360;
 export const RIESENRAD_X = ALLEE_X - 380;
-/** Tor im Zaun vor dem Abendmarkt (auf der Allee). */
+/** Tor im Zaun vor dem Sternenmarkt (auf der Allee). */
 export const TOR: Punkt = { x: ALLEE_X, y: OBEN + ZAUN_PLATZ };
-/** Die Allee reicht vom Festplatz bis zum Abendmarkt. */
+/** Die Allee reicht vom Festplatz bis zum Sternenmarkt. */
 const ALLEE_OBEN = (REIHEN[0] as Reihe).y;
 
 /** x-Position der i-ten Bude einer Reihe mit n Buden: links und rechts der Allee verteilt. */
@@ -183,8 +183,13 @@ export function weg(a: Punkt, b: Punkt): Punkt[] {
 export const weglaenge = (w: readonly Punkt[]): number =>
   w.reduce((s, p, i) => (i === 0 ? 0 : s + Math.hypot(p.x - (w[i - 1] as Punkt).x, p.y - (w[i - 1] as Punkt).y)), 0);
 
-/** Position nach `strecke` Weltpixeln entlang des Weges, mit Blickrichtung. */
-export function aufStrecke(w: readonly Punkt[], strecke: number): { p: Punkt; rechts: boolean } {
+export type Laufrichtung = 'rechts' | 'links' | 'hoch' | 'runter';
+
+const richtungVon = (a: Punkt, b: Punkt): Laufrichtung =>
+  Math.abs(b.x - a.x) >= Math.abs(b.y - a.y) ? (b.x >= a.x ? 'rechts' : 'links') : b.y < a.y ? 'hoch' : 'runter';
+
+/** Position nach `strecke` Weltpixeln entlang des Weges, mit Laufrichtung des aktuellen Stücks. */
+export function aufStrecke(w: readonly Punkt[], strecke: number): { p: Punkt; richtung: Laufrichtung } {
   let rest = Math.max(0, strecke);
   for (let i = 1; i < w.length; i++) {
     const a = w[i - 1] as Punkt;
@@ -192,12 +197,12 @@ export function aufStrecke(w: readonly Punkt[], strecke: number): { p: Punkt; re
     const l = Math.hypot(b.x - a.x, b.y - a.y);
     if (rest <= l || i === w.length - 1) {
       const t = l === 0 ? 1 : Math.min(1, rest / l);
-      return { p: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, rechts: b.x >= a.x };
+      return { p: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, richtung: richtungVon(a, b) };
     }
     rest -= l;
   }
   const letzter = w[w.length - 1] ?? { x: 0, y: 0 };
-  return { p: letzter, rechts: true };
+  return { p: letzter, richtung: 'runter' };
 }
 
 /** Laufdauer: gemütlich, aber nie länger als 3,5 Sekunden. */

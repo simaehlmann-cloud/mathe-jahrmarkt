@@ -24,6 +24,7 @@
     reihenSpanne,
     weg,
     weglaenge,
+    type Laufrichtung,
     type Punkt,
   } from '../../domain/karte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
@@ -47,7 +48,7 @@
 
   // Startpunkt: vor der zuletzt besuchten Bude, sonst am Eingang
   let pos = $state<Punkt>(app.karteOrt ?? budenOrt(app.letzteBude ?? '')?.vorne ?? EINGANG);
-  let rechts = $state(true);
+  let richtung = $state<Laufrichtung>('runter');
   let laeuft = $state(false);
   let ziel = $state<string | null>(null);
 
@@ -85,7 +86,7 @@
     const t = Math.min(1, (jetzt - lauf.start) / lauf.dauer);
     const a = aufStrecke(lauf.weg, t * lauf.laenge);
     pos = a.p;
-    rechts = a.rechts;
+    richtung = a.richtung;
     kamera(true);
     if (t >= 1) {
       const fertig = lauf.fertig;
@@ -234,7 +235,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab}px">
       <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; transform: scale({massstab})" onclick={aufKarteGetippt}>
-        <!-- Boden: Wiese, Wege, Festplatz, Zaun des Abendmarkts -->
+        <!-- Boden: Wiese, Wege, Festplatz, Zaun des Sternenmarkts -->
         <svg class="boden" viewBox="0 0 {WELT_BREITE} {WELT_HOEHE}" width={WELT_BREITE} height={WELT_HOEHE} aria-hidden="true">
           <defs>
             <pattern id="gras" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -248,7 +249,7 @@
             </pattern>
           </defs>
           <rect width={WELT_BREITE} height={WELT_HOEHE} fill="url(#gras)" />
-          <!-- Abendmarkt: dunkler Himmel hinter dem Zaun -->
+          <!-- Sternenmarkt: dunkler Himmel hinter dem Zaun -->
           <rect x="0" y="0" width={WELT_BREITE} height={TOR.y - 20} fill={abendOffen ? '#2e2a4f' : '#4b4673'} opacity="0.85" />
           {#each Array.from({ length: 40 }, (_, i) => i) as i (i)}
             <circle cx={(i * 173) % WELT_BREITE} cy={20 + ((i * 97) % 140)} r={i % 3 === 0 ? 2.5 : 1.5} fill="#fff6c8" opacity="0.8" />
@@ -262,7 +263,7 @@
             {@const [l, re] = reihenSpanne(r)}
             <rect x={l - 30} y={r.y - WEG_BREITE / 2} width={re - l + 60} height={WEG_BREITE} rx={WEG_BREITE / 2} fill="url(#pflaster)" stroke="#c9a96f" stroke-width="5" />
           {/each}
-          <!-- Zaun vor dem Abendmarkt -->
+          <!-- Zaun vor dem Sternenmarkt -->
           {#if !abendOffen}
             <g>
               {#each Array.from({ length: Math.ceil(WELT_BREITE / 36) }, (_, i) => i) as i (i)}
@@ -297,9 +298,9 @@
           {/each}
         </svg>
 
-        <!-- Abendmarkt-Schild -->
+        <!-- Sternenmarkt-Schild -->
         <div class="abend-schild" style="left: {ALLEE_X}px; top: {TOR.y + 14}px">
-          <strong>Abendmarkt</strong>
+          <strong>Sternenmarkt</strong>
           {#if !abendOffen}<span>öffnet, wenn alle Buden Silber haben</span>{/if}
         </div>
 
@@ -393,7 +394,7 @@
 
         <!-- Die Figur -->
         <div class="figur" style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
-          <Laeufer figur={p.figur} aussehen={p.aussehen} {laeuft} {rechts} groesse={104} />
+          <Laeufer figur={p.figur} aussehen={p.aussehen} {laeuft} {richtung} groesse={104} />
         </div>
       </div>
     </div>

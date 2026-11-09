@@ -35,7 +35,7 @@ export const gasseLaeuft = (p: Profil, gasse: GasseId): boolean => budenDerGasse
 /** Sommerfest: alle Tagesbuden mindestens Bronze. Erreichbar ohne Zusatzpaket. */
 export const sommerfest = (p: Profil): boolean => TAGESBUDEN.every((b) => istGeschafft(p, b.id, 'bronze'));
 
-/** Abendmarkt: Zusatzpaket und alle Tagesbuden mindestens Silber. */
+/** Sternenmarkt: Zusatzpaket und alle Tagesbuden mindestens Silber. */
 export const abendmarktOffen = (p: Profil, paket: boolean): boolean => paket && TAGESBUDEN.every((b) => istGeschafft(p, b.id, 'silber'));
 
 export interface RundenErgebnis {

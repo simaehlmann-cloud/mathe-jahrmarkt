@@ -36,6 +36,12 @@
   let host: HTMLDivElement;
   let szene: BudeSzene | undefined;
   let aufgabe = $state<Aufgabe>(runde.aktuelle);
+  /** Lange Zahlwörter dürfen an den Wortteilen umbrechen (fünfhundert-dreiund-zwanzig). */
+  let anzeige = $derived(
+    aufgabe.art === 'stellenwert' && aufgabe.form === 'wort'
+      ? aufgabe.text.replace(/(tausend|hundert|und)(?=.)/g, '$1\u00AD')
+      : `${aufgabe.text}${aufgabe.art === 'mal' ? ' = ?' : ''}`,
+  );
   let phase = $state(runde.aktuellePhase);
   let nummer = $state(runde.nummer);
   let punkte = $state(0);
@@ -194,7 +200,7 @@
       {:else if phase === 'nochmal'}
         <span class="marke">Noch eine ähnliche</span>
       {/if}
-      <span class="aufgabe">{aufgabe.text}{aufgabe.art === 'mal' ? ' = ?' : ''}</span>
+      <span class="aufgabe" class:lang={anzeige.length > 14}>{anzeige}</span>
     </div>
     <button class="rund" onclick={() => app.sprich(aufgabe.sprechtext, true)} aria-label="Aufgabe vorlesen"><Icon name="laut" /></button>
   </div>
@@ -283,6 +289,12 @@
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
     text-shadow: 0 3px 0 var(--holz-dunkel);
+    hyphens: manual;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  .aufgabe.lang {
+    font-size: clamp(1.35rem, 5.6vw, 2.2rem);
   }
   .marke {
     font-size: 0.9rem;

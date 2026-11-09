@@ -46,7 +46,7 @@ export async function erstelleDosenSzene(host: HTMLElement, k: SzenenKontext): P
     const zelleB = w / spalten;
     const nutzH = h - 70; // unten die Theke
     const zelleH = nutzH / zeilen;
-    const dose = Math.max(18, Math.min(zelleB * 0.2, zelleH * 0.2, 46));
+    const dose = Math.max(18, Math.min(zelleB * 0.24, zelleH * 0.22, 60));
     return { w, h, spalten, zeilen, zelleB, zelleH, dose };
   };
 

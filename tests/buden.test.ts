@@ -160,8 +160,10 @@ describe('Begehbarer Jahrmarkt', () => {
   it('Position entlang des Weges und Blickrichtung', () => {
     const w = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }];
     expect(weglaenge(w)).toBe(200);
-    expect(aufStrecke(w, 50)).toEqual({ p: { x: 50, y: 0 }, rechts: true });
-    expect(aufStrecke(w, 150).p).toEqual({ x: 100, y: 50 });
+    expect(aufStrecke(w, 50)).toEqual({ p: { x: 50, y: 0 }, richtung: 'rechts' });
+    expect(aufStrecke(w, 150)).toEqual({ p: { x: 100, y: 50 }, richtung: 'runter' });
+    expect(aufStrecke([{ x: 0, y: 100 }, { x: 0, y: 0 }], 10).richtung).toBe('hoch');
+    expect(aufStrecke([{ x: 100, y: 0 }, { x: 0, y: 0 }], 10).richtung).toBe('links');
     expect(aufStrecke(w, 999).p).toEqual({ x: 100, y: 100 });
     expect(laufdauerMs(100000)).toBe(3500);
   });
