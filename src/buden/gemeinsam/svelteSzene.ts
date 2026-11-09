@@ -33,4 +33,28 @@ export function svelteSzene(komponente: Component<{ kontext: SzenenKontext }, Sv
   };
 }
 
+/** Auswahl-Bude: nur ein Bild-Baustein, Knöpfe und Ablauf kommen von der gemeinsamen Bühne. */
+export function auswahlSzene(
+  bild: Component<{ aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null }>,
+  optionen: { spalten?: number; hintergrund?: string } = {},
+) {
+  return async (host: HTMLElement, kontext: SzenenKontext): Promise<BudeSzene> => {
+    const { default: AuswahlBuehne } = await import('./AuswahlBuehne.svelte');
+    const ort = document.createElement('div');
+    ort.style.cssText = 'position:absolute;inset:0;overflow:auto;';
+    host.appendChild(ort);
+    const s = mount(AuswahlBuehne, { target: ort, props: { kontext, bild, ...optionen } }) as unknown as SvelteSzenenExporte;
+    return {
+      zeige: (a) => s.zeige(a),
+      treffer: (w) => s.treffer(w),
+      daneben: (w) => s.daneben(w),
+      sperre: (x) => s.sperre(x),
+      zerstoere: () => {
+        void unmount(s as unknown as Record<string, unknown>);
+        ort.remove();
+      },
+    };
+  };
+}
+
 export const warte = (ms: number): Promise<void> => new Promise((ok) => setTimeout(ok, ms));

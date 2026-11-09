@@ -25,10 +25,15 @@ export interface BudeSzene {
   zerstoere(): void;
 }
 
+/** Bild einer Auswahl-Bude; dieselbe Darstellung dient auch in der Hilfe. */
+export type BildKomponente = Component<{ aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null }>;
+
 export interface HilfeProps {
   aufgabe: Aufgabe;
   gewaehlt: number;
   onfertig: () => void;
+  /** Bild der Bude (nur Auswahl-Buden). */
+  bild?: BildKomponente | undefined;
 }
 
 /** Alles, was eine Bude ausmacht. Neue Buden melden sich in src/buden/index.ts an. */
@@ -48,6 +53,8 @@ export interface BudeDefinition {
   ladetext: string;
   /** Beschriftung einer Antwort für Bildschirmleser, wenn der Wert ein Code ist (z. B. 1 → „kleiner“). */
   antwortText?: (wert: number) => string;
+  /** Bild für Auswahl-Buden (Bühne und Hilfe). */
+  bild?: BildKomponente;
   /** Die Bude bringt eine eigene zugängliche Eingabe mit (z. B. Ziffernfeld); dann entfallen die versteckten Antwortknöpfe. */
   eigeneBedienung?: boolean;
 }

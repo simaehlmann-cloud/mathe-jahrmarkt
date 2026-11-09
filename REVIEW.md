@@ -96,6 +96,17 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Didaktik | Rechen-Werkstatt verrät die Länge des Ergebnisses nicht (immer ein Kästchen mehr); Überträge sind Notiz, nicht Bewertung | |
 | Schichten | `schriftlich.ts` kennt den Typ des Subtraktionsverfahrens aus dem Datenbestand (nur Typ, keine Abhängigkeit zur Laufzeit) | später in die Domäne verschieben |
 
+## Neu in 0.8.0 geprüft
+
+| Stufe | Befund | Behebung |
+| --- | --- | --- |
+| Architektur | 18 Buden mit gleichem Ablauf (Bild + Auswahl) | gemeinsamer Baukasten: `auswahlBude()`, `AuswahlBuehne`, `HilfeErklaerung`; jede Bude ist nur noch Generator + Bild |
+| Mathematik | Rechenmauer, Zahlenfolgen, schriftliche Division, Würfelnetze, Spiegelungen | Tests prüfen die Rechenregel jeder Mauer, die Lücke jeder Folge, Ziffern und Rest jeder Division (Tausende Fälle), alle 11 Würfelnetze und das Falten |
+| Didaktik | Antwort darf nicht im Bild stehen (z. B. Gondelzahl, Startzahl bei der Probe) | Bild verdeckt sie bis zur Lösung; in der Hilfe wird sie gezeigt |
+| Didaktik | Fehlvorstellungen als Distraktoren: „längere Kommazahl ist größer“, 0,34 statt 3/4, Rest größer als Teiler, Nenner und Zähler vertauscht | |
+| Barrierefreiheit | Spiegelkabinett: jedes Kästchen ist ein Knopf mit Spalte/Zeile; Bilder haben Beschreibungen | |
+| Ablauftest | Bei falscher Probe wird die Aufgabe wiederholt, der Test probiert dann den nächsten Knopf | `e2e.mjs` |
+
 ## Offen
 
 | Stufe | Befund | Vorschlag |
@@ -103,7 +114,8 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | kritisch vor Veröffentlichung | Nativer Kauf fehlt; die App zeigt in der Store-Version ehrlich „noch nicht verfügbar“ | Fahrplan Schritt 6 |
 | wichtig | Der Paketstatus liegt nur lokal; nach Neuinstallation hilft „Käufe wiederherstellen“ erst mit nativem Kauf | mit Schritt 6 beim Start still prüfen |
 | wichtig | Sprachausgabe hängt von installierten Systemstimmen ab; ohne deutsche Offline-Stimme bleibt es still | Hinweis im Elternbereich ist da; später eingesprochene Aufnahmen |
-| Verbesserung | Gassen-Abschlussanimation und Sommerfest sind im Fortschritt angelegt, aber noch ohne Darstellung | sobald eine Gasse vollständig ist |
+| Verbesserung | Gassen-Abschlussanimation und Sommerfest sind im Fortschritt angelegt, aber noch ohne Darstellung | jetzt möglich, da alle Buden gebaut sind |
+| Verbesserung | Sternenmarkt lässt sich im Ablauftest nicht erreichen (braucht Silber überall); geprüft über Unit-Tests und Bildvorschau | Testzugang über einen Entwicklerschalter |
 | Verbesserung | Sicherung läuft über Kopieren und Einfügen von Text | Teilen-Dialog über ein Capacitor-Plugin |
 
 ## Prüfstand

@@ -53,6 +53,10 @@ interface AufgabeBasis {
    */
   optionen: Option[];
   eingabe?: Eingabe;
+  /** Erklärung für die Hilfe: Grundidee und Rechenweg in Schritten. */
+  erklaerung?: { idee: string; schritte: string[] };
+  /** Anzeigetext je Antwortwert, wenn Werte Codes sind (z. B. 2 → „15 cm“). */
+  labels?: Readonly<Record<number, string>>;
   kompetenz: KompetenzId;
   dimension: Dimension;
   /** Schlüssel für Adaptivität und Lernprofil, z. B. „7x8“ (kleinerer Faktor zuerst) oder „stw:null“. */
@@ -177,7 +181,19 @@ export interface TresorAufgabe extends AufgabeBasis {
   moeglichkeiten?: string[];
 }
 
+/**
+ * Aufgabe einer Auswahl-Bude mit eigenem Bild. `bude` sagt, welches Bild sie zeichnet; `daten` sind dessen Angaben
+ * (z. B. Preise, Uhrzeit, Diagrammwerte). Die Antwort ist eine Zahl oder ein Code mit `labels`.
+ */
+export interface AuswahlAufgabe extends AufgabeBasis {
+  art: 'auswahl';
+  bude: string;
+  form: string;
+  daten: Readonly<Record<string, unknown>>;
+}
+
 export type Aufgabe =
+  | AuswahlAufgabe
   | EinmaleinsAufgabe
   | StellenwertAufgabe
   | ZahlenstrahlAufgabe

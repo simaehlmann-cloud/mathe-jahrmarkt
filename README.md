@@ -4,9 +4,9 @@ Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die 
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.7.0)
+## Stand dieser Version (0.8.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar.
 
 | Bereich | Stand |
 | --- | --- |
@@ -16,10 +16,16 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Dosenwerfen | Stellenwerte bis 1 000 / 100 000 / 1 000 000: Stellentafel, Zahlwort, Ziffernwert, Entbündeln; falsche Dosen aus typischen Fehlern (Null vergessen, wie gesprochen, nicht gebündelt); Hilfe mit Stellenwerttafel |
 | Zahlenstrahl-Seilbahn | Gondel am Seil (Zahlenstrahl mit 20 Abschnitten) an die Zahl ziehen oder ablesen; bis 1 000, 100 000, Ausschnitte mit Nachbartausendern; Hilfe: Wert eines Strichs, Sprünge vom beschrifteten Strich |
 | Gleichgewichts-Waage | Waage als Modell für Gleichheit: fehlende Zahl ergänzen (347 + ? = 500), Terme vergleichen mit <, =, > (398 + 245 und 400 + 243), Platzhalter bei Mal und Geteilt; im Gleichgewicht nur bei genau gleichen Werten; Hilfe: Ergänzen in Schritten, Umkehraufgabe, beide Seiten ausrechnen |
-| Rechendomino | Kette aus Aufgabe und Ergebnis, halbschriftlich Plus/Minus mit Übertrag, Mal und Geteilt durch Zerlegen; Hilfe zeigt den Rechenweg in Schritten |
+| Rechendomino | Steine ziehen oder antippen; die Kette legt sich als Schlange (rechts, runter, links) zu einer Figur, mit Feuerwerk am Ende; Kette aus Aufgabe und Ergebnis, halbschriftlich Plus/Minus mit Übertrag, Mal und Geteilt durch Zerlegen; Hilfe zeigt den Rechenweg in Schritten |
 | Rechen-Werkstatt | schriftlich auf Karopapier: Ergebnis Ziffer für Ziffer von rechts nach links, Merkzeile für Überträge; Addition, Subtraktion, Multiplikation mit zweistelligem Faktor (Teilprodukte als Notiz); Hilfe Spalte für Spalte, Minus im Verfahren aus dem Elternbereich |
 | Fehlerdetektiv | fertige Rechnung unter der Lupe: „Kann das stimmen?“ mit Überschlag, dann falsche Ziffer antippen oder „Alles richtig“; eingebaute Fehler: Übertrag vergessen, kleiner von größer, Einmaleins-Fehler |
 | Zahlenrätsel-Tresor | Hinweise (Teilbarkeit, Quersumme, Ziffernbeziehungen, Bereich) führen zu genau einer Zahl, Rädchen am Schloss; Gold: Kombinatorik (wie viele Codes?); Hilfe prüft die eigene Zahl Hinweis für Hinweis bzw. listet alle Codes geordnet |
+| Größenmarkt | Süßigkeitenkasse (passend bezahlen, Rückgeld, Einkauf), Schätz-Bude (Längen, Gewichte, Volumen, Zeiten), Uhr-Karussell (Viertelstunden, Minuten, Zeitspannen), Umrechnungs-Memory (m/cm, kg/g, h/min, € /ct), Achterbahn-Architekt (Streckenstücke, Einheiten, Umfang) |
+| Spiegelzelt | Spiegelkabinett (Kästchen selbst ausmalen, senkrechte/waagerechte/schräge Achse), Würfelnetz-Werkstatt (faltbar? gegenüberliegende Flächen), Labyrinth-Robo (Befehlsfolgen), Formen-Sortierer (Figuren, Körper, Flächeninhalt), Zelt-Dekorateur (Bandornamente fortsetzen, Fehler finden) |
+| Musterbahn | Zahlenfolgen-Zug (plus/minus, mal/geteilt, zwei Regeln), Rechenmauer (3 und 4 Ebenen, rückwärts), Riesenrad-Techniker (Plätze, Division mit Rest, Preistabelle) |
+| Forschergasse | Murmel-Labor (sicher/möglich/unmöglich, wahrscheinlichste Farbe, zwei Tüten vergleichen), Diagramm-Reporter (Strichliste, Säulen- und Balkendiagramm mit Skala) |
+| Sternenmarkt | Geisterbahn (schriftliche Division wie im Heft, Schritt für Schritt, Rest, Probe), Pizzabäckerei (Stammbrüche, Anteile, gleichwertige Brüche), Hau den Lukas (Zehntel ablesen, Kommazahlen ordnen, Bruch als Dezimalzahl) |
+| Hilfe der neuen Buden | einheitlich in drei Schritten: Grundidee, Rechenweg mit dem Bild der Bude (Lösung markiert), selbst wählen |
 | Dartbude | Bronze, Silber, Gold, Probewurf, Hilfe nach Fehlern, Nochmal-Aufgabe, Rekord, Familien-Bestenliste, Verlaufskurve |
 | Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
 | Buden | vier Dachformen (Markise, Zirkuszelt, Kuppel, Holzgiebel), eigene Farben und ein Motiv je Bude, auch auf dem Rollladen noch nicht gebauter Buden |
@@ -31,7 +37,7 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
 | Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
 | Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
-| Noch nicht | übrige 15 Buden (Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse, Sternenmarkt), Jahrmarkt-Check, Sternenmarkt, nativer Kauf |
+| Noch nicht | Jahrmarkt-Check, Gassen-Abschlussfeier, nativer Kauf |
 
 ## App-Symbol und Startbild
 
@@ -100,6 +106,8 @@ Grundregeln:
 3. Hilfe nach Fehlern als Svelte-Komponente mit `HilfeProps` (zeigen, hervorheben, vergleichen, nochmal).
 4. Anmelden in `src/buden/index.ts`, `spielbar: true` im Budenregister.
 5. `npm run verify` und `npm run e2e`.
+
+Für Auswahl-Aufgaben mit eigenem Bild reicht `auswahlBude()` aus `src/buden/gemeinsam/auswahlBude.ts`: Generator (mit `auswahlAufgabe()` aus `baukasten.ts`) plus eine Bild-Komponente; Bühne, Antwortknöpfe und Hilfe kommen mit.
 
 ## Store-Regeln für Kinder-Apps
 

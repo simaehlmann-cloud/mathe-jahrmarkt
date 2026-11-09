@@ -3,6 +3,10 @@ import { dartbude } from './dartbude';
 import { dosenwerfen } from './dosenwerfen';
 import { fehlerdetektiv } from './detektiv';
 import { rechendomino } from './domino';
+import { formensortierer, labyrinth, spiegelkabinett, wuerfelnetz, zeltdekorateur } from './spiegelzelt';
+import { achterbahn, kasse, schaetzbude, uhrkarussell, umrechnungsmemory } from './groessenmarkt';
+import { diagrammreporter, murmellabor, rechenmauer, riesenradtechniker, zahlenfolgenzug } from './musterbahn';
+import { geisterbahn, hauDenLukas, pizzabaeckerei } from './sternenmarkt';
 import { seilbahn } from './seilbahn';
 import { einmaleinsTurbo } from './turbo';
 import { zahlenraetselTresor } from './tresor';
@@ -21,6 +25,24 @@ export const BUDEN_DEFINITIONEN: Readonly<Record<string, BudeDefinition>> = {
   rechenwerkstatt,
   fehlerdetektiv,
   tresor: zahlenraetselTresor,
+  kasse,
+  schaetzbude,
+  uhrkarussell,
+  umrechnungsmemory,
+  achterbahn,
+  spiegelkabinett,
+  wuerfelnetz,
+  labyrinth,
+  formensortierer,
+  zeltdekorateur,
+  zahlenfolgenzug,
+  rechenmauer,
+  riesenradtechniker,
+  murmellabor,
+  diagrammreporter,
+  geisterbahn,
+  pizzabaeckerei,
+  hauDenLukas,
 };
 
 export function budeDefinition(id: string): BudeDefinition {

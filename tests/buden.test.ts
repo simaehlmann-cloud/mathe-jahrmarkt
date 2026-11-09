@@ -401,3 +401,162 @@ describe('Tresor: Prüfungen passen zu den Hinweisen', () => {
     }
   });
 });
+
+import { baueAchterbahn, baueKasse, baueMemory, baueSchaetzen, baueUhr, muenzen } from '../src/domain/aufgaben/groessen';
+
+describe('Größenmarkt', () => {
+  const alle = [baueKasse, baueSchaetzen, baueUhr, baueMemory, baueAchterbahn];
+  it('jede Aufgabe hat eindeutige Antworten mit Beschriftung und eine Erklärung', () => {
+    const rng = createRng(101);
+    for (const baue of alle) {
+      for (const stufe of STUFEN) {
+        for (let i = 0; i < 150; i++) {
+          const a = baue(stufe, rng);
+          pruefeOptionen(a);
+          expect(a.optionen.length).toBeGreaterThanOrEqual(3);
+          for (const o of a.optionen) expect(a.labels?.[o.wert], `${a.bude} ${o.wert}`).toBeTruthy();
+          expect(new Set(a.optionen.map((o) => a.labels?.[o.wert])).size).toBe(a.optionen.length);
+          expect(a.erklaerung?.schritte.length).toBeGreaterThan(0);
+          expect(a.daten.stufe).toBe(stufe);
+        }
+      }
+    }
+  });
+  it('Münzen ergeben den Preis, Uhrzeiten und Rückgeld stimmen', () => {
+    expect(muenzen(345).reduce((s, m) => s + m, 0)).toBe(345);
+    const rng = createRng(5);
+    for (let i = 0; i < 100; i++) {
+      const r = baueKasse('silber', rng, 'rueckgeld');
+      expect(r.antwort).toBe((r.daten.schein as number) - (r.daten.preis as number));
+      const u = baueUhr('gold', rng);
+      expect(u.antwort).toBeGreaterThan(u.daten.min as number);
+    }
+  });
+});
+
+import { baueBand, baueFormen, baueLabyrinth, baueNetz, baueSpiegel, falte, fahre, freieZellen, gegenueber, spiegle } from '../src/domain/aufgaben/raum';
+
+describe('Spiegelzelt', () => {
+  it('Würfelnetze: die 11 Netze falten sich, ein 2×3-Rechteck nicht', () => {
+    const kreuz: [number, number][] = [[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]];
+    const f = falte(kreuz);
+    expect(f).toBeDefined();
+    // Im Kreuz liegen oben und unten gegenüber
+    expect(f?.[0]).toBe(gegenueber(f?.[5] ?? -1));
+    expect(falte([[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]])).toBeUndefined();
+    expect(falte([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0]])).toBeUndefined();
+  });
+  it('alle Aufgaben des Spiegelzelts sind eindeutig und erklärt', () => {
+    const rng = createRng(111);
+    for (const baue of [baueSpiegel, baueNetz, baueLabyrinth, baueFormen, baueBand]) {
+      for (const stufe of STUFEN) {
+        for (let i = 0; i < 80; i++) {
+          const a = baue(stufe, rng);
+          pruefeOptionen(a);
+          if (a.eingabe !== 'ziffern') for (const o of a.optionen) expect(a.labels?.[o.wert], `${a.bude}`).toBeTruthy();
+          expect(a.erklaerung?.schritte.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+  it('Labyrinth: nur das richtige Programm erreicht den Stern', () => {
+    const rng = createRng(7);
+    for (let i = 0; i < 60; i++) {
+      const a = baueLabyrinth('silber', rng);
+      const mauern = new Set(a.daten.mauern as string[]);
+      const ziel = a.daten.ziel as [number, number];
+      for (const o of a.optionen) {
+        const ende = fahre(a.daten.start as [number, number], (a.labels?.[o.wert] ?? '').replace(/ /g, ''), mauern);
+        expect(!!ende && ende[0] === ziel[0] && ende[1] === ziel[1]).toBe(o.wert === a.antwort);
+      }
+    }
+  });
+  it('Spiegeln und Bitmaske', () => {
+    expect(spiegle(0, 1, 'senkrecht')).toEqual([3, 1]);
+    expect(spiegle(2, 0, 'schraeg')).toEqual([0, 2]);
+    expect(freieZellen('senkrecht')).toHaveLength(8);
+  });
+});
+
+import { baueDiagramm, baueFolge, baueMauer, baueMurmeln, baueRiesenrad, mauer } from '../src/domain/aufgaben/muster';
+
+describe('Musterbahn und Forschergasse', () => {
+  it('jede Aufgabe hat eindeutige, positive Antworten und eine Erklärung', () => {
+    const rng = createRng(202);
+    for (const baue of [baueFolge, baueMauer, baueRiesenrad, baueMurmeln, baueDiagramm]) {
+      for (const stufe of STUFEN) {
+        for (let i = 0; i < 200; i++) {
+          const a = baue(stufe, rng);
+          pruefeOptionen(a);
+          expect(a.optionen.length).toBeGreaterThanOrEqual(3);
+          expect(a.optionen.every((o) => Number.isInteger(o.wert) && o.wert > 0), `${a.bude} ${a.form}`).toBe(true);
+          if (a.labels) expect(new Set(a.optionen.map((o) => a.labels?.[o.wert] ?? o.wert)).size).toBe(a.optionen.length);
+          expect(a.erklaerung?.schritte.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+  it('Rechenmauer: jeder Stein ist die Summe der beiden darunter, die Lücke ist die Antwort', () => {
+    expect(mauer([1, 2, 3])).toEqual([[1, 2, 3], [3, 5], [8]]);
+    const rng = createRng(7);
+    for (let i = 0; i < 200; i++) {
+      const a = baueMauer(rng.pick(STUFEN), rng);
+      const z = a.daten.zeilen as (number | null)[][];
+      const voll = z.map((r) => r.map((v) => v ?? a.antwort));
+      for (let r = 1; r < voll.length; r++) for (let s = 0; s < voll[r]!.length; s++) expect(voll[r]![s]).toBe(voll[r - 1]![s]! + voll[r - 1]![s + 1]!);
+    }
+  });
+  it('Zahlenfolge: die Antwort ist der Wert an der Lücke', () => {
+    const rng = createRng(8);
+    for (let i = 0; i < 200; i++) {
+      const a = baueFolge(rng.pick(STUFEN), rng);
+      expect((a.daten.folge as number[])[a.daten.luecke as number]).toBe(a.antwort);
+    }
+  });
+  it('Diagramm: Werte sind Vielfache der Skala', () => {
+    const rng = createRng(9);
+    for (let i = 0; i < 200; i++) {
+      const a = baueDiagramm(rng.pick(STUFEN), rng);
+      for (const w of a.daten.werte as number[]) expect(w % (a.daten.schritt as number)).toBe(0);
+    }
+  });
+});
+
+import { baueBruch, baueDezimal, baueDivision, divisionsSchritte } from '../src/domain/aufgaben/klasse5';
+
+describe('Sternenmarkt', () => {
+  it('jede Aufgabe hat eindeutige Antworten mit Beschriftung und eine Erklärung', () => {
+    const rng = createRng(303);
+    for (const baue of [baueDivision, baueBruch, baueDezimal]) {
+      for (const stufe of STUFEN) {
+        for (let i = 0; i < 200; i++) {
+          const a = baue(stufe, rng);
+          pruefeOptionen(a);
+          expect(a.optionen.length, `${a.bude} ${a.form}`).toBeGreaterThanOrEqual(3);
+          if (a.labels) expect(new Set(a.optionen.map((o) => a.labels?.[o.wert] ?? o.wert)).size, `${a.bude} ${a.form}`).toBe(a.optionen.length);
+          expect(a.erklaerung?.schritte.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+  it('schriftliche Division: Ziffern ergeben das Ergebnis, der Rest stimmt', () => {
+    expect(divisionsSchritte(846, 3).map((s) => s.q)).toEqual([2, 8, 2]);
+    expect(divisionsSchritte(1234, 5).map((s) => s.q).join('')).toBe('246');
+    for (let a = 100; a < 3000; a += 7) {
+      for (const d of [2, 3, 7, 9]) {
+        const s = divisionsSchritte(a, d);
+        expect(Number(s.map((x) => x.q).join(''))).toBe(Math.floor(a / d));
+        expect(s[s.length - 1]!.rest).toBe(a % d);
+        expect(s.every((x) => x.rest < d)).toBe(true);
+      }
+    }
+  });
+  it('Ziffer-Aufgaben fragen nach der richtigen Ergebnisziffer', () => {
+    const rng = createRng(4);
+    for (let i = 0; i < 300; i++) {
+      const a = baueDivision(rng.pick(STUFEN), rng);
+      if (a.daten.frage === 'ziffer') expect(a.antwort - 1).toBe(a.daten.loesung);
+      if (a.daten.frage === 'rest') expect(a.antwort).toBe((a.daten.a as number) % (a.daten.d as number));
+    }
+  });
+});

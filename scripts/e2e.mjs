@@ -41,10 +41,11 @@ const pruefe = (b, text) => {
 
 const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox', ...(process.env.DROSSEL ? ['--disable-gpu'] : [])] });
 try {
+  // NUR=hoch oder NUR=quer beschränkt den Lauf auf eine Ausrichtung (schneller beim Entwickeln)
   for (const [name, viewport] of [
     ['quer', { width: 1180, height: 820 }],
     ['hoch', { width: 390, height: 844 }],
-  ]) {
+  ].filter(([n]) => !process.env.NUR || process.env.NUR === n)) {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true });
     const page = await ctx.newPage();
     letzteSeite = page;
@@ -388,6 +389,66 @@ try {
       },
       () => page.getByRole('button', { name: 'Öffnen' }).click(),
     );
+
+    // Auswahl-Buden: so lange antippen, bis eine Antwort falsch ist und die Hilfe kommt
+    const auswahlBudeTesten = async (titel, kurz) => {
+      await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.getByRole('button', { name: `${titel} öffnen` }).click();
+      await page.getByRole('button', { name: 'Bronze spielen' }).click();
+      await page.locator('.wahl').first().waitFor();
+      await page.waitForTimeout(700);
+      await foto(`${kurz}-aufgabe`);
+      let hilfe = false;
+      let probeFalsch = 0;
+      for (let i = 0; i < 14 && !hilfe; i++) {
+        await page.waitForTimeout(900);
+        const knoepfe = await page.locator('.wahl:not(.falsch):not([disabled])').all();
+        const k = knoepfe[probeFalsch % Math.max(1, knoepfe.length)] ?? knoepfe[0];
+        if (!k) continue;
+        await k.click();
+        await page.waitForTimeout(1500);
+        hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+        // Falsche Probe wird wiederholt: dann den nächsten Knopf versuchen
+        if (!hilfe && (await page.getByText('Probewurf').isVisible())) probeFalsch++;
+      }
+      if (hilfe) {
+        await foto(`${kurz}-hilfe-1`);
+        await page.getByRole('button', { name: 'Weiter' }).click();
+        await foto(`${kurz}-hilfe-2`);
+        await page.getByRole('button', { name: 'Weiter' }).click();
+        for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
+          if (await page.getByText('Super!').isVisible()) break;
+          await knopf.click();
+        }
+        await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+      }
+      pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
+    };
+    for (const [titel, kurz] of [
+      ['Süßigkeitenkasse', '31-kasse'],
+      ['Schätz-Bude', '32-schaetzen'],
+      ['Uhr-Karussell', '33-uhr'],
+      ['Umrechnungs-Memory', '34-memory'],
+      ['Achterbahn-Architekt', '35-achterbahn'],
+      ['Würfelnetz-Werkstatt', '37-netz'],
+      ['Labyrinth-Robo', '38-labyrinth'],
+      ['Formen-Sortierer', '39-formen'],
+      ['Zelt-Dekorateur', '40-band'],
+      ['Zahlenfolgen-Zug', '41-folge'],
+      ['Rechenmauer', '42-mauer'],
+      ['Riesenrad-Techniker', '43-riesenrad'],
+      ['Murmel-Labor', '44-murmeln'],
+      ['Diagramm-Reporter', '45-diagramm'],
+    ]) await auswahlBudeTesten(titel, kurz);
+
+    // Spiegelkabinett: Probe richtig spiegeln (blaue Kästchen an der senkrechten Achse), dann leer abgeben
+    const spiegeln = async () => {
+      const blau = await page.locator('.gitter rect[fill="#3c78d8"]').evaluateAll((r) => r.map((e) => [Number(e.getAttribute('x')) / 52, Number(e.getAttribute('y')) / 52]));
+      for (const [x, y] of blau) await page.getByRole('button', { name: `Kästchen Spalte ${4 - x}, Zeile ${y + 1}`, exact: true }).click();
+      await page.getByRole('button', { name: 'Fertig' }).click();
+    };
+    await eigeneBude('Spiegelkabinett', '36-spiegel', spiegeln, () => page.getByRole('button', { name: 'Fertig' }).click());
 
     pruefe(konsole.length === 0, `${name}: keine Fehler in der Konsole${konsole.length ? `: ${konsole.join(' | ')}` : ''}`);
     await ctx.close();
