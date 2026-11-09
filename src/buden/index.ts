@@ -1,54 +1,33 @@
-import { BUDEN } from '../domain/buden';
-import { dartbude } from './dartbude';
-import { dosenwerfen } from './dosenwerfen';
-import { fehlerdetektiv } from './detektiv';
-import { rechendomino } from './domino';
-import { formensortierer, labyrinth, spiegelkabinett, wuerfelnetz, zeltdekorateur } from './spiegelzelt';
-import { achterbahn, kasse, schaetzbude, uhrkarussell, umrechnungsmemory } from './groessenmarkt';
-import { diagrammreporter, murmellabor, rechenmauer, riesenradtechniker, zahlenfolgenzug } from './musterbahn';
-import { geisterbahn, hauDenLukas, pizzabaeckerei } from './sternenmarkt';
-import { seilbahn } from './seilbahn';
-import { einmaleinsTurbo } from './turbo';
-import { zahlenraetselTresor } from './tresor';
-import { waage } from './waage';
-import { rechenwerkstatt } from './werkstatt';
-import type { BudeDefinition } from './typen';
+import { baueBruch, baueDezimal, baueDivision } from '../../domain/aufgaben/klasse5';
+import { auswahlBude } from '../gemeinsam/auswahlBude';
+import BildDivision from './BildDivision.svelte';
+import BildLukas from './BildLukas.svelte';
+import BildPizza from './BildPizza.svelte';
 
-/** Anmeldung aller spielbaren Buden. Muss zu `spielbar` im Budenregister passen (wird getestet). */
-export const BUDEN_DEFINITIONEN: Readonly<Record<string, BudeDefinition>> = {
-  dartbude,
-  'einmaleins-turbo': einmaleinsTurbo,
-  dosenwerfen,
-  seilbahn,
-  waage,
-  rechendomino,
-  rechenwerkstatt,
-  fehlerdetektiv,
-  tresor: zahlenraetselTresor,
-  kasse,
-  schaetzbude,
-  uhrkarussell,
-  umrechnungsmemory,
-  achterbahn,
-  spiegelkabinett,
-  wuerfelnetz,
-  labyrinth,
-  formensortierer,
-  zeltdekorateur,
-  zahlenfolgenzug,
-  rechenmauer,
-  riesenradtechniker,
-  murmellabor,
-  diagrammreporter,
-  geisterbahn,
-  pizzabaeckerei,
-  hauDenLukas,
-};
-
-export function budeDefinition(id: string): BudeDefinition {
-  const d = BUDEN_DEFINITIONEN[id];
-  if (!d) throw new Error(`Bude ${id} ist noch nicht gebaut`);
-  return d;
-}
-
-export const spielbareIds = (): string[] => BUDEN.filter((b) => b.spielbar).map((b) => b.id);
+/** Sternenmarkt: Ausblick auf Klasse 5. */
+export const geisterbahn = auswahlBude({
+  id: 'geisterbahn',
+  baue: baueDivision,
+  probe: (rng) => baueDivision('bronze', rng, 'ohne'),
+  bild: BildDivision,
+  ladetext: 'Die Gespenster verstecken sich …',
+  anleitung: 'Teile Schritt für Schritt wie im Heft: Wie oft passt die Zahl hinein? Was bleibt übrig?',
+  hintergrund: '#2b2f5e',
+});
+export const pizzabaeckerei = auswahlBude({
+  id: 'pizzabaeckerei',
+  baue: baueBruch,
+  probe: (rng) => baueBruch('bronze', rng, 'stamm'),
+  bild: BildPizza,
+  ladetext: 'Der Ofen heizt vor …',
+  anleitung: 'Pizzen werden in gleich große Stücke geschnitten. Welcher Bruch passt?',
+});
+export const hauDenLukas = auswahlBude({
+  id: 'hauDenLukas',
+  baue: baueDezimal,
+  probe: (rng) => baueDezimal('bronze', rng, 'zehntel'),
+  bild: BildLukas,
+  ladetext: 'Der Hammer wird geschwungen …',
+  anleitung: 'Lies die Höhe auf der Zehntel-Skala ab und vergleiche Kommazahlen.',
+  spalten: 2,
+});
