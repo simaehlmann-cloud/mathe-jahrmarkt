@@ -1,4 +1,4 @@
-import { STUFEN, TAGESBUDEN, budeInfo, budenDerGasse, type GasseId, type Stufe } from '../buden';
+import { KERNBUDEN, STUFEN, TAGESBUDEN, budeInfo, budenDerGasse, type GasseId, type Stufe } from '../buden';
 import { MAX_RUNDEN, type Profil, type Runde, type StufenStand } from '../profil';
 
 /** Eine Stufe ist geschafft mit mindestens 8 von 10 richtigen Antworten in einer Runde. */
@@ -36,7 +36,7 @@ export const gasseLaeuft = (p: Profil, gasse: GasseId): boolean => budenDerGasse
 export const sommerfest = (p: Profil): boolean => TAGESBUDEN.every((b) => istGeschafft(p, b.id, 'bronze'));
 
 /** Sternenmarkt: Zusatzpaket und alle Tagesbuden mindestens Silber. */
-export const abendmarktOffen = (p: Profil, paket: boolean): boolean => paket && TAGESBUDEN.every((b) => istGeschafft(p, b.id, 'silber'));
+export const abendmarktOffen = (p: Profil, paket: boolean): boolean => paket && KERNBUDEN.every((b) => istGeschafft(p, b.id, 'silber'));
 
 export interface RundenErgebnis {
   profil: Profil;

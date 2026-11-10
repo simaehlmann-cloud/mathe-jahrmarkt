@@ -372,7 +372,7 @@ describe('Knobelzelt', () => {
   });
 });
 
-import { INSEL, LANDSCHAFT, START, boeden, istBoden, kaufeEinrichtung, leereInsel, nimm, oberkante, pruefeInsel, setze, wegAufInsel, TUER_OBEN } from '../src/domain/insel';
+import { INSEL, BREITE, LANDSCHAFT, START, boeden, istBoden, kaufeEinrichtung, leereInsel, nimm, oberkante, pruefeInsel, setze, wegAufInsel, TUER_OBEN } from '../src/domain/insel';
 
 describe('Bauinsel', () => {
   const bau = (s: ReturnType<typeof leereInsel>, x: number, y: number, art: number, n = 1) => {
@@ -389,9 +389,9 @@ describe('Bauinsel', () => {
     expect(istBoden(s, START.x, START.y, START.z)).toBe(true);
     const wasser = LANDSCHAFT.art.indexOf('wasser');
     expect(wasser).toBeGreaterThan(0);
-    expect(boeden(s, wasser % INSEL, Math.floor(wasser / INSEL))).toEqual([]);
+    expect(boeden(s, wasser % BREITE, Math.floor(wasser / BREITE))).toEqual([]);
     const baum = LANDSCHAFT.baum.indexOf(true);
-    expect(boeden(s, baum % INSEL, Math.floor(baum / INSEL))).toEqual([]);
+    expect(boeden(s, baum % BREITE, Math.floor(baum / BREITE))).toEqual([]);
     expect(Math.max(...LANDSCHAFT.hoehe)).toBe(2);
     // Auf den Hügel kommt man zu Fuß
     expect(wegAufInsel(s, START, { x: 4, y: 4, z: 2 }).length).toBeGreaterThan(0);
@@ -399,7 +399,7 @@ describe('Bauinsel', () => {
   it('Mauer versperrt den Weg, eine Tür öffnet ihn, ohne Treppe kommt man nicht auf einen Block', () => {
     let s = leereInsel();
     // Mauer quer über die Insel (Zeile 15), zwei Blöcke hoch, außer am Weg wird sie ganz geschlossen
-    for (let x = 0; x < INSEL; x++) if (!LANDSCHAFT.baum[15 * INSEL + x]) s = bau(s, x, 15, 1, 2);
+    for (let x = 0; x < INSEL; x++) if (!LANDSCHAFT.baum[15 * BREITE + x]) s = bau(s, x, 15, 1, 2);
     const ziel = { x: 12, y: 12, z: 0 };
     expect(wegAufInsel(s, START, ziel)).toEqual([]);
     // Tür statt Mauer an einer Stelle
@@ -412,7 +412,7 @@ describe('Bauinsel', () => {
     const tuer = setze(t, 12, 15, 101, 100);
     expect(tuer.ok).toBe(true);
     if (!tuer.ok) return;
-    expect(tuer.stand.stapel[15 * INSEL + 12]).toEqual([101, TUER_OBEN]);
+    expect(tuer.stand.stapel[15 * BREITE + 12]).toEqual([101, TUER_OBEN]);
     const weg = wegAufInsel(tuer.stand, START, ziel);
     expect(weg.length).toBeGreaterThan(0);
     expect(weg.some((p) => p.x === 12 && p.y === 15)).toBe(true);
@@ -439,7 +439,7 @@ describe('Bauinsel', () => {
     expect(setze(s, 5, 15, 110, 5)).toEqual({ ok: false, grund: 'keinTeil' });
     expect(setze(s, START.x, START.y, 3, 5)).toEqual({ ok: false, grund: 'figur' });
     const wasser = LANDSCHAFT.art.indexOf('wasser');
-    expect(setze(s, wasser % INSEL, Math.floor(wasser / INSEL), 3, 5)).toEqual({ ok: false, grund: 'feld' });
+    expect(setze(s, wasser % BREITE, Math.floor(wasser / BREITE), 3, 5)).toEqual({ ok: false, grund: 'feld' });
     let hoch = s;
     for (let i = 0; i < 8; i++) hoch = (setze(hoch, 5, 15, 1, 99) as { stand: typeof s }).stand;
     expect(oberkante(hoch, 5, 15)).toBe(8);
@@ -487,7 +487,7 @@ describe('Bauinsel: Haus mit Dach', () => {
     s = n(setzeAn(s, 15, 17, 0, 101, 99));
     // Dach in Ebene 2 über alles, auch über den leeren Raum (Halt durch die Nachbarn)
     for (let y = 13; y <= 17; y++) for (let x = 13; x <= 17; x++) s = n(setzeAn(s, x, y, 2, 2, 99));
-    expect(s.stapel[15 * INSEL + 15]).toEqual([LUFT, LUFT, 2]);
+    expect(s.stapel[15 * BREITE + 15]).toEqual([LUFT, LUFT, 2]);
     expect(istBoden(s, 15, 15, 0)).toBe(true);
     const weg = wegAufInsel(s, START, { x: 15, y: 15, z: 0 });
     expect(weg.length).toBeGreaterThan(0);
@@ -495,9 +495,9 @@ describe('Bauinsel: Haus mit Dach', () => {
     expect(setzeAn(leereInsel(), 5, 18, 3, 1, 9)).toEqual({ ok: false, grund: 'schwebt' });
     // Abbauen in der Mitte lässt das Dach stehen, Tür verschwindet ganz
     const ohneTuer = nimmAn(s, 15, 17, 1, 0);
-    expect(ohneTuer.ok && ohneTuer.stand.stapel[17 * INSEL + 15]).toEqual([LUFT, LUFT, 2]);
+    expect(ohneTuer.ok && ohneTuer.stand.stapel[17 * BREITE + 15]).toEqual([LUFT, LUFT, 2]);
     expect(ohneTuer.ok && ohneTuer.stand.inventar['101']).toBe(1);
     // Speicherdaten mit Luft bleiben erhalten
-    expect(pruefeInsel(JSON.parse(JSON.stringify(s))).stapel[15 * INSEL + 15]).toEqual([LUFT, LUFT, 2]);
+    expect(pruefeInsel(JSON.parse(JSON.stringify(s))).stapel[15 * BREITE + 15]).toEqual([LUFT, LUFT, 2]);
   });
 });

@@ -92,6 +92,8 @@ export const ANDENKEN_X = ALLEE_X + 360;
 export const RIESENRAD_X = ALLEE_X - 380;
 /** Knobelzelt rechts neben dem Andenkenstand. */
 export const KNOBEL_X = ALLEE_X + 610;
+/** Fähranleger zur Bauinsel links auf dem Festplatz. */
+export const FAEHRE_X = ALLEE_X - 650;
 /** Tor im Zaun vor dem Sternenmarkt (auf der Allee). */
 export const TOR: Punkt = { x: ALLEE_X, y: OBEN + ZAUN_PLATZ };
 /** Die Allee reicht vom Festplatz bis zum Sternenmarkt. */

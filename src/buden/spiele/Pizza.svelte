@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Aufgabe } from '../../domain/aufgaben/typen';
   import { warte } from '../gemeinsam/svelteSzene';
+  import Belag from '../sternenmarkt/Belag.svelte';
   import type { SzenenKontext } from '../typen';
 
   /**
@@ -97,7 +98,7 @@
             onclick={() => tippe(i)}
             onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), tippe(i))}
           />
-          {#if belegt.has(i)}{#each salami(i) as [x, y], k (k)}<circle cx={x} cy={y} r={n > 8 ? 6 : 9} fill="#d9433f" stroke="#a52a27" stroke-width="1.5" pointer-events="none" />{/each}{/if}
+          {#if belegt.has(i)}{#each salami(i) as [x, y], k (k)}<Belag art={String(d.belag ?? 'Salami')} {x} {y} r={n > 8 ? 6 : 9} />{/each}{/if}
         {/each}
       {/if}
     </svg>
@@ -106,7 +107,7 @@
       <span><b>{n}</b> {n === 1 ? 'Stück' : 'Stücke'}</span>
       <button onclick={() => schneide(1)} disabled={gesperrt || n >= 12} aria-label="Mehr Stücke">+</button>
     </div>
-    <p class="tipp">{n < 2 ? 'Schneide zuerst mit + in gleich große Stücke.' : 'Tippe Stücke an, um sie mit Salami zu belegen.'}</p>
+    <p class="tipp">{n < 2 ? 'Schneide zuerst mit + in gleich große Stücke.' : `Tippe Stücke an, um sie mit ${String(d.belag ?? 'Salami')} zu belegen.`}</p>
     <button class="ticket rot" onclick={backen} disabled={gesperrt || n < 2 || belegt.size === 0}>In den Ofen!</button>
   </div>
 {/if}

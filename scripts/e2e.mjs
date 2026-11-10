@@ -175,6 +175,16 @@ try {
     await foto('13-eltern-bericht');
     const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Bericht als PDF' }).click()]);
     pruefe(/^mathe-jahrmarkt-bericht-.*\.pdf$/.test(pdf.suggestedFilename()), `${name}: Eltern-Bericht als PDF (${pdf.suggestedFilename()})`);
+    // Über die App: Impressum, Datenschutz und Lizenzen offline in der App
+    await page.getByRole('button', { name: 'Über die App' }).click();
+    await page.getByRole('button', { name: 'Impressum' }).click();
+    await page.getByText('Wisdompeak Apps', { exact: false }).first().waitFor();
+    await page.getByRole('button', { name: 'Datenschutzerklärung' }).click();
+    await page.getByText('Grundsatz: keine Datenerhebung').waitFor();
+    await page.getByRole('button', { name: /Lizenzen/ }).click();
+    await page.locator('details summary').first().waitFor();
+    pruefe((await page.locator('details summary').count()) >= 10, `${name}: Über die App zeigt Impressum, Datenschutz und Lizenzen`);
+    await foto('14a-ueber');
     await page.getByRole('button', { name: 'Zusatzpaket' }).click();
     await foto('14-eltern-paket');
     await page.getByRole('button', { name: /freischalten/ }).click();
@@ -208,7 +218,7 @@ try {
     // Daten überstehen das Neuladen
     await page.reload();
     await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
-    pruefe(await page.getByText('1 von 24').isVisible(), `${name}: Fortschritt bleibt nach Neustart erhalten`);
+    pruefe(await page.getByText('1 von 27').isVisible(), `${name}: Fortschritt bleibt nach Neustart erhalten`);
     const gespeichert = await page.evaluate(() => {
       const roh = localStorage.getItem('CapacitorStorage.mathe-jahrmarkt.daten');
       return roh ? JSON.parse(roh).profile[0] : null;
@@ -500,11 +510,13 @@ try {
         if (!d || d.paket.gekauft) return;
         d.paket = { gekauft: true, seit: 1 };
         const st = { geschafft: true, rekord: 900, gespielt: 1, verlauf: [900] };
-        const ids = ['dartbude', 'einmaleins-turbo', 'dosenwerfen', 'seilbahn', 'waage', 'rechendomino', 'rechenwerkstatt', 'fehlerdetektiv', 'tresor', 'kasse', 'schaetzbude', 'uhrkarussell', 'umrechnungsmemory', 'achterbahn', 'spiegelkabinett', 'wuerfelnetz', 'labyrinth', 'formensortierer', 'zeltdekorateur', 'zahlenfolgenzug', 'rechenmauer', 'riesenradtechniker', 'murmellabor', 'diagrammreporter'];
+        const ids = ['dartbude', 'einmaleins-turbo', 'dosenwerfen', 'seilbahn', 'waage', 'rechendomino', 'rechenwerkstatt', 'fehlerdetektiv', 'tresor', 'kasse', 'schaetzbude', 'uhrkarussell', 'umrechnungsmemory', 'achterbahn', 'spiegelkabinett', 'wuerfelnetz', 'labyrinth', 'formensortierer', 'zeltdekorateur', 'zahlenfolgenzug', 'rechenmauer', 'riesenradtechniker', 'murmellabor', 'diagrammreporter', 'wuerfelbauer', 'lageplan', 'gluecksrad'];
         for (const id of ids) d.profile[0].fortschritt[id] = { bronze: st, silber: st };
         for (const id of ['geisterbahn', 'pizzabaeckerei']) d.profile[0].fortschritt[id] = { bronze: st };
         d.profile[0].fortschritt.hauDenLukas = { bronze: st, silber: st };
         d.profile[0].gesehen.gassen = ['zahlengasse', 'groessenmarkt', 'spiegelzelt', 'musterbahn', 'forschergasse', 'abendmarkt'];
+        // Geschwisterkind für das Duell
+        d.profile.push({ ...JSON.parse(JSON.stringify(d.profile[0])), id: 'mia', name: 'Mia', fortschritt: {}, taler: 0 });
         localStorage.setItem(k, JSON.stringify(d));
       });
       await page.goto(`http://localhost:${PORT}/`);
@@ -756,6 +768,129 @@ try {
         await klick('Mehr Kraft');
         await klick('🔨 Hau!');
       });
+
+      // Neue Buden (0.11): Würfelbauer, Lageplan, Glücksrad
+      await spielBude('Würfelbauer', '69-wuerfelbauer', 'Gold', async () => {});
+      await spielBude('Lageplan', '70-lageplan', 'Silber', async () => {});
+      await spielBude('Glücksrad', '71-gluecksrad', 'Silber', async () => {});
+
+      // Riesenrad-Fahrt: Übersicht aller Gondeln, Antippen führt zur Bude
+      await page.getByRole('button', { name: /^Riesenrad:/ }).click();
+      await page.getByRole('heading', { name: 'Fahrt mit dem Riesenrad' }).waitFor();
+      pruefe((await page.locator('.fahrt .zeile').count()) === 27, `${name}: Riesenrad-Fahrt zeigt alle 27 Tagesbuden`);
+      await foto('72-riesenrad-fahrt');
+      await page.locator('.fahrt .zeile', { hasText: 'Glücksrad' }).click();
+      await page.getByRole('button', { name: /spielen$/ }).waitFor();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Flinka gibt Tipps
+      await page.getByRole('button', { name: 'Flinka nach einem Tipp fragen' }).click();
+      await page.getByText(/Hallo Sam!/).waitFor({ timeout: 30000 });
+      await foto('73-flinka-tipp');
+      for (let i = 0; i < 8 && (await page.getByRole('button', { name: /^(Weiter|Los geht)/ }).count()); i++) await page.getByRole('button', { name: /^(Weiter|Los geht)/ }).last().click();
+
+      // Fundbüro: Die Fehler von eben liegen dort und kommen morgen wieder
+      await menue(/Fundbüro/);
+      await page.getByRole('heading', { name: 'Fundbüro' }).waitFor();
+      pruefe(await page.getByText(/später zurück, die nächste morgen/).isVisible(), `${name}: Fundbüro merkt sich Fehler für morgen`);
+      await foto('74-fundbuero');
+      // Einen Tag später (Uhr vorstellen): abholen
+      await page.evaluate(() => {
+        const k = 'CapacitorStorage.mathe-jahrmarkt.daten';
+        const d = JSON.parse(localStorage.getItem(k));
+        for (const f of d.profile[0].fundbuero) f.faellig = 0;
+        localStorage.setItem(k, JSON.stringify(d));
+      });
+      await page.reload();
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      await menue(/Fundbüro/);
+      await page.getByRole('button', { name: /Abholen/ }).first().click();
+      await page.locator('.marke', { hasText: 'Fundbüro' }).waitFor();
+      await page.waitForTimeout(900);
+      await foto('75-fundbuero-runde');
+      pruefe((await page.locator('.punkte-reihe li').count()) <= 6, `${name}: Fundbüro-Runde mit den fälligen Aufgaben`);
+      await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
+      await page.getByRole('heading', { name: 'Fundbüro' }).waitFor();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Geschwister-Duell: Sam rechnet alles richtig, Mia liegt immer daneben
+      const rechne = (t) => {
+        let m;
+        if ((m = t.match(/Das Doppelte von (\d+)/))) return 2 * Number(m[1]);
+        if ((m = t.match(/Die Hälfte von (\d+)/))) return Number(m[1]) / 2;
+        m = t.match(/(\d+)\s*([·+−:])\s*(\d+)/);
+        const [a, b] = [Number(m[1]), Number(m[3])];
+        return { '·': a * b, '+': a + b, '−': a - b, ':': a / b }[m[2]];
+      };
+      await menue(/Geschwister-Duell/);
+      await page.getByRole('button', { name: 'Duell starten' }).click();
+      for (const kind of ['Sam', 'Mia']) {
+        await page.getByRole('button', { name: `Ich bin ${kind} – los!` }).click();
+        for (let i = 0; i < 10; i++) {
+          const t = await page.locator('.aufgabe span').first().textContent({ timeout: 8000 });
+          if (i === 3 && kind === 'Sam') await foto('76-duell');
+          // Sam rechnet richtig, Mia immer um eins daneben (gleiche Stellenzahl, dann prüft die App von selbst)
+          const r = rechne(t);
+          const eingabe = kind === 'Sam' ? r : r % 10 === 9 ? r - 1 : r + 1;
+          for (const z of String(eingabe)) await page.getByRole('button', { name: `Ziffer ${z}` }).click();
+          await page.waitForTimeout(80);
+        }
+      }
+      await page.getByRole('heading', { name: 'Sam gewinnt!' }).waitFor();
+      pruefe(await page.getByText('10 von 10').isVisible(), `${name}: Duell – gleiche Aufgaben, Sam gewinnt mit 10 von 10`);
+      await foto('77-duell-ende');
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Forscheraufgaben im Knobelzelt
+      await menue('Knobelzelt');
+      await page.getByRole('button', { name: /Forscheraufgaben/ }).click();
+      const eingeben = async (zahlen) => {
+        for (const zahl of zahlen) {
+          for (const z of String(zahl)) await page.getByRole('button', { name: `Ziffer ${z}` }).click();
+          await page.locator('.tasten button.ok').click();
+        }
+      };
+      for (let i = 0; i < 4; i++) {
+        const text = await page.locator('.aufgabe .text').textContent();
+        if (i === 0) await foto('78-forscher');
+        if (/Geschichten/.test(text)) {
+          await page.locator('.geschichte').first().click();
+          await page.getByRole('button', { name: 'Prüfen' }).click();
+          if (!(await page.getByRole('button', { name: /Nächste Aufgabe|Fertig/ }).count())) await page.getByRole('button', { name: 'Prüfen' }).click();
+        } else {
+          const ziel = Number(text.match(/(?:Ergebnis|zusammen|Deckstein) (\d+)/)[1]);
+          let loesungen;
+          if (/Malaufgaben/.test(text)) loesungen = [[1, ziel], [2, ziel / 2], [ziel / 4 === Math.floor(ziel / 4) ? 4 : 3, ziel / (ziel / 4 === Math.floor(ziel / 4) ? 4 : 3)]];
+          else if (/gerade Zahlen/.test(text)) loesungen = [[0, ziel], [2, ziel - 2], [4, ziel - 4], [6, ziel - 6]];
+          else if (/Minusaufgaben/.test(text)) loesungen = [[ziel + 1, 1], [ziel + 2, 2], [ziel + 3, 3]];
+          else loesungen = [[1, 1, ziel - 3], [2, 2, ziel - 6]];
+          for (const l of loesungen) await eingeben(l);
+          pruefe(await page.getByText(/Geschafft!/).isVisible(), `${name}: Forscheraufgabe gelöst (${text.slice(0, 40)}…)`);
+          if (i === 0) await foto('79-forscher-geloest');
+        }
+        await page.getByRole('button', { name: /Nächste Aufgabe|Fertig/ }).click();
+      }
+      await page.getByRole('heading', { name: 'Forscherrunde geschafft!' }).waitFor();
+      await page.getByRole('button', { name: 'Zurück zum Zelt' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Sammelkarte umdrehen: Mathe-Fakt auf der Rückseite
+      await menue(/Sammelalbum/);
+      await page.locator('.raster .platz').first().click();
+      await page.getByRole('button', { name: 'Umdrehen' }).click();
+      await page.getByText('Wusstest du?').waitFor();
+      await page.waitForTimeout(500);
+      pruefe(await page.getByText('Wusstest du?').isVisible(), `${name}: Sammelkarte hat einen Mathe-Fakt auf der Rückseite`);
+      await foto('80-kartenrueckseite');
+      await page.getByRole('button', { name: 'Schließen' }).click();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Fähre zur Bauinsel
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      await page.getByRole('button', { name: /Fähre zur Bauinsel/ }).click();
+      await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached', timeout: 30000 });
+      pruefe(true, `${name}: Fähre bringt zur Bauinsel`);
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
       pruefe(konsole2.length === 0, `${name}: zweiter Durchgang ohne Fehler in der Konsole${konsole2.length ? `: ${konsole2.join(' | ')}` : ''}`);
       await ctx2.close();
     }

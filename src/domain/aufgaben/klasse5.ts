@@ -115,6 +115,8 @@ export function baueDivision(stufe: Stufe, rng: Rng, form?: string): AuswahlAufg
 
 const NENNER_NAME: Record<number, string> = { 2: 'die Hälfte', 3: 'ein Drittel', 4: 'ein Viertel', 5: 'ein Fünftel', 6: 'ein Sechstel', 8: 'ein Achtel', 10: 'ein Zehntel', 12: 'ein Zwölftel' };
 const NENNER = [2, 3, 4, 5, 6, 8, 10, 12];
+/** Beläge für Abwechslung; die Farbe zeichnen Bild und Spiel. */
+export const BELAEGE = ['Salami', 'Pilzen', 'Paprika', 'Ananas', 'Tomaten'] as const;
 const bruch = (z: number, n: number): string => `${z}/${n}`;
 
 /**
@@ -135,31 +137,33 @@ export function baueBruch(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe
   if (f === 'stamm' || f === 'anteil') {
     const n = f === 'stamm' ? rng.pick(NENNER) : rng.pick([4, 5, 6, 8, 10, 12]);
     const z = f === 'stamm' ? 1 : rng.int(2, Math.min(n - 1, 7));
+    const belag = rng.pick(BELAEGE);
     return auswahlAufgabe(
       {
-        bude: 'pizzabaeckerei', form: f, stufe, text: `Bestellung: ${bruch(z, n)} mit Salami`, sprechtext: `Bestellung: ${z === 1 ? NENNER_NAME[n] : bruch(z, n)} der Pizza mit Salami. Schneide die Pizza und belege sie.`,
+        bude: 'pizzabaeckerei', form: f, stufe, text: `Bestellung: ${bruch(z, n)} mit ${belag}`, sprechtext: `Bestellung: ${z === 1 ? NENNER_NAME[n] : bruch(z, n)} der Pizza mit ${belag}. Schneide die Pizza und belege sie.`,
         antwort: code(z, n), fehler: fehlerFuer(z, n), frei: true, format: (w) => bruch(w % 100, Math.floor(w / 100)),
         kompetenz: 'klasse5', dimension: f === 'stamm' ? 'wissen' : 'sicherheit',
         idee: 'Der Nenner (unten) sagt, in wie viele gleich große Stücke du schneidest. Der Zähler (oben) sagt, wie viele davon belegt werden.',
-        schritte: [`${n} gleiche Stücke schneiden.`, `${z} ${z === 1 ? 'Stück' : 'Stücke'} mit Salami belegen: ${bruch(z, n)}${z === 1 ? ` (${NENNER_NAME[n]})` : ''}.`],
-        daten: { pizzen: [[z, n]], anzeige: 'bruch', bestellung: [z, n] },
+        schritte: [`${n} gleiche Stücke schneiden.`, `${z} ${z === 1 ? 'Stück' : 'Stücke'} mit ${belag} belegen: ${bruch(z, n)}${z === 1 ? ` (${NENNER_NAME[n]})` : ''}.`],
+        daten: { pizzen: [[z, n]], anzeige: 'bruch', bestellung: [z, n], belag },
       },
       rng,
     );
   }
   const n = rng.pick([2, 3, 4, 5]);
   const z = rng.int(1, n - 1);
-  const k = rng.pick([2, 3]);
+  const k = rng.pick([2, 3, 4].filter((x) => n * x <= 12));
+  const belag = rng.pick(BELAEGE);
   return auswahlAufgabe(
     {
-      bude: 'pizzabaeckerei', form: f, stufe, text: `Genauso viel Salami wie ${bruch(z, n)} – aber in ${n * k} Stücken!`,
-      sprechtext: `Der Kunde möchte genauso viel Salami wie auf ${bruch(z, n)} der Pizza. Schneide die Pizza aber in ${n * k} Stücke.`,
+      bude: 'pizzabaeckerei', form: f, stufe, text: `Genauso viel Pizza mit ${belag} wie ${bruch(z, n)} – aber in ${n * k} Stücken!`,
+      sprechtext: `Der Kunde möchte genauso viel Pizza mit ${belag} wie ${bruch(z, n)}. Schneide die Pizza aber in ${n * k} Stücke.`,
       antwort: code(z * k, n * k), fehler: [...fehlerFuer(z * k, n * k), { wert: code(z, n * k), fehlerArt: 'sonstige' }, { wert: code(z + k, n * k), fehlerArt: 'sonstige' }], frei: true,
       format: (w) => bruch(w % 100, Math.floor(w / 100)),
       kompetenz: 'klasse5', dimension: 'anwendung',
       idee: 'Schneidest du jedes Stück noch einmal durch, werden es mehr Stücke – aber die belegte Fläche bleibt gleich.',
       schritte: [`Jedes ${bruch(1, n)}-Stück wird in ${k} Teile geschnitten.`, `Aus ${n} Stücken werden ${n * k}, aus ${z} belegten werden ${z * k}.`, `${bruch(z, n)} = ${bruch(z * k, n * k)}`],
-      daten: { pizzen: [[z, n]], loesung: [z * k, n * k], anzeige: 'bruch', bestellung: [z, n], stuecke: n * k },
+      daten: { pizzen: [[z, n]], loesung: [z * k, n * k], anzeige: 'bruch', bestellung: [z, n], stuecke: n * k, belag },
     },
     rng,
   );
@@ -210,10 +214,11 @@ export function baueDezimal(stufe: Stufe, rng: Rng, form?: string): AuswahlAufga
   }
   const paare: [string, number][] = [
     ['1/2', 50], ['1/4', 25], ['3/4', 75], ['1/5', 20], ['1/10', 10], ['3/10', 30], ['7/10', 70], ['2/5', 40], ['9/10', 90], ['4/5', 80],
+    ['3/5', 60], ['2/4', 50], ['5/10', 50], ['6/10', 60], ['2/10', 20], ['8/10', 80], ['4/10', 40], ['1/20', 5], ['3/20', 15], ['7/20', 35],
   ];
   const [b, hundertstel] = rng.pick(paare);
   const [z = '1', n = '2'] = b.split('/');
-  const dz = `0,${String(hundertstel).replace(/0$/, '')}`;
+  const dz = (hundertstel / 100).toFixed(2).replace(/0$/, '').replace('.', ',');
   return auswahlAufgabe(
     {
       bude: 'hauDenLukas', form: f, stufe, text: `Triff genau ${b}!`, sprechtext: `Stelle die Kraft so ein, dass der Puck bis ${b} fliegt. Die Skala geht von 0 bis 1.`,

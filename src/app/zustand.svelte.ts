@@ -17,7 +17,7 @@ export type Bildschirm =
   | { name: 'start' }
   | { name: 'jahrmarkt' }
   | { name: 'bude'; bude: string }
-  | { name: 'spiel'; bude: string; stufe: Stufe; n?: number; fortsetzen?: boolean }
+  | { name: 'spiel'; bude: string; stufe: Stufe; n?: number; fortsetzen?: boolean; fundbuero?: boolean }
   | { name: 'profil' }
   | { name: 'andenken' }
   | { name: 'figur' }
@@ -27,7 +27,9 @@ export type Bildschirm =
   | { name: 'album' }
   | { name: 'blitz' }
   | { name: 'knobel' }
-  | { name: 'insel' };
+  | { name: 'insel' }
+  | { name: 'fundbuero' }
+  | { name: 'duell' };
 
 /** Zentraler Zustand. Jede Änderung am Bestand läuft über `aendere`, damit sie gespeichert wird. */
 class AppZustand {
@@ -115,6 +117,11 @@ class AppZustand {
   aendere(fn: (b: Datenbestand) => Datenbestand): void {
     this.bestand = fn($state.snapshot(this.bestand) as Datenbestand);
     this.plan?.vormerken($state.snapshot(this.bestand) as Datenbestand);
+  }
+
+  /** Ein bestimmtes Profil ändern (z. B. Taler fürs Geschwisterkind nach einem Duell). */
+  aendereProfilVon(id: string, fn: (p: Profil) => Profil): void {
+    this.aendere((b) => ({ ...b, profile: b.profile.map((p) => (p.id === id ? fn(p) : p)) }));
   }
 
   aendereProfil(fn: (p: Profil) => Profil): void {

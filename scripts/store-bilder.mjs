@@ -15,6 +15,8 @@ for (const [geraet, viewport, dsf] of [
 ]) {
   const ctx = await b.newContext({ viewport, deviceScaleFactor: dsf, hasTouch: true });
   const page = await ctx.newPage();
+  // Feste Zeit: Sommer, Vormittag – sonst hängt die Stimmung (Abend, Herbstlaub) vom Zeitpunkt des Erzeugens ab
+  await page.clock.install({ time: new Date('2026-06-16T10:30:00') });
   page.setDefaultTimeout(20000);
   const foto = (n) => page.screenshot({ path: `${AUS}/${geraet}-${n}.png` });
   const menue = async (punkt) => {

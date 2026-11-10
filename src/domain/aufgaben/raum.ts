@@ -264,8 +264,6 @@ export function baueFormen(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgab
   const liste = f === 'koerper' ? KOERPER : FORMEN_FLAECHE;
   const i = rng.int(0, liste.length - 1);
   const name = liste[i] ?? '';
-  const andere = rng.shuffle(liste.filter((x) => x !== name)).slice(0, 3);
-  const c = codeAuswahl([name, ...andere], 0, rng);
   const merkmale: Record<string, string> = {
     Dreieck: '3 Ecken und 3 Seiten.',
     Quadrat: '4 gleich lange Seiten und 4 rechte Winkel.',
@@ -280,13 +278,38 @@ export function baueFormen(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgab
     Kegel: 'ein Kreis unten und eine Spitze.',
     Pyramide: 'ein Viereck unten, Dreiecke treffen sich oben in einer Spitze.',
   };
+  const artikel = ['Kugel', 'Pyramide'].includes(name) ? 'e' : '';
+  // Abwechslung im Bild: Ebene Formen gedreht, verschieden groß und in verschiedenen Farben
+  const bild = { name, dreh: f === 'flaeche' && name !== 'Kreis' ? rng.pick([0, 0, 15, 30, 45, 90, -20]) : 0, farbe: rng.int(0, 3), groesse: rng.pick([0.8, 0.9, 1]) };
+  // Jede dritte Aufgabe fragt nach den Ecken statt nach dem Namen
+  if (rng.int(0, 2) === 0) {
+    const ECKEN: Record<string, number> = { Dreieck: 3, Quadrat: 4, Rechteck: 4, Kreis: 0, Fünfeck: 5, Sechseck: 6, Würfel: 8, Quader: 8, Kugel: 0, Zylinder: 0, Kegel: 0, Pyramide: 5 };
+    const e = ECKEN[name] ?? 0;
+    const kandidaten = rng.shuffle([0, 3, 4, 5, 6, 8].filter((x) => x !== e));
+    // Werte um 10 verschoben, weil 0 als Antwortwert nicht erlaubt ist („keine Ecke“ = 10)
+    const fehler = kandidaten.slice(0, 3).map((x) => ({ wert: x + 10, fehlerArt: 'sonstige' as const }));
+    return auswahlAufgabe(
+      {
+        bude: 'formensortierer', form: f, stufe, text: f === 'koerper' ? 'Wie viele Ecken hat dieser Körper?' : 'Wie viele Ecken hat diese Form?', antwort: e + 10,
+        fehler,
+        format: (w) => (w === 10 ? 'keine Ecke' : `${w - 10} Ecken`),
+        kompetenz: 'raum', dimension: 'wissen',
+        idee: 'Fahre mit dem Finger einmal rundherum und zähle jede Ecke genau einmal.',
+        schritte: [`Das ist ein${artikel} ${name}: ${merkmale[name] ?? ''}`, e === 0 ? `${name}: keine Ecke.` : `${name}: ${e} Ecken.`],
+        daten: bild,
+      },
+      rng,
+    );
+  }
+  const andere = rng.shuffle(liste.filter((x) => x !== name)).slice(0, 3);
+  const c = codeAuswahl([name, ...andere], 0, rng);
   return auswahlAufgabe(
     {
       bude: 'formensortierer', form: f, stufe, text: f === 'koerper' ? 'Welcher Körper ist das?' : 'Welche Form ist das?', ...c,
       kompetenz: 'raum', dimension: 'wissen',
       idee: 'Zähle Ecken und Seiten und schau, ob Seiten gleich lang sind.',
-      schritte: [`Das ist ein${['Kugel', 'Pyramide'].includes(name) ? 'e' : ''} ${name}: ${merkmale[name] ?? ''}`],
-      daten: { name },
+      schritte: [`Das ist ein${artikel} ${name}: ${merkmale[name] ?? ''}`],
+      daten: bild,
     },
     rng,
   );
@@ -303,10 +326,37 @@ const ZEICHEN_PAARE = [
 const DREHUNG = ['▲', '▶', '▼', '◀'];
 
 export function baueBand(stufe: Stufe, rng: Rng, form?: string): AuswahlAufgabe {
-  const f = form ?? (stufe === 'bronze' ? 'fortsetzen' : stufe === 'silber' ? 'fehler' : 'abbildung');
+  const f0 = form ?? (stufe === 'bronze' ? 'fortsetzen' : stufe === 'silber' ? 'fehler' : 'abbildung');
+  // „Nochmal“-Aufgaben nach einer Drehfolge kommen wieder aus der Gold-Familie
+  const f = f0 === 'drehfolge' ? 'abbildung' : f0;
   if (f === 'abbildung') {
+    // Drehfolgen (je eine Vierteldrehung im Uhrzeigersinn) und Spiegelpaare
+    const DREH_REIHEN = [DREHUNG, ['◢', '◣', '◤', '◥']];
+    const SPIEGEL = [['▶', '◀'], ['▲', '▼'], ['◢', '◣'], ['◤', '◥'], ['◢', '◥']];
+    const reihe = rng.pick(DREH_REIHEN);
+    const start = rng.int(0, 3);
+    const gedreht = Array.from({ length: 5 }, (_, i) => reihe[(start + i) % 4] ?? '');
     const art = rng.pick(['verschoben', 'gespiegelt', 'gedreht']);
-    const folge = art === 'verschoben' ? ['▶', '▶', '▶', '▶', '▶'] : art === 'gespiegelt' ? ['▶', '◀', '▶', '◀', '▶'] : [...DREHUNG, '▲'];
+    const sp = rng.pick(SPIEGEL);
+    const z = rng.pick([...DREHUNG, '◢', '◣', '◤', '◥']);
+    const folge = art === 'verschoben' ? Array.from({ length: 5 }, () => z) : art === 'gespiegelt' ? Array.from({ length: 5 }, (_, i) => sp[i % 2] ?? '') : gedreht;
+    // Jede zweite Aufgabe: das nächste Bild einer Drehfolge finden
+    if (rng.int(0, 1) === 0) {
+      const luecke = 4;
+      const richtig = gedreht[luecke] ?? '';
+      const andere = rng.shuffle(reihe.filter((x) => x !== richtig)).slice(0, 3);
+      const c = codeAuswahl([richtig, ...andere], 0, rng);
+      return auswahlAufgabe(
+        {
+          bude: 'zeltdekorateur', form: 'drehfolge', stufe, text: 'Das Bild dreht sich immer um eine Vierteldrehung weiter. Welches Bild kommt als Nächstes?', ...c,
+          kompetenz: 'raum', dimension: 'anwendung',
+          idee: 'Schau, in welche Richtung die Spitze zeigt, und drehe sie in Gedanken eine Vierteldrehung weiter – wie der Uhrzeiger.',
+          schritte: [`Die Folge: ${gedreht.slice(0, 4).join(' ')}`, `Eine Vierteldrehung weiter: ${richtig}`],
+          daten: { folge: gedreht, luecke },
+        },
+        rng,
+      );
+    }
     const c = codeAuswahl([art, ...['verschoben', 'gespiegelt', 'gedreht'].filter((x) => x !== art)], 0, rng);
     return auswahlAufgabe(
       {

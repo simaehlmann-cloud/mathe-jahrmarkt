@@ -4,13 +4,13 @@ Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die 
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Stand dieser Version (0.10.0)
+## Stand dieser Version (0.11.0)
 
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar. Neu in 0.9.0 (Zielgruppe Anfang Klasse 5): älterer Ton mit Menschen- und Roboterfiguren und Rängen, Menü hinter der eigenen Figur, acht Buden als echte Spiele, Tagesaufträge, Jahrmarkt-Check, Bauplatz mit Blöcken und Bauaufträgen. Neu in 0.10.0: Gassen-Begrüßung passend zur ersten Bude, Auftragsfähnchen, Weiterspielen nach einer Pause, vier klar unterscheidbare Stimmen, Wochenziel, Frischmacher, Blitzrechnen, Knobelzelt mit Rätsel der Woche, Gassenfeiern und Sommerfest, Sammelalbum, Bauinsel, neue Musik und Klänge, Tablet-Ansicht, echter Kauf über App Store und Google Play, Eltern-Bericht als PDF.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar. Neu in 0.9.0 (Zielgruppe Anfang Klasse 5): älterer Ton mit Menschen- und Roboterfiguren und Rängen, Menü hinter der eigenen Figur, acht Buden als echte Spiele, Tagesaufträge, Jahrmarkt-Check, Bauplatz mit Blöcken und Bauaufträgen. Neu in 0.10.0: Gassen-Begrüßung passend zur ersten Bude, Auftragsfähnchen, Weiterspielen nach einer Pause, vier klar unterscheidbare Stimmen, Wochenziel, Frischmacher, Blitzrechnen, Knobelzelt mit Rätsel der Woche, Gassenfeiern und Sommerfest, Sammelalbum, Bauinsel, neue Musik und Klänge, Tablet-Ansicht, echter Kauf über App Store und Google Play, Eltern-Bericht als PDF. Neu in 0.11.0: drei neue Buden (Würfelbauer, Lageplan, Glücksrad – jetzt 30), weniger Wiederholungen, Medaillen an den Buden, drehendes Riesenrad mit Fahrt, Flinka gibt Tipps, Fundbüro, Geschwister-Duell, Forscheraufgaben, Sammelkarten mit Mathe-Fakten, Tageszeit und Jahreszeiten auf der Karte, größere Bauinsel mit Brücke, Fähre, Tieren und Bauaufträgen, Impressum, Datenschutz und Lizenzen in der App und im Netz.
 
 | Bereich | Stand |
 | --- | --- |
-| Jahrmarkt-Welt | begehbare Karte: Kind tippt auf eine Bude, die eigene Figur läuft über die Wege hin und geht hinein; alle 27 Buden an ihrem Platz, Straßenschilder je Gasse, Riesenrad als Fortschritt auf dem Festplatz, Sternenmarkt hinter dem Zaun |
+| Jahrmarkt-Welt | begehbare Karte: Kind tippt auf eine Bude, die eigene Figur läuft über die Wege hin und geht hinein; alle 30 Buden an ihrem Platz mit Medaille (B/S/G), Straßenschilder je Gasse, Riesenrad dreht sich (je mehr Gondeln leuchten, desto schneller) und lädt zur Fahrt mit Übersicht aller Buden, Flinka am Eingang gibt Tipps, Tageszeit (abends Lichterketten) und Jahreszeiten, Fähre zur Bauinsel, Sternenmarkt hinter dem Zaun |
 | Geschichte | Flinka mit Intro, Gassen-Begrüßung, Lob bei jeder neuen Stufe |
 | Einmaleins-Turbo | Ergebnis mit Ziffernfeld eintippen, Kart fährt mit jeder richtigen Antwort; freiwilliger Turbo mit Zeitleiste und Bonus; Gold mit Analogaufgaben (7 · 80) und eigener Hilfe |
 | Dosenwerfen | Stellenwerte bis 1 000 / 100 000 / 1 000 000: Stellentafel, Zahlwort, Ziffernwert, Entbündeln; falsche Dosen aus typischen Fehlern (Null vergessen, wie gesprochen, nicht gebündelt); Hilfe mit Stellenwerttafel |
@@ -20,10 +20,10 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Rechen-Werkstatt | schriftlich auf Karopapier: Ergebnis Ziffer für Ziffer von rechts nach links, Merkzeile für Überträge; Addition, Subtraktion, Multiplikation mit zweistelligem Faktor (Teilprodukte als Notiz); Hilfe Spalte für Spalte, Minus im Verfahren aus dem Elternbereich |
 | Fehlerdetektiv | fertige Rechnung unter der Lupe: „Kann das stimmen?“ mit Überschlag, dann falsche Ziffer antippen oder „Alles richtig“; eingebaute Fehler: Übertrag vergessen, kleiner von größer, Einmaleins-Fehler |
 | Zahlenrätsel-Tresor | Hinweise (Teilbarkeit, Quersumme, Ziffernbeziehungen, Bereich) führen zu genau einer Zahl, Rädchen am Schloss; Gold: Kombinatorik (wie viele Codes?); Hilfe prüft die eigene Zahl Hinweis für Hinweis bzw. listet alle Codes geordnet |
-| Größenmarkt | Süßigkeitenkasse (passend bezahlen, Rückgeld, Einkauf), Schätz-Bude (Längen, Gewichte, Volumen, Zeiten), Uhr-Karussell (Viertelstunden, Minuten, Zeitspannen), Umrechnungs-Memory (m/cm, kg/g, h/min, € /ct), Achterbahn-Architekt (Streckenstücke, Einheiten, Umfang) |
-| Spiegelzelt | Spiegelkabinett (Kästchen selbst ausmalen, senkrechte/waagerechte/schräge Achse), Würfelnetz-Werkstatt (faltbar? gegenüberliegende Flächen), Labyrinth-Robo (Befehlsfolgen), Formen-Sortierer (Figuren, Körper, Flächeninhalt), Zelt-Dekorateur (Bandornamente fortsetzen, Fehler finden) |
+| Größenmarkt | Süßigkeitenkasse (passend bezahlen, Rückgeld, Einkauf), Schätz-Bude (Längen, Gewichte, Volumen, Zeiten), Uhr-Karussell (Viertelstunden, Minuten, Zeitspannen), Umrechnungs-Memory (m/cm, kg/g, h/min, € /ct), Achterbahn-Architekt (Streckenstücke, Einheiten, Umfang), Lageplan (Planquadrate A1–E5, Wege beschreiben, Maßstab) |
+| Spiegelzelt | Spiegelkabinett (Kästchen selbst ausmalen, senkrechte/waagerechte/schräge Achse), Würfelnetz-Werkstatt (faltbar? gegenüberliegende Flächen), Labyrinth-Robo (Befehlsfolgen), Formen-Sortierer (Figuren und Körper mit Ecken, Flächeninhalt), Zelt-Dekorateur (Bandornamente fortsetzen, Fehler finden, Drehfolgen), Würfelbauer (Türme zählen, Baupläne, Ansichten von vorne und oben, Quader ergänzen) |
 | Musterbahn | Zahlenfolgen-Zug (plus/minus, mal/geteilt, zwei Regeln), Rechenmauer (3 und 4 Ebenen, rückwärts), Riesenrad-Techniker (Plätze, Division mit Rest, Preistabelle) |
-| Forschergasse | Murmel-Labor (sicher/möglich/unmöglich, wahrscheinlichste Farbe, zwei Tüten vergleichen), Diagramm-Reporter (Strichliste, Säulen- und Balkendiagramm mit Skala) |
+| Forschergasse | Murmel-Labor (sicher/möglich/unmöglich, wahrscheinlichste Farbe, zwei Tüten vergleichen), Diagramm-Reporter (Strichliste, Säulen- und Balkendiagramm mit Skala), Glücksrad (Chancen nach Feldern, Strichliste und Rad zuordnen, faire Spiele) |
 | Sternenmarkt | Geisterbahn (schriftliche Division wie im Heft, Schritt für Schritt, Rest, Probe), Pizzabäckerei (Stammbrüche, Anteile, gleichwertige Brüche), Hau den Lukas (Zehntel ablesen, Kommazahlen ordnen, Bruch als Dezimalzahl) |
 | Spiel-Buden | Kasse: Münzen und Scheine auf den Tresen legen. Uhr: Zeiger ziehen. Achterbahn: Schienen aus dem Lager legen, die Bahn wächst maßstäblich. Rechenmauer: Stein für Stein bis zur Spitze. Riesenrad: erst rechnen, dann fährt das Rad. Geisterbahn: Division Ziffer für Ziffer, der Wagen fährt in den Tunnel. Pizzabäckerei: selbst schneiden und belegen. Hau den Lukas: Kraft einstellen und zuschlagen. Für Bildschirmleser gibt es weiter Antwortknöpfe |
 | Ränge | Jede geschaffte Stufe ist ein Stern: Neuling, Budenhelfer, Budenprofi, Budenchef, Jahrmarkt-Manager, Jahrmarkt-Direktor, Mathe-Legende; im Menü, im Mathe-Profil und beim Aufstieg nach der Runde |
@@ -45,13 +45,16 @@ Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als 
 | Weiterspielen | Wer eine Runde abbricht, kann sie bis zu einem Tag lang an derselben Stelle fortsetzen („Aufgabe x von 10“) oder neu starten, ohne Probewurf |
 | Wochenziel und Frischmacher | Drei Spieltage pro Woche bringen 15 Blöcke; ein Tagesauftrag holt eine Bude zurück, die 10 Tage nicht gespielt wurde |
 | Blitzrechnen | 60 Sekunden Kopfrechnen in drei Stufen zum Aufwärmen, Blöcke für richtige Antworten, Rekord |
-| Knobelzelt | Sachaufgaben in Teilschritten mit Tipp und Rechnung (9 Arten, 3 Stufen), dazu jede Woche ein Rätsel mit zwei Tipps |
-| Feiern und Sammelalbum | Gassenfeier, wenn alle Buden einer Gasse Bronze haben, Sommerfest für alle; 42 Sammelkarten (normal, selten, legendär) |
-| Bauinsel | Zusatzpaket: Insel mit Wiese, Strand, See, Hügel und Bäumen; die Figur läuft verkleinert, steigt Treppen und geht durch Türen; Blöcke an jede Seite setzen und wieder abbauen, Dächer bauen, Einrichtung aus dem Andenkenstand; im Haus wird die Decke ausgeblendet |
+| Knobelzelt | Sachaufgaben in Teilschritten mit Tipp und Rechnung (9 Arten, 3 Stufen), Forscheraufgaben mit vielen Lösungen (Malaufgaben-Jagd, gerade Paare, Minusaufgaben, Mauer-Baumeister, Geschichten-Detektiv), dazu jede Woche ein Rätsel mit zwei Tipps |
+| Abwechslung | Jede Bude merkt sich die letzten 40 Aufgaben und Motive; dieselbe Aufgabe oder dasselbe Bild kommt nicht gleich wieder |
+| Fundbüro | Fehler kommen nach 1, 3 und 7 Tagen als ähnliche Aufgaben wieder (verteiltes Wiederholen), 2 Taler je wiedergefundener Aufgabe |
+| Geschwister-Duell | zwei Profile rechnen nacheinander dieselben zehn Aufgaben; erst Treffer, dann Zeit; Taler für beide |
+| Feiern und Sammelalbum | Gassenfeier, wenn alle Buden einer Gasse Bronze haben, Sommerfest für alle; 45 Sammelkarten (normal, selten, legendär), jede mit einem Mathe-Fakt auf der Rückseite |
+| Bauinsel | Zusatzpaket: zwei Inseln mit Brücke, Wiese, Strand, See, Hügel, Blumen und Bäumen; Tiere (Schaf, Hund, Katze, Huhn) laufen umher; Shop nach Bauen, Wohnen, Garten, Tiere; sechs Bauaufträge auf drei Bauplätzen; die Figur läuft flüssig; die Figur läuft verkleinert, steigt Treppen und geht durch Türen; Blöcke an jede Seite setzen und wieder abbauen, Dächer bauen, Einrichtung aus dem Andenkenstand; im Haus wird die Decke ausgeblendet |
 | Kauf | StoreKit 2 und Google Play Billing (Plugin `@capgo/native-purchases`), Produkt `de.maehlmann.mathejahrmarkt.zusatzpaket`, Käufe wiederherstellen, stille Wiederherstellung beim Start; die Test-APK hat einen gekennzeichneten Testkauf |
 | Eltern-Bericht | PDF mit Woche, Check, Fortschritt je Gasse und Lernprofil, über das Teilen-Menü oder als Download |
 | Tablet | Ab 760 px Breite wird die ganze Oberfläche größer (Faktor 1,2 bzw. 1,4) |
-| Noch nicht | Bauaufträge direkt auf der Bauinsel (bisher über den Bauplatz) |
+| Über die App | Impressum, Datenschutzerklärung und Lizenzen der Open-Source-Bausteine im Elternbereich; dieselben Texte als Webseiten in `docs/` (GitHub Pages) |
 
 ## App-Symbol und Startbild
 
@@ -123,6 +126,12 @@ Grundregeln:
 5. `npm run verify` und `npm run e2e`.
 
 Für Auswahl-Aufgaben mit eigenem Bild reicht `auswahlBude()` aus `src/buden/gemeinsam/auswahlBude.ts`: Generator (mit `auswahlAufgabe()` aus `baukasten.ts`) plus eine Bild-Komponente; Bühne, Antwortknöpfe und Hilfe kommen mit.
+
+## Impressum und Datenschutz im Netz
+
+Die Stores verlangen eine öffentlich erreichbare Datenschutzerklärung. Die Texte stehen an einer Stelle (`src/app/rechtliches.ts`) und erscheinen in der App unter Elternbereich → Über die App. `npm run rechtliches` erzeugt daraus die Seiten in `docs/` (ein Test prüft, dass sie aktuell sind).
+
+Einmalig auf github.com: Repository → Settings → Pages → „Deploy from a branch“, Branch `main`, Ordner `/docs` → Save. Nach ein bis zwei Minuten sind die Seiten erreichbar unter `https://simaehlmann-cloud.github.io/mathe-jahrmarkt/datenschutz.html` und `…/impressum.html`. Diese Adresse kommt in App Store Connect und in die Google Play Console.
 
 ## Store-Regeln für Kinder-Apps
 

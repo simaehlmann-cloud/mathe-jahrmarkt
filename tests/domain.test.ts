@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { faktGewichtung } from '../src/domain/adaptiv/gewichtung';
 import { aehnlicheAufgabe, einmaleinsAufgabe } from '../src/domain/aufgaben/einmaleins';
 import type { Aufgabe, EinmaleinsAufgabe } from '../src/domain/aufgaben/typen';
-import { BUDEN, GASSEN, TAGESBUDEN } from '../src/domain/buden';
+import { BUDEN, GASSEN, KERNBUDEN, TAGESBUDEN } from '../src/domain/buden';
 import { erzeugeSperrfrage, pruefeSperre, zahlInWorten } from '../src/domain/elternsperre';
 import { abendmarktOffen, budenZustand, rundeVerbuchen, sommerfest } from '../src/domain/fortschritt/fortschritt';
 import { stufeFreigabe } from '../src/domain/fortschritt/kaufgrenze';
@@ -17,11 +17,12 @@ const TAG = 24 * 3600 * 1000;
 const profil = (): Profil => neuesProfil('p1', 'Alex', 'fuchs', 0);
 
 describe('Kompetenzmodell und Budenregister', () => {
-  it('24 Tagesbuden, 3 Abendbuden, Nummern lückenlos', () => {
-    expect(TAGESBUDEN).toHaveLength(24);
-    expect(BUDEN).toHaveLength(27);
-    expect(BUDEN.map((b) => b.nr)).toEqual(Array.from({ length: 27 }, (_, i) => i + 1));
-    expect(new Set(BUDEN.map((b) => b.id)).size).toBe(27);
+  it('27 Tagesbuden (davon 24 Kernbuden), 3 Abendbuden, Nummern lückenlos', () => {
+    expect(TAGESBUDEN).toHaveLength(27);
+    expect(KERNBUDEN).toHaveLength(24);
+    expect(BUDEN).toHaveLength(30);
+    expect(BUDEN.map((b) => b.nr)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
+    expect(new Set(BUDEN.map((b) => b.id)).size).toBe(30);
   });
   it('jede basale Kompetenz hat mindestens zwei Buden', () => {
     for (const k of Object.values(KOMPETENZEN).filter((x) => x.basal)) {

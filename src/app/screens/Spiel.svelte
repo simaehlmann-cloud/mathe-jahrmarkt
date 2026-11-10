@@ -4,7 +4,7 @@
   import type { BudeSzene } from '../../buden/typen';
   import type { Aufgabe } from '../../domain/aufgaben/typen';
   import { STUFEN_NAME, budeInfo, type Stufe } from '../../domain/buden';
-  import { AUFGABEN_PRO_RUNDE, rundeVerbuchen } from '../../domain/fortschritt/fortschritt';
+  import { rundeVerbuchen } from '../../domain/fortschritt/fortschritt';
   import { stufeFreigabe } from '../../domain/fortschritt/kaufgrenze';
   import { URSACHE_HINWEIS } from '../../domain/lernprofil/fehlerursache';
   import { createRng, randomSeed } from '../../domain/rng';
@@ -18,19 +18,30 @@
   import { mitPause, ohnePause, pauseFuer } from '../../domain/pause';
   import { KARTEN, WOCHENZIEL_BLOECKE, wochenzielBelohnung } from '../../domain/belohnungen';
   import { app } from '../zustand.svelte';
+  import { TALER_PRO_FUNDSACHE, abholStapel, beantwortet, legeAb } from '../../domain/fundbuero';
 
-  let props: { bude: string; stufe: Stufe; fortsetzen?: boolean } = $props();
+  let props: { bude: string; stufe: Stufe; fortsetzen?: boolean; fundbuero?: boolean } = $props();
   // Der Bildschirm wird für jede Runde neu erzeugt ({#key} in App.svelte), Bude und Stufe stehen daher fest.
-  const { bude, stufe, fortsetzen } = (() => ({ bude: props.bude, stufe: props.stufe, fortsetzen: props.fortsetzen === true }))();
+  const { bude, stufe, fortsetzen, fundbuero } = (() => ({ bude: props.bude, stufe: props.stufe, fortsetzen: props.fortsetzen === true, fundbuero: props.fundbuero === true }))();
 
   const info = budeInfo(bude);
   const def = budeDefinition(bude);
   const profilStart = app.profil;
   const ersteRunde = !profilStart || Object.values(profilStart.fortschritt[bude] ?? {}).every((s) => !s || s.gespielt === 0);
   const rng = createRng(randomSeed());
+  // Fundbüro: die fälligen Aufgaben dieser Bude und Stufe, jeweils als ähnliche Aufgabe mit neuen Zahlen
+  const fundsachen = fundbuero && profilStart ? (abholStapel(profilStart.fundbuero, Date.now()).find((x) => x.bude === bude && x.stufe === stufe)?.sachen ?? []) : [];
+  const vorgaben = fundsachen.map((f) => {
+    try {
+      return def.aehnlich(f.aufgabe, rng);
+    } catch {
+      return f.aufgabe;
+    }
+  });
+  let fundErledigt = 0;
   // Unterbrochene Runde fortsetzen, sonst einen alten Zwischenstand verwerfen (neu starten)
-  const pause = fortsetzen && profilStart ? pauseFuer(profilStart, bude, stufe, Date.now()) : undefined;
-  if (!pause && profilStart && profilStart.pausen.some((q) => q.bude === bude && q.stufe === stufe)) app.aendereProfil((q) => ohnePause(q, bude, stufe));
+  const pause = fortsetzen && !fundbuero && profilStart ? pauseFuer(profilStart, bude, stufe, Date.now()) : undefined;
+  if (!pause && !fundbuero && profilStart && profilStart.pausen.some((q) => q.bude === bude && q.stufe === stufe)) app.aendereProfil((q) => ohnePause(q, bude, stufe));
   const runde = new Rundensteuerung({
     bude,
     stufe,
@@ -38,9 +49,12 @@
     erzeuge: def.erzeuge,
     aehnlich: def.aehnlich,
     gewichtung: def.gewichtung(profilStart?.ereignisse ?? []),
-    probe: !pause && ersteRunde ? def.probe(rng) : undefined,
+    probe: !pause && !fundbuero && ersteRunde ? def.probe(rng) : undefined,
     fortsetzen: pause,
+    verlauf: profilStart?.verlauf[bude],
+    vorgaben: fundbuero ? vorgaben : undefined,
   });
+  const anzahl = runde.anzahl;
 
   let host: HTMLDivElement;
   let szene: BudeSzene | undefined;
@@ -57,6 +71,7 @@
   let ergebnisse = $state<boolean[]>(pause ? [...pause.ergebnisse] : []);
   let hinweis = $state<string | null>(null);
   let hilfe = $state<{ aufgabe: Aufgabe; gewaehlt: number } | null>(null);
+  let fundEnde = $state<{ richtig: number; erledigt: number; taler: number } | null>(null);
   let ende = $state<{ punkte: number; richtig: number; taler: number; rekord: boolean; geschafft: boolean; erster: boolean; bloecke: number; auftraege: number; bonus: boolean; neuerRang: string | null; wochenziel: boolean; karten: string[] } | null>(null);
   let bereit = $state(false);
   let fehlerBeimLaden = $state(false);
@@ -84,7 +99,10 @@
     void app.sprache.stopp();
     const ms = performance.now() - gezeigtUm;
     const a = aufgabe;
+    const vorher = phase;
+    const nr = nummer;
     const erg = runde.antworte(wert, ms, bonus);
+    if (vorher === 'haupt' && !erg.wiederholen) merkeFuersFundbuero(a, nr, erg.richtig, erg.ereignis?.gewertet === true);
     if (erg.richtig) {
       void vibriere('leicht');
       await szene.treffer(wert);
@@ -108,6 +126,20 @@
     hilfe = { aufgabe: a, gewaehlt: wert };
   }
 
+  /** Fehler kommen ins Fundbüro; beim Abholen wird die Sache weitergeschoben (sofort, auch bei Abbruch). */
+  function merkeFuersFundbuero(a: Aufgabe, nr: number, richtig: boolean, gewertet: boolean) {
+    const jetzt = Date.now();
+    if (fundbuero) {
+      const f = fundsachen[nr - 1];
+      if (!f) return;
+      const r = beantwortet(app.profil?.fundbuero ?? [], f.id, richtig, jetzt);
+      if (r.erledigt) fundErledigt++;
+      app.aendereProfil((q) => ({ ...q, fundbuero: beantwortet(q.fundbuero, f.id, richtig, jetzt).liste }));
+    } else if (!richtig && gewertet) {
+      app.aendereProfil((q) => ({ ...q, fundbuero: legeAb(q.fundbuero, bude, stufe, a, jetzt) }));
+    }
+  }
+
   function hilfeFertig() {
     hilfe = null;
     hinweis = null;
@@ -124,12 +156,25 @@
     if (verbucht) return;
     verbucht = true;
     app.ereignisseAnhaengen(runde.ereignisse);
+    // Gestellte Aufgaben merken, damit die nächsten Runden Abwechslung bringen
+    const v = runde.verlauf;
+    app.aendereProfil((q) => ({ ...q, verlauf: { ...q.verlauf, [bude]: v } }));
   }
 
   function beenden() {
     const p = app.profil;
     if (!p) return;
     verbuche();
+    if (fundbuero) {
+      // Im Fundbüro zählt die Runde nicht für Stufen und Rekorde – es gibt Taler fürs Wiederfinden
+      const richtig = ergebnisse.filter(Boolean).length;
+      const taler = richtig * TALER_PRO_FUNDSACHE;
+      app.aendereProfil((q) => ({ ...q, taler: q.taler + taler }));
+      void app.speichereSofort();
+      fundEnde = { richtig, erledigt: fundErledigt, taler };
+      app.spieleKlang('richtig');
+      return;
+    }
     const r = runde.ergebnis();
     const vorher = ohnePause(app.profil ?? p, bude, stufe);
     const rangVorher = rang(vorher);
@@ -175,6 +220,10 @@
   function zurueck() {
     // Abgebrochene Runde: Antworten zählen fürs Lernprofil, die Runde selbst nicht. Der Stand wird zum Weiterspielen gemerkt.
     verbuche();
+    if (fundbuero) {
+      app.zeige({ name: 'fundbuero' });
+      return;
+    }
     const z = ende ? undefined : runde.zwischenstand();
     if (z) app.aendereProfil((q) => mitPause(q, { ...z, bude, stufe, am: Date.now(), ergebnisse: ergebnisse.slice(0, z.gestellt) }));
     app.zeige({ name: 'bude', bude });
@@ -186,8 +235,8 @@
 
   onMount(() => {
     const p = app.profil;
-    if (!p || !stufeFreigabe(p, bude, stufe, app.paket).frei) {
-      app.zeige({ name: 'bude', bude });
+    if (!p || !stufeFreigabe(p, bude, stufe, app.paket).frei || (fundbuero && !vorgaben.length)) {
+      app.zeige(fundbuero ? { name: 'fundbuero' } : { name: 'bude', bude });
       return;
     }
     def
@@ -216,8 +265,8 @@
   // Während der Hilfe nach Fehlern wird der Druck ignoriert, damit die Hilfe nicht verloren geht.
   app.zurueckAbfangen = () => {
     if (hilfe) return true;
-    if (ende) {
-      app.zeige({ name: 'bude', bude });
+    if (ende || fundEnde) {
+      app.zeige(fundEnde ? { name: 'fundbuero' } : { name: 'bude', bude });
       return true;
     }
     zurueck();
@@ -242,6 +291,8 @@
         <span class="marke">Probewurf</span>
       {:else if phase === 'nochmal'}
         <span class="marke">Noch eine ähnliche</span>
+      {:else if fundbuero}
+        <span class="marke">Fundbüro</span>
       {/if}
       <span class="aufgabe" class:lang={anzeige.length > 14}>{anzeige}</span>
     </div>
@@ -249,8 +300,8 @@
   </div>
   <div class="status">
     <span class="stufe">{info.name} · {STUFEN_NAME[stufe]}</span>
-    <ol class="punkte-reihe" aria-label="Aufgabe {Math.max(nummer, 0)} von {AUFGABEN_PRO_RUNDE}">
-      {#each Array.from({ length: AUFGABEN_PRO_RUNDE }, (_, i) => i) as i (i)}
+    <ol class="punkte-reihe" aria-label="Aufgabe {Math.max(nummer, 0)} von {anzahl}">
+      {#each Array.from({ length: anzahl }, (_, i) => i) as i (i)}
         <li class:richtig={ergebnisse[i] === true} class:falsch={ergebnisse[i] === false} class:jetzt={i === nummer - 1 && ergebnisse[i] === undefined}></li>
       {/each}
     </ol>
@@ -266,7 +317,7 @@
   <!-- Für Bildschirmleser und Tastatur: dieselben Antworten als Knöpfe (außer die Bude hat eine eigene Eingabe, z. B. ein Ziffernfeld) -->
   <div class="nur-leser" hidden={def.eigeneBedienung === true}>
     {#each aufgabe.optionen as o (o.wert)}
-      <button onclick={() => void antwort(o.wert)} disabled={!bereit || !!hilfe || !!ende}>{aufgabe.labels?.[o.wert] ?? (def.antwortText && aufgabe.art === 'gleichheit' && aufgabe.form === 'vergleichen' ? def.antwortText(o.wert) : o.wert)}</button>
+      <button onclick={() => void antwort(o.wert)} disabled={!bereit || !!hilfe || !!ende || !!fundEnde}>{aufgabe.labels?.[o.wert] ?? (def.antwortText && aufgabe.art === 'gleichheit' && aufgabe.form === 'vergleichen' ? def.antwortText(o.wert) : o.wert)}</button>
     {/each}
   </div>
 
@@ -274,6 +325,24 @@
     <div class="ebene">
       {#if hinweis}<p class="hinweis oben" role="status">{hinweis}</p>{/if}
       <HilfeKomponente aufgabe={hilfe.aufgabe} gewaehlt={hilfe.gewaehlt} onfertig={hilfeFertig} bild={def.bild} />
+    </div>
+  {/if}
+
+  {#if fundEnde}
+    <div class="ebene">
+      <div class="tafel ende" role="dialog" aria-modal="true" aria-labelledby="fund-titel">
+        <div class="markise"></div>
+        <div class="inhalt">
+          <h2 id="fund-titel">{fundEnde.richtig === anzahl ? 'Alles wiedergefunden!' : 'Fundsachen abgeholt'}</h2>
+          <p>{fundEnde.richtig} von {anzahl} beim ersten Versuch richtig.</p>
+          {#if fundEnde.erledigt}<p>{fundEnde.erledigt === 1 ? 'Eine Aufgabe sitzt jetzt richtig fest' : `${fundEnde.erledigt} Aufgaben sitzen jetzt richtig fest`} und ist aus dem Fundbüro raus.</p>{/if}
+          <p class="klein">Richtig gelöste Sachen kommen später noch einmal – so bleibt es im Kopf.</p>
+          {#if fundEnde.taler}<p class="taler"><span><Icon name="taler" groesse={26} /> +{fundEnde.taler} Taler</span></p>{/if}
+          <div class="knoepfe">
+            <button class="ticket rot" onclick={() => app.zeige({ name: 'fundbuero' })}>Zum Fundbüro</button>
+          </div>
+        </div>
+      </div>
     </div>
   {/if}
 
@@ -285,7 +354,7 @@
           <h2 id="ende-titel">{ende.geschafft ? (ende.erster ? `${STUFEN_NAME[stufe]} geschafft!` : 'Stark gespielt!') : 'Runde geschafft!'}</h2>
           {#if ende.rekord}<p class="rekord">Neuer Rekord!</p>{/if}
           <p class="gross">{ende.punkte} Punkte</p>
-          <p>{ende.richtig} von {AUFGABEN_PRO_RUNDE} beim ersten Versuch richtig.</p>
+          <p>{ende.richtig} von {anzahl} beim ersten Versuch richtig.</p>
           <p class="taler"><span><Icon name="taler" groesse={26} /> +{ende.taler} Taler</span>{#if ende.bloecke}<span><Icon name="block" groesse={24} /> +{ende.bloecke} Blöcke</span>{/if}</p>
           {#if ende.auftraege}<p class="auftrag"><Icon name="auftrag" groesse={22} /> {ende.bonus ? 'Alle Tagesaufträge erledigt!' : 'Tagesauftrag erledigt!'}</p>{/if}
           {#if ende.wochenziel}<p class="auftrag"><Icon name="stern" groesse={22} /> Wochenziel geschafft: 3 Spieltage!</p>{/if}

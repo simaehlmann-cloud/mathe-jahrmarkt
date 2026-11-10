@@ -98,7 +98,7 @@ export const BUDEN: readonly BudeInfo[] = [
   b(17, 'labyrinth', 'Labyrinth-Robo', 'spiegelzelt', 'Roboter mit Befehlen steuern',
     ['3 Befehle', 'Wege planen', 'kürzester Weg'], [k('raum', 'anwendung')], true),
   b(18, 'formensortierer', 'Formen-Sortierer', 'spiegelzelt', 'Figuren und Körper sortieren',
-    ['Dreieck, Viereck, Kreis', 'Rechteck und Quadrat, Körper', 'Flächeninhalt'], [k('raum', 'wissen')], true),
+    ['ebene Formen und ihre Ecken', 'Körper und ihre Ecken', 'Flächeninhalt'], [k('raum', 'wissen')], true),
   b(19, 'zeltdekorateur', 'Zelt-Dekorateur', 'spiegelzelt', 'Zeltbahnen mit Bandornamenten schmücken',
     ['Muster fortsetzen', 'Fehler finden', 'Verschiebung und Spiegelung'], [k('raum'), k('muster', 'anwendung')], true),
   b(20, 'zahlenfolgenzug', 'Zahlenfolgen-Zug', 'musterbahn', 'fehlenden Waggon einsetzen',
@@ -117,6 +117,13 @@ export const BUDEN: readonly BudeInfo[] = [
     ['Stammbrüche', 'Anteile', 'gleichwertige Brüche'], [k('klasse5', 'wissen')], true),
   b(27, 'hauDenLukas', 'Hau den Lukas', 'abendmarkt', 'Dezimalzahl auf der Skala treffen',
     ['Zehntel', 'ordnen', 'Dezimalzahl und Bruch'], [k('klasse5')], true),
+  // Seit Version 0.11: drei weitere Tagesbuden
+  b(28, 'wuerfelbauer', 'Würfelbauer', 'spiegelzelt', 'Würfelgebäude zählen und Baupläne lesen',
+    ['Türme zählen', 'Baupläne', 'Ansichten und Ergänzen'], [k('raum', 'anwendung')], true),
+  b(29, 'lageplan', 'Lageplan', 'groessenmarkt', 'Planquadrate finden, Wege gehen, Entfernungen messen',
+    ['Planquadrate', 'Wege beschreiben', 'Maßstab'], [k('raum', 'wissen'), k('groessen', 'anwendung')], true),
+  b(30, 'gluecksrad', 'Glücksrad', 'forschergasse', 'drehen, Chancen vergleichen, Strichlisten deuten',
+    ['Chancen und Felder', 'Vermutung und Ergebnis', 'faire Spiele'], [k('daten', 'anwendung')], true),
 ];
 
 export const budeInfo = (id: string): BudeInfo => {
@@ -127,5 +134,10 @@ export const budeInfo = (id: string): BudeInfo => {
 
 export const budenDerGasse = (gasse: GasseId): BudeInfo[] => BUDEN.filter((x) => x.gasse === gasse);
 
-/** Die 24 Buden des Tages-Jahrmarkts (ohne Sternenmarkt). */
+/** Die Buden des Tages-Jahrmarkts (ohne Sternenmarkt). */
 export const TAGESBUDEN: readonly BudeInfo[] = BUDEN.filter((x) => x.gasse !== 'abendmarkt');
+/**
+ * Die 24 Tagesbuden der ersten Version. Der Sternenmarkt öffnet mit Silber an diesen Buden;
+ * neue Buden kommen dazu, ohne dass ein schon geöffneter Sternenmarkt wieder zugeht.
+ */
+export const KERNBUDEN: readonly BudeInfo[] = TAGESBUDEN.filter((x) => x.nr <= 24);

@@ -22,12 +22,14 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
     case 'blitz':
     case 'knobel':
     case 'insel':
+    case 'fundbuero':
+    case 'duell':
     case 'eltern':
       return hatProfil ? { name: 'jahrmarkt' } : { name: 'start' };
     case 'bude':
       return { name: 'jahrmarkt' };
     case 'spiel':
-      return { name: 'bude', bude: b.bude };
+      return b.fundbuero ? { name: 'fundbuero' } : { name: 'bude', bude: b.bude };
     case 'figur':
       return { name: 'profil' };
   }

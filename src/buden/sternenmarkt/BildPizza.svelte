@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Aufgabe } from '../../domain/aufgaben/typen';
+  import Belag from './Belag.svelte';
   /** Pizzabäckerei: Pizza in n gleiche Stücke geschnitten, z davon belegt. Nach der Lösung ggf. zweite Pizza. */
   let { aufgabe, zustand }: { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null } = $props();
   const d = $derived(aufgabe.art === 'auswahl' ? aufgabe.daten : {});
@@ -29,7 +30,7 @@
       <circle r={R + 6} fill="#e9b26a" stroke="#232a5c" stroke-width="3" />
       {#each Array(n) as _, i (i)}
         <path d={stueck(i, n)} fill={i < z ? '#f7d36b' : '#f6e3b4'} stroke="#232a5c" stroke-width="2.5" />
-        {#if i < z}{#each belag(i, n) as [x, y], k (k)}<circle cx={x} cy={y} r={n > 8 ? 5 : 7} fill="#d9433f" />{/each}{/if}
+        {#if i < z}{#each belag(i, n) as [x, y], k (k)}<Belag art={String(d.belag ?? 'Salami')} {x} {y} r={n > 8 ? 5 : 7} />{/each}{/if}
       {/each}
     </svg>
   {/each}

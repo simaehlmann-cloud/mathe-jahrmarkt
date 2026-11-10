@@ -6,7 +6,9 @@ import type { AuftragsTag } from './auftraege';
 import type { CheckErgebnis } from './check';
 import type { Pause } from './pause';
 import { leererBlitz, type BlitzStand } from './blitz';
+import type { Verlauf } from './abwechslung';
 import { leereInsel, type InselStand } from './insel';
+import type { Fundsache } from './fundbuero';
 
 export type FigurId = 'mensch' | 'menschLang' | 'roboter' | 'fuchs' | 'eule' | 'igel' | 'katze' | 'baer' | 'hase';
 export const FIGUREN: readonly { id: FigurId; name: string }[] = [
@@ -80,6 +82,10 @@ export interface Profil {
   blitz: BlitzStand;
   /** Bauinsel (Zusatzpaket). */
   insel: InselStand;
+  /** Zuletzt gestellte Aufgaben je Bude – für Abwechslung. */
+  verlauf: Record<string, Verlauf>;
+  /** Falsch gelöste Aufgaben, die nach 1, 3 und 7 Tagen wiederkommen. */
+  fundbuero: Fundsache[];
 }
 
 export const MAX_PROFILE = 4;
@@ -109,6 +115,8 @@ export function neuesProfil(id: string, name: string, figur: FigurId, jetzt: num
     album: [],
     blitz: leererBlitz(),
     insel: leereInsel(),
+    verlauf: {},
+    fundbuero: [],
   };
 }
 

@@ -4,7 +4,19 @@ import { pruefeBau } from '../domain/bau';
 import { pruefeCheck } from '../domain/check';
 import { pruefePausen } from '../domain/pause';
 import { pruefeBlitz } from '../domain/blitz';
+import { pruefeVerlauf, type Verlauf } from '../domain/abwechslung';
+
+function pruefeVerlaeufe(x: unknown): Record<string, Verlauf> {
+  const aus: Record<string, Verlauf> = {};
+  if (!x || typeof x !== 'object') return aus;
+  for (const [k, v] of Object.entries(x as Record<string, unknown>).slice(0, 80)) {
+    const p = pruefeVerlauf(v);
+    if (p && k.length <= 40) aus[k] = p;
+  }
+  return aus;
+}
 import { pruefeInsel } from '../domain/insel';
+import { pruefeFundbuero } from '../domain/fundbuero';
 import { STUFEN } from '../domain/buden';
 import { FIGUREN, MAX_PROFILE, bereinigeName, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
 import type { Ereignis, Wochenwert } from '../domain/lernprofil/lernprofil';
@@ -30,6 +42,8 @@ export interface Einstellungen {
   lautEffekte: number;
   lautSprache: number;
   animationenReduziert: boolean;
+  /** Karte zeigt Tageszeit (Abendlichter) und Jahreszeit (Laub, Schnee, Blüten). */
+  stimmung: boolean;
   schrift: Schrift;
   subtraktion: Subtraktionsverfahren;
   automatischVorlesen: boolean;
@@ -59,6 +73,7 @@ export const standardEinstellungen = (): Einstellungen => ({
   lautEffekte: 0.8,
   lautSprache: 1,
   animationenReduziert: false,
+  stimmung: true,
   schrift: 'normal',
   subtraktion: 'abziehen-entbuendeln',
   automatischVorlesen: true,
@@ -112,7 +127,7 @@ function pruefeEreignis(x: unknown): Ereignis | undefined {
   };
 }
 
-function pruefeProfil(x: unknown): Profil | undefined {
+export function pruefeProfil(x: unknown): Profil | undefined {
   if (!istObjekt(x) || typeof x.id !== 'string' || x.id.length === 0) return undefined;
   const name = bereinigeName(text(x.name));
   if (!name) return undefined;
@@ -175,6 +190,8 @@ function pruefeProfil(x: unknown): Profil | undefined {
     belohnt: liste(x.belohnt, (e) => (typeof e === 'string' ? e : undefined)).slice(-500),
     album: liste(x.album, (e) => (typeof e === 'string' ? e : undefined)).slice(-500),
     blitz: pruefeBlitz(x.blitz),
+    verlauf: pruefeVerlaeufe(x.verlauf),
+    fundbuero: pruefeFundbuero(x.fundbuero),
     insel: pruefeInsel(x.insel),
   };
 }
@@ -187,6 +204,7 @@ export function pruefeEinstellungen(x: unknown): Einstellungen {
     lautEffekte: zahl(x.lautEffekte, s.lautEffekte, 0, 1),
     lautSprache: zahl(x.lautSprache, s.lautSprache, 0, 1),
     animationenReduziert: bool(x.animationenReduziert, s.animationenReduziert),
+    stimmung: bool(x.stimmung, s.stimmung),
     schrift: (['normal', 'gross', 'sehrGross'].includes(text(x.schrift)) ? x.schrift : s.schrift) as Schrift,
     subtraktion: (Object.keys(SUBTRAKTION_NAMEN).includes(text(x.subtraktion)) ? x.subtraktion : s.subtraktion) as Subtraktionsverfahren,
     automatischVorlesen: bool(x.automatischVorlesen, s.automatischVorlesen),

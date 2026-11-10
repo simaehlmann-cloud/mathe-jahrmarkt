@@ -9,10 +9,16 @@ import { BLOCKARTEN, MAX_HOEHE } from './bau';
  * Hoch geht es nur über Treppen (eine Ebene), hinunter darf man eine Ebene springen.
  */
 
+/** Höhe des Bauplans (Felder von oben nach unten). Die erste Insel ist INSEL × INSEL groß. */
 export const INSEL = 24;
+/** Breite des Bauplans: erste Insel, Wasserstraße mit Brücke, zweite Insel. */
+export const BREITE = 44;
+export const HOEHE = INSEL;
 export const INSEL_MAX = MAX_HOEHE;
 
-export type Gelaende = 'gras' | 'sand' | 'wasser' | 'weg';
+export type Gelaende = 'gras' | 'sand' | 'wasser' | 'weg' | 'bruecke' | 'blumen';
+export type Kategorie = 'bauen' | 'wohnen' | 'garten' | 'tiere';
+export const KATEGORIE_NAME: Record<Kategorie, string> = { bauen: 'Bauen', wohnen: 'Wohnen', garten: 'Garten', tiere: 'Tiere' };
 
 /** Einrichtung: Kennung (im Stapel ab 100), Name, Preis in Talern, Eigenschaften. */
 export interface Einrichtung {
@@ -23,30 +29,70 @@ export interface Einrichtung {
   begehbar: 'durch' | 'stufe' | 'nein';
   /** Wie viele Ebenen hoch (Tür 2). */
   hoehe: 1 | 2;
+  kategorie: Kategorie;
 }
 export const TUER_OBEN = 199;
 export const LUFT = -1;
+const E = (id: number, name: string, preis: number, kategorie: Kategorie, begehbar: Einrichtung['begehbar'] = 'nein', hoehe: 1 | 2 = 1): Einrichtung => ({ id, name, preis, kategorie, begehbar, hoehe });
 export const EINRICHTUNG: readonly Einrichtung[] = [
-  { id: 101, name: 'Tür', preis: 15, begehbar: 'durch', hoehe: 2 },
-  { id: 102, name: 'Fenster', preis: 10, begehbar: 'nein', hoehe: 1 },
-  { id: 103, name: 'Treppe', preis: 10, begehbar: 'stufe', hoehe: 1 },
-  { id: 110, name: 'Bett', preis: 25, begehbar: 'nein', hoehe: 1 },
-  { id: 111, name: 'Schrank', preis: 20, begehbar: 'nein', hoehe: 1 },
-  { id: 112, name: 'Tisch', preis: 15, begehbar: 'nein', hoehe: 1 },
-  { id: 113, name: 'Lampe', preis: 10, begehbar: 'nein', hoehe: 1 },
-  { id: 114, name: 'Pflanze', preis: 8, begehbar: 'nein', hoehe: 1 },
-  { id: 115, name: 'Zaun', preis: 5, begehbar: 'nein', hoehe: 1 },
+  E(101, 'Tür', 15, 'bauen', 'durch', 2),
+  E(102, 'Fenster', 10, 'bauen'),
+  E(103, 'Treppe', 10, 'bauen', 'stufe'),
+  E(115, 'Zaun', 5, 'bauen'),
+  E(110, 'Bett', 25, 'wohnen'),
+  E(111, 'Schrank', 20, 'wohnen'),
+  E(112, 'Tisch', 15, 'wohnen'),
+  E(113, 'Lampe', 10, 'wohnen'),
+  E(116, 'Sofa', 25, 'wohnen'),
+  E(117, 'Stuhl', 8, 'wohnen'),
+  E(118, 'Regal', 15, 'wohnen'),
+  E(114, 'Topfpflanze', 8, 'garten'),
+  E(120, 'Rote Blume', 3, 'garten'),
+  E(121, 'Gelbe Blume', 3, 'garten'),
+  E(122, 'Blaue Blume', 3, 'garten'),
+  E(123, 'Hecke', 6, 'garten'),
+  E(124, 'Bank', 12, 'garten'),
+  E(125, 'Brunnen', 30, 'garten'),
+  E(126, 'Gartenlaterne', 10, 'garten'),
+  E(127, 'Beet', 6, 'garten'),
 ];
+export const BLUMEN = [120, 121, 122] as const;
+
+/** Tiere: werden gekauft, auf die Insel gesetzt und laufen dann langsam umher. Keine Gegner. */
+export interface TierArt {
+  id: number;
+  name: string;
+  preis: number;
+}
+export const TIERE: readonly TierArt[] = [
+  { id: 140, name: 'Schaf', preis: 30 },
+  { id: 141, name: 'Hund', preis: 35 },
+  { id: 142, name: 'Katze', preis: 30 },
+  { id: 143, name: 'Huhn', preis: 15 },
+];
+export const tierArt = (id: number): TierArt | undefined => TIERE.find((t) => t.id === id);
+export interface Tier {
+  art: number;
+  x: number;
+  y: number;
+  z: number;
+}
+/** Höchstens so viele Tiere auf der Insel. */
+export const MAX_TIERE = 12;
 export const einrichtung = (id: number): Einrichtung | undefined => EINRICHTUNG.find((e) => e.id === id);
 export const istBlock = (art: number): boolean => BLOCKARTEN.some((b) => b.id === art);
 
 export interface InselStand {
-  /** INSEL² Stapel über dem Gelände, Index y · INSEL + x. */
+  /** BREITE · HOEHE Stapel über dem Gelände, Index y · BREITE + x. */
   stapel: number[][];
-  /** Gekaufte, noch nicht verbaute Einrichtung: Kennung → Anzahl. */
+  /** Gekaufte, noch nicht verbaute Einrichtung und Tiere: Kennung → Anzahl. */
   inventar: Record<string, number>;
   /** Wo die Figur steht. */
   figur: { x: number; y: number; z: number };
+  /** Tiere auf der Insel. */
+  tiere: Tier[];
+  /** Bauaufträge auf den Grundstücken: erledigte Aufträge (Kennungen). */
+  erledigt: string[];
 }
 
 /* ---------- Feste Landschaft ---------- */
@@ -58,16 +104,24 @@ export interface Landschaft {
   baum: boolean[];
 }
 
-const idx = (x: number, y: number): number => y * INSEL + x;
-export const imFeld = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < INSEL && y < INSEL;
+export const idx = (x: number, y: number): number => y * BREITE + x;
+export const imFeld = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < BREITE && y < HOEHE;
+/** Brücke über die Wasserstraße zwischen den Inseln. */
+export const BRUECKE = { x0: 24, x1: 27, y: 11 } as const;
+/** Mitte und Halbachsen der zweiten Insel. */
+const INSEL2 = { x: 35.5, y: 11.5, rx: 8.2, ry: 9.2 };
+export const aufInsel2 = (x: number, y: number): boolean => Math.hypot((x + 0.5 - INSEL2.x) / INSEL2.rx, (y + 0.5 - INSEL2.y) / INSEL2.ry) < 1;
 
 export const LANDSCHAFT: Landschaft = (() => {
-  const art: Gelaende[] = Array(INSEL * INSEL).fill('gras');
-  const hoehe: number[] = Array(INSEL * INSEL).fill(0);
-  const baum: boolean[] = Array(INSEL * INSEL).fill(false);
+  const n = BREITE * HOEHE;
+  const art: Gelaende[] = Array(n).fill('wasser');
+  const hoehe: number[] = Array(n).fill(0);
+  const baum: boolean[] = Array(n).fill(false);
+  // Erste Insel: INSEL × INSEL wie bisher
   for (let y = 0; y < INSEL; y++)
     for (let x = 0; x < INSEL; x++) {
       const i = idx(x, y);
+      art[i] = 'gras';
       // See oben rechts, mit Sandstrand drumherum
       const dSee = Math.hypot((x - 18.5) / 3.4, (y - 5) / 2.6);
       if (dSee < 1) art[i] = 'wasser';
@@ -76,14 +130,31 @@ export const LANDSCHAFT: Landschaft = (() => {
       const dHuegel = Math.hypot((x - 4) / 3.6, (y - 4) / 3.2);
       if (dHuegel < 0.6) hoehe[i] = 2;
       else if (dHuegel < 1) hoehe[i] = 1;
-      // Weg vom Ankunftsplatz (unten Mitte) nach oben
+      // Weg vom Ankunftsplatz (unten Mitte) nach oben und zur Brücke
       if ((x === 11 || x === 12) && y >= 9) art[i] = 'weg';
       if (y === 9 && x >= 6 && x <= 15) art[i] = 'weg';
+      if ((y === BRUECKE.y || y === BRUECKE.y + 1) && x >= 13) art[i] = 'weg';
       // Strand am unteren Rand
       if (y >= INSEL - 1) art[i] = 'sand';
     }
-  // Bäume (fest), nicht auf Weg, Wasser oder Bauplätzen in der Mitte
-  for (const [x, y] of [[1, 9], [2, 14], [1, 19], [7, 1], [10, 2], [14, 1], [22, 12], [21, 16], [22, 20], [8, 22], [16, 22], [3, 22], [20, 9], [6, 7], [15, 12]] as [number, number][]) baum[idx(x, y)] = true;
+  // Brücke (zwei Felder breit)
+  for (let x = BRUECKE.x0; x <= BRUECKE.x1; x++) for (const y of [BRUECKE.y, BRUECKE.y + 1]) art[idx(x, y)] = 'bruecke';
+  // Zweite Insel: Blumenwiese, Strand, kleiner Teich, ein Hügel
+  for (let y = 0; y < HOEHE; y++)
+    for (let x = BRUECKE.x1 + 1; x < BREITE; x++) {
+      if (!aufInsel2(x, y)) continue;
+      const i = idx(x, y);
+      const d = Math.hypot((x + 0.5 - INSEL2.x) / INSEL2.rx, (y + 0.5 - INSEL2.y) / INSEL2.ry);
+      art[i] = d > 0.86 ? 'sand' : 'gras';
+      if (Math.hypot((x - 38) / 2.4, (y - 17) / 1.8) < 1) art[i] = 'blumen';
+      if (Math.hypot((x - 31) / 1.6, (y - 16.5) / 1.3) < 1) art[i] = 'wasser';
+      const dHuegel = Math.hypot((x - 39) / 2.2, (y - 6) / 2);
+      if (dHuegel < 1) hoehe[i] = 1;
+      if ((y === BRUECKE.y || y === BRUECKE.y + 1) && x <= 35) art[i] = 'weg';
+    }
+  // Bäume (fest), nicht auf Weg, Wasser oder Bauplätzen
+  for (const [x, y] of [[1, 9], [2, 14], [1, 19], [7, 1], [10, 2], [14, 1], [22, 14], [21, 16], [22, 20], [8, 22], [16, 22], [3, 22], [20, 9], [6, 7], [8, 14],
+    [33, 4], [41, 11], [36, 20], [30, 19], [42, 15], [29, 8]] as [number, number][]) baum[idx(x, y)] = true;
   // Leichte Erhebung am Steg: Treppenstufen auf den Hügel bei (6..7, 4)
   hoehe[idx(7, 4)] = 1;
   return { art, hoehe, baum };
@@ -92,9 +163,10 @@ export const LANDSCHAFT: Landschaft = (() => {
 /** Ankunftsplatz der Figur. */
 export const START = { x: 12, y: 21, z: 0 };
 
-export const leereInsel = (): InselStand => ({ stapel: Array.from({ length: INSEL * INSEL }, () => []), inventar: {}, figur: { ...START } });
+export const leereInsel = (): InselStand => ({ stapel: Array.from({ length: BREITE * HOEHE }, () => []), inventar: {}, figur: { ...START }, tiere: [], erledigt: [] });
 
-export const bebaubar = (x: number, y: number): boolean => imFeld(x, y) && LANDSCHAFT.art[idx(x, y)] !== 'wasser' && !LANDSCHAFT.baum[idx(x, y)];
+export const bebaubar = (x: number, y: number): boolean =>
+  imFeld(x, y) && LANDSCHAFT.art[idx(x, y)] !== 'wasser' && LANDSCHAFT.art[idx(x, y)] !== 'bruecke' && !LANDSCHAFT.baum[idx(x, y)];
 
 /* ---------- Ebenen und Böden ---------- */
 
@@ -233,6 +305,7 @@ export function setzeAn(s: InselStand, x: number, y: number, z: number, art: num
   const seitlich = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx = 0, dy = 0]) => fest(inEbene(s, x + dx, y + dy, z)));
   if (e ? !getragen : !getragen && !seitlich) return { ok: false, grund: 'schwebt' };
   if (figurImWeg(s, x, y, z, z + hoehe - 1)) return { ok: false, grund: 'figur' };
+  if (s.tiere.some((t) => t.x === x && t.y === y && t.z <= z + hoehe - 1 && t.z >= z - 1)) return { ok: false, grund: 'besetzt' };
   if (e) {
     if ((s.inventar[String(art)] ?? 0) <= 0) return { ok: false, grund: 'keinTeil' };
   } else if (!istBlock(art)) return { ok: false, grund: 'keinTeil' };
@@ -277,9 +350,173 @@ export function nimm(s: InselStand, x: number, y: number, bloecke: number): BauE
 
 /** Einrichtung im Andenkenstand kaufen. */
 export function kaufeEinrichtung(s: InselStand, taler: number, art: number): { ok: true; stand: InselStand; taler: number } | { ok: false } {
-  const e = einrichtung(art);
+  const e = einrichtung(art) ?? tierArt(art);
   if (!e || taler < e.preis) return { ok: false };
   return { ok: true, stand: { ...s, inventar: { ...s.inventar, [String(art)]: (s.inventar[String(art)] ?? 0) + 1 } }, taler: taler - e.preis };
+}
+
+/* ---------- Tiere ---------- */
+
+/** Tier aus dem Inventar auf einen Boden setzen. */
+export function setzeTier(s: InselStand, x: number, y: number, z: number, art: number): BauErgebnis {
+  if (!tierArt(art)) return { ok: false, grund: 'keinTeil' };
+  if ((s.inventar[String(art)] ?? 0) <= 0) return { ok: false, grund: 'keinTeil' };
+  if (!istBoden(s, x, y, z)) return { ok: false, grund: 'feld' };
+  if (s.tiere.length >= MAX_TIERE) return { ok: false, grund: 'hoch' };
+  if (s.tiere.some((t) => t.x === x && t.y === y) || (s.figur.x === x && s.figur.y === y)) return { ok: false, grund: 'besetzt' };
+  return {
+    ok: true,
+    stand: { ...s, tiere: [...s.tiere, { art, x, y, z }], inventar: { ...s.inventar, [String(art)]: (s.inventar[String(art)] ?? 0) - 1 } },
+    bloecke: 0,
+  };
+}
+
+/** Tier auf Feld (x, y) zurück ins Inventar nehmen. */
+export function nimmTier(s: InselStand, x: number, y: number): InselStand | undefined {
+  const i = s.tiere.findIndex((t) => t.x === x && t.y === y);
+  if (i < 0) return undefined;
+  const t = s.tiere[i]!;
+  return { ...s, tiere: s.tiere.filter((_, k) => k !== i), inventar: { ...s.inventar, [String(t.art)]: (s.inventar[String(t.art)] ?? 0) + 1 } };
+}
+
+/**
+ * Ein Bummelschritt: Jedes Tier geht mit `zufall()` < 0.5 ein Feld in eine freie Richtung (gleiche Ebene,
+ * nicht ins Wasser, nicht auf andere Tiere oder die Figur). `zufall` liefert Zahlen in [0, 1).
+ */
+export function tiereBummeln(s: InselStand, zufall: () => number): InselStand {
+  if (s.tiere.length === 0) return s;
+  const belegt = new Set(s.tiere.map((t) => `${t.x},${t.y}`));
+  belegt.add(`${s.figur.x},${s.figur.y}`);
+  let geaendert = false;
+  const tiere = s.tiere.map((t) => {
+    if (zufall() >= 0.5) return t;
+    const richtungen: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const [dx, dy] = richtungen[Math.floor(zufall() * 4)] ?? [1, 0];
+    const nx = t.x + dx;
+    const ny = t.y + dy;
+    if (belegt.has(`${nx},${ny}`) || !istBoden(s, nx, ny, t.z) || LANDSCHAFT.art[idx(nx, ny)] === 'bruecke') return t;
+    belegt.delete(`${t.x},${t.y}`);
+    belegt.add(`${nx},${ny}`);
+    geaendert = true;
+    return { ...t, x: nx, y: ny };
+  });
+  return geaendert ? { ...s, tiere } : s;
+}
+
+/* ---------- Grundstücke und Bauaufträge ---------- */
+
+export interface Grundstueck {
+  id: string;
+  name: string;
+  x0: number;
+  y0: number;
+  /** Seitenlänge (quadratisch). */
+  n: number;
+}
+/** Drei Grundstücke auf der zweiten Insel, je 4 × 4 Felder. */
+export const GRUNDSTUECKE: readonly Grundstueck[] = [
+  { id: 'a', name: 'Grundstück A', x0: 30, y0: 5, n: 4 },
+  { id: 'b', name: 'Grundstück B', x0: 36, y0: 13, n: 4 },
+  { id: 'c', name: 'Grundstück C', x0: 30, y0: 12, n: 4 },
+];
+export const imGrundstueck = (g: Grundstueck, x: number, y: number): boolean => x >= g.x0 && y >= g.y0 && x < g.x0 + g.n && y < g.y0 + g.n;
+
+export interface InselAuftrag {
+  id: string;
+  grundstueck: string;
+  titel: string;
+  text: string;
+  /** Mathematischer Hinweis zur Lösung. */
+  tipp: string;
+  pruefe: (s: InselStand, g: Grundstueck) => boolean;
+}
+
+/** Ebene 0 eines Feldes auf dem Grundstück (absolut z = Geländehöhe). */
+const unten = (s: InselStand, x: number, y: number): number | null => {
+  const e = s.stapel[idx(x, y)]?.[0];
+  return e === undefined || e === LUFT ? null : e;
+};
+const felder = (g: Grundstueck): [number, number][] => {
+  const l: [number, number][] = [];
+  for (let y = g.y0; y < g.y0 + g.n; y++) for (let x = g.x0; x < g.x0 + g.n; x++) l.push([x, y]);
+  return l;
+};
+const randFelder = (g: Grundstueck): [number, number][] => felder(g).filter(([x, y]) => x === g.x0 || y === g.y0 || x === g.x0 + g.n - 1 || y === g.y0 + g.n - 1);
+const anzahlVon = (s: InselStand, g: Grundstueck, arten: readonly number[]): number =>
+  felder(g).reduce((n, [x, y]) => n + (s.stapel[idx(x, y)] ?? []).filter((a) => arten.includes(a)).length, 0);
+const gesetzt = (a: number | undefined): boolean => a !== undefined && a !== LUFT && a !== TUER_OBEN;
+
+export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
+  {
+    id: 'flaeche8',
+    grundstueck: 'a',
+    titel: 'Fläche: 8 Felder',
+    text: 'Belege auf Grundstück A genau 8 Felder mit Blöcken – eine Lage, alles auf dem Boden.',
+    tipp: 'Ein Rechteck aus 2 Reihen mit je 4 Feldern hat 2 · 4 = 8 Felder.',
+    pruefe: (s, g) => felder(g).filter(([x, y]) => { const u = unten(s, x, y); return u !== null && istBlock(u); }).length === 8,
+  },
+  {
+    id: 'umfang',
+    grundstueck: 'a',
+    titel: 'Umfang: ein Zaun rundherum',
+    text: 'Baue auf Grundstück A ganz außen herum einen Zaun oder eine Mauer – jedes Randfeld bekommt ein Teil.',
+    tipp: 'Ein Quadrat mit 4 Feldern Seitenlänge hat 12 Randfelder: 4 + 4 + 2 + 2.',
+    pruefe: (s, g) => randFelder(g).every(([x, y]) => unten(s, x, y) !== null),
+  },
+  {
+    id: 'turm5',
+    grundstueck: 'b',
+    titel: 'Turm: 5 Blöcke hoch',
+    text: 'Baue auf Grundstück B einen Turm, der genau 5 Blöcke hoch ist.',
+    tipp: 'Zähle beim Bauen mit: 1, 2, 3, 4, 5.',
+    pruefe: (s, g) => felder(g).some(([x, y]) => { const st = s.stapel[idx(x, y)] ?? []; return st.length === 5 && st.every((a) => istBlock(a)); }),
+  },
+  {
+    id: 'wuerfel8',
+    grundstueck: 'b',
+    titel: 'Würfel: 2 · 2 · 2',
+    text: 'Baue auf Grundstück B einen großen Würfel: 2 Blöcke lang, 2 breit und 2 hoch.',
+    tipp: '2 · 2 = 4 Blöcke in der unteren Lage, noch einmal 4 darauf: 8 Blöcke.',
+    pruefe: (s, g) =>
+      felder(g).some(([x, y]) =>
+        [[0, 0], [1, 0], [0, 1], [1, 1]].every(([dx = 0, dy = 0]) => {
+          const st = s.stapel[idx(x + dx, y + dy)] ?? [];
+          return imGrundstueck(g, x + dx, y + dy) && istBlock(st[0] ?? LUFT) && istBlock(st[1] ?? LUFT);
+        }),
+      ),
+  },
+  {
+    id: 'haus',
+    grundstueck: 'c',
+    titel: 'Haus mit Tür, Fenster und Dach',
+    text: 'Baue auf Grundstück C ein Haus: Wände, eine Tür, mindestens ein Fenster und ein Dach.',
+    tipp: 'Das Dach kommt auf die Wände – setze die Blöcke seitlich an, dann halten sie.',
+    pruefe: (s, g) =>
+      anzahlVon(s, g, [101]) >= 1 &&
+      anzahlVon(s, g, [102]) >= 1 &&
+      felder(g).filter(([x, y]) => { const st = s.stapel[idx(x, y)] ?? []; return (st[0] ?? LUFT) === LUFT && st.slice(2).some(gesetzt); }).length >= 1,
+  },
+  {
+    id: 'garten6',
+    grundstueck: 'c',
+    titel: 'Garten mit 6 Blumen',
+    text: 'Pflanze auf Grundstück C 6 Blumen. Blumen gibt es im Andenkenstand unter „Garten“.',
+    tipp: 'Zum Beispiel 2 rote, 2 gelbe und 2 blaue: 2 + 2 + 2 = 6.',
+    pruefe: (s, g) => anzahlVon(s, g, BLUMEN) >= 6,
+  },
+];
+export const INSEL_AUFTRAG_TALER = 20;
+export const INSEL_AUFTRAG_BLOECKE = 15;
+
+/** Der nächste offene Auftrag (der Reihe nach). */
+export const offenerInselAuftrag = (s: InselStand): InselAuftrag | undefined => INSEL_AUFTRAEGE.find((a) => !s.erledigt.includes(a.id));
+
+/** Erfüllt? Dann wird er als erledigt eingetragen. */
+export function pruefeInselAuftrag(s: InselStand): { stand: InselStand; auftrag: InselAuftrag } | undefined {
+  const a = offenerInselAuftrag(s);
+  const g = a && GRUNDSTUECKE.find((x) => x.id === a.grundstueck);
+  if (!a || !g || !a.pruefe(s, g)) return undefined;
+  return { stand: { ...s, erledigt: [...s.erledigt, a.id] }, auftrag: a };
 }
 
 /* ---------- Speicher ---------- */
@@ -289,22 +526,39 @@ export function pruefeInsel(x: unknown): InselStand {
   if (typeof x !== 'object' || x === null) return leer;
   const o = x as Record<string, unknown>;
   const gueltig = (a: unknown): a is number => typeof a === 'number' && (istBlock(a) || !!einrichtung(a) || a === TUER_OBEN || a === LUFT);
-  const stapel =
-    Array.isArray(o.stapel) && o.stapel.length === INSEL * INSEL
-      ? o.stapel.map((st, i) => {
-          if (!Array.isArray(st) || !bebaubar(i % INSEL, Math.floor(i / INSEL))) return [];
-          const h = LANDSCHAFT.hoehe[i] ?? 0;
-          const sauber = st.map((a) => (gueltig(a) ? a : LUFT)).slice(0, Math.max(0, INSEL_MAX - h));
-          while (sauber.length && sauber[sauber.length - 1] === LUFT) sauber.pop();
-          return sauber;
-        })
-      : leer.stapel;
+  // Alte Spielstände (nur eine Insel, 24 × 24) auf den breiteren Bauplan umrechnen
+  let roh: unknown[] | undefined;
+  if (Array.isArray(o.stapel) && o.stapel.length === BREITE * HOEHE) roh = o.stapel;
+  else if (Array.isArray(o.stapel) && o.stapel.length === INSEL * INSEL) {
+    roh = Array.from({ length: BREITE * HOEHE }, () => []);
+    o.stapel.forEach((st, i) => {
+      (roh as unknown[])[idx(i % INSEL, Math.floor(i / INSEL))] = st;
+    });
+  }
+  const stapel = roh
+    ? roh.map((st, i) => {
+        if (!Array.isArray(st) || !bebaubar(i % BREITE, Math.floor(i / BREITE))) return [];
+        const h = LANDSCHAFT.hoehe[i] ?? 0;
+        const sauber = st.map((a) => (gueltig(a) ? a : LUFT)).slice(0, Math.max(0, INSEL_MAX - h));
+        while (sauber.length && sauber[sauber.length - 1] === LUFT) sauber.pop();
+        return sauber;
+      })
+    : leer.stapel;
   const inventar: Record<string, number> = {};
   if (typeof o.inventar === 'object' && o.inventar !== null)
-    for (const [k, v] of Object.entries(o.inventar)) if (einrichtung(Number(k)) && typeof v === 'number' && Number.isInteger(v) && v > 0 && v < 1000) inventar[k] = v;
+    for (const [k, v] of Object.entries(o.inventar)) if ((einrichtung(Number(k)) || tierArt(Number(k))) && typeof v === 'number' && Number.isInteger(v) && v > 0 && v < 1000) inventar[k] = v;
   const f = o.figur as Record<string, unknown> | undefined;
   let figur = { ...START };
-  const stand: InselStand = { stapel, inventar, figur };
-  if (f && typeof f.x === 'number' && typeof f.y === 'number' && typeof f.z === 'number' && istBoden(stand, f.x, f.y, f.z)) figur = { x: f.x, y: f.y, z: f.z };
-  return { stapel, inventar, figur };
+  const basis: InselStand = { stapel, inventar, figur, tiere: [], erledigt: [] };
+  if (f && typeof f.x === 'number' && typeof f.y === 'number' && typeof f.z === 'number' && istBoden(basis, f.x, f.y, f.z)) figur = { x: f.x, y: f.y, z: f.z };
+  const tiere: Tier[] = [];
+  if (Array.isArray(o.tiere))
+    for (const t of o.tiere.slice(0, MAX_TIERE)) {
+      if (!t || typeof t !== 'object') continue;
+      const q = t as Record<string, unknown>;
+      if (typeof q.art === 'number' && tierArt(q.art) && typeof q.x === 'number' && typeof q.y === 'number' && typeof q.z === 'number' && istBoden(basis, q.x, q.y, q.z))
+        tiere.push({ art: q.art, x: q.x, y: q.y, z: q.z });
+    }
+  const erledigt = Array.isArray(o.erledigt) ? o.erledigt.filter((e): e is string => typeof e === 'string' && e.length < 40).slice(0, 200) : [];
+  return { stapel, inventar, figur, tiere, erledigt };
 }

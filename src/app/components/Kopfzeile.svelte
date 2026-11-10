@@ -5,6 +5,7 @@
   import { rang } from '../../domain/rang';
   import { neueKarten } from '../../domain/belohnungen';
   import Icon from './Icon.svelte';
+  import { faellige } from '../../domain/fundbuero';
 
   /** Kopfzeile mit Zurück, Titel, Talern, Ton und dem Menü hinter der eigenen Figur. */
   let { titel, zurueck, mitte }: { titel?: string; zurueck?: () => void; mitte?: Snippet } = $props();
@@ -12,6 +13,7 @@
   let r = $derived(p ? rang(p) : null);
   let neu = $derived(p ? neueKarten(p).length : 0);
   let offen = $state(false);
+  let fund = $derived(p ? faellige(p.fundbuero, Date.now()).length : 0);
   function gehe(b: Bildschirm) {
     offen = false;
     app.zeige(b);
@@ -76,7 +78,9 @@
       <button onclick={() => gehe({ name: 'profil' })}><Icon name="profil" groesse={22} />Mein Mathe-Profil</button>
       <button onclick={() => gehe({ name: 'album' })}><Icon name="album" groesse={22} />Sammelalbum{#if neu}<span class="punkt">{neu} neu</span>{/if}</button>
       <button onclick={() => gehe({ name: 'blitz' })}><Icon name="blitz" groesse={22} />Blitzrechnen</button>
+      <button onclick={() => gehe({ name: 'duell' })}><Icon name="duell" groesse={22} />Geschwister-Duell</button>
       <button onclick={() => gehe({ name: 'knobel' })}><Icon name="raetsel" groesse={22} />Knobelzelt</button>
+      <button onclick={() => gehe({ name: 'fundbuero' })}><Icon name="kiste" groesse={22} />Fundbüro{#if fund}<span class="punkt">{fund} zum Abholen</span>{/if}</button>
       <button onclick={() => gehe({ name: 'bauplatz' })}><Icon name="block" groesse={22} />Bauplatz</button>
       <button onclick={() => gehe({ name: 'insel' })}><Icon name="insel" groesse={22} />Bauinsel{#if !app.paket}<Icon name="schloss" groesse={16} />{/if}</button>
       <button onclick={() => gehe({ name: 'check' })}><Icon name="check" groesse={22} />Jahrmarkt-Check</button>
@@ -171,6 +175,20 @@
     border: 3px solid var(--tinte);
     border-radius: 18px;
     box-shadow: 0 6px 0 var(--tinte);
+    /* Lange Menüs (quer gehaltenes Handy) dürfen blättern */
+    max-height: calc(100dvh - 11rem - var(--oben, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* Wenig Höhe: zwei Spalten, damit alles ohne Blättern sichtbar ist */
+  @media (orientation: landscape) and (max-height: 54rem) and (min-width: 36rem) {
+    .menue {
+      grid-template-columns: 1fr 1fr;
+      width: min(36rem, calc(100vw - 32px));
+    }
+    .menue .wer {
+      grid-column: 1 / -1;
+    }
   }
   .wer {
     display: flex;

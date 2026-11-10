@@ -6,6 +6,7 @@
     ALLEE_X,
     ANDENKEN_X,
     KNOBEL_X,
+    FAEHRE_X,
     BUDE_BREITE,
     BUDE_HOEHE,
     BUDEN_ORTE,
@@ -41,6 +42,10 @@
   import { gasseFarbe } from '../../domain/auftraege';
   import { FEIER_BLOECKE, WOCHENZIEL_BLOECKE, WOCHENZIEL_TAGE, feierSchluessel, offeneFeiern, spieltageDieseWoche, wochenKennung } from '../../domain/belohnungen';
   import Feier from '../components/Feier.svelte';
+  import RiesenradFahrt from '../components/RiesenradFahrt.svelte';
+  import { flinkaTipp } from '../../domain/flinka';
+  import { BAUMKRONE, jahreszeit, tageszeit } from '../../domain/stimmung';
+  import { createRng, randomSeed } from '../../domain/rng';
 
   /**
    * Der begehbare Jahrmarkt. Das Kind tippt auf eine Bude (oder einen Weg),
@@ -58,6 +63,15 @@
   let feiern = $derived(p && p.gesehen.intro ? offeneFeiern(p) : []);
   let tage = $derived(p ? spieltageDieseWoche(p, new Date()) : 0);
   let wocheGeschafft = $derived(p ? p.belohnt.includes(`woche:${wochenKennung(new Date())}`) : false);
+  let fahrtOffen = $state(false);
+
+  // Tageszeit und Jahreszeit (einmal pro Minute neu)
+  let jetzt = $state(new Date());
+  let jz = $derived(app.einstellungen.stimmung ? jahreszeit(jetzt) : 'sommer');
+  let tz = $derived(app.einstellungen.stimmung ? tageszeit(jetzt) : 'tag');
+  let krone = $derived(BAUMKRONE[jz]);
+  const flockenZahl = 26;
+  const flocken = Array.from({ length: flockenZahl }, (_, i) => ({ x: (i * 37) % 100, d: 7 + ((i * 13) % 9), v: -((i * 7) % 14), g: 0.6 + ((i * 5) % 6) / 10 }));
 
   function feierFertig() {
     const f = feiern[0];
@@ -183,6 +197,11 @@
     laufeZu({ x: KNOBEL_X, y: FESTPLATZ_Y }, () => app.zeige({ name: 'knobel' }));
   }
 
+  function zurFaehre() {
+    app.spieleKlang('tipp');
+    laufeZu({ x: FAEHRE_X, y: FESTPLATZ_Y }, () => app.zeige({ name: 'insel' }));
+  }
+
   function zumAndenkenstand() {
     app.spieleKlang('tipp');
     laufeZu({ x: ANDENKEN_X, y: FESTPLATZ_Y }, () => app.zeige({ name: 'andenken' }));
@@ -231,7 +250,24 @@
     }
   });
 
+  /** Flinka am Eingang: hingehen und einen Tipp abholen. */
+  function zuFlinka() {
+    if (!p) return;
+    app.spieleKlang('tipp');
+    laufeZu({ x: EINGANG.x + 40, y: FESTPLATZ_Y }, () => {
+      const q = app.profil;
+      if (!q) return;
+      dialog = { saetze: flinkaTipp(q, q.auftraege, app.paket, new Date(), createRng(randomSeed())) };
+    });
+  }
+
+  function fahrtZurBude(id: string) {
+    fahrtOffen = false;
+    zurBude(id);
+  }
+
   onMount(() => {
+    const uhr = setInterval(() => (jetzt = new Date()), 60000);
     app.auftraegeSicherstellen();
     messen();
     void tick().then(() => kamera(false));
@@ -240,7 +276,10 @@
       kamera(false);
     });
     if (karte) ro.observe(karte);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      clearInterval(uhr);
+    };
   });
 
   onDestroy(() => {
@@ -263,6 +302,7 @@
 
 {#if p}
   <Kopfzeile titel="Jahrmarkt" />
+  <div class="kartenrahmen">
   <div class="karte" bind:this={karte}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab}px">
@@ -319,9 +359,11 @@
             <g transform="translate({b.x} {b.y})">
               <ellipse cx="0" cy="58" rx="40" ry="10" fill="#1f2a6b" opacity="0.12" />
               <rect x="-8" y="10" width="16" height="48" rx="5" fill="#87521f" />
-              <circle cx="-18" cy="0" r="30" fill="#3fae6a" />
-              <circle cx="18" cy="-4" r="32" fill="#4fbf78" />
-              <circle cx="0" cy="-26" r="30" fill="#5ccc85" />
+              <circle cx="-18" cy="0" r="30" fill={krone[0]} />
+              <circle cx="18" cy="-4" r="32" fill={krone[1]} />
+              <circle cx="0" cy="-26" r="30" fill={jz === 'winter' ? krone[1] : krone[2]} />
+              {#if jz === 'winter'}<path d="M-30 -30 Q0 -64 30 -30 Q14 -40 0 -36 Q-14 -40 -30 -30 Z" fill="#fff" /><path d="M-44 -6 Q-18 -32 4 -10 Q-18 -18 -44 -6 Z" fill="#fff" />{/if}
+              {#if jz === 'fruehling'}{#each [[-24, -6], [10, -16], [-4, -40], [24, 6], [-10, 12]] as [bx, by], k (k)}<circle cx={bx} cy={by} r="5" fill="#fff" /><circle cx={bx} cy={by} r="2" fill="#f17aa0" />{/each}{/if}
             </g>
           {/each}
           <!-- Büsche an den Enden der Querwege -->
@@ -340,7 +382,7 @@
             {#each [-1, 1] as s (s)}
               <g transform="translate({ALLEE_X + s * 70} {r.y + 160})">
                 <rect x="-3" y="-60" width="6" height="64" fill="#1f2a6b" />
-                <circle cx="0" cy="-66" r="10" fill={laufend > 0 ? '#ffe57a' : '#d7dae6'} stroke="#1f2a6b" stroke-width="3" />
+                <circle cx="0" cy="-66" r="10" fill={laufend > 0 || tz !== 'tag' ? '#ffe57a' : '#d7dae6'} stroke="#1f2a6b" stroke-width="3" />
               </g>
             {/each}
           {/each}
@@ -385,11 +427,12 @@
           {#if info}
             {@const zustand = info.spielbar ? budenZustand(p, o.id) : 'zu'}
             {@const mitKatze = o.id === 'dartbude' && istGeschafft(p, o.id, 'bronze')}
-            <div class="bude" class:ziel={ziel === o.id} style="left: {o.x - BUDE_BREITE / 2}px; top: {o.boden - BUDE_HOEHE}px; z-index: {Math.round(o.boden)}">
+            {@const medaille = info.spielbar ? hoechsteStufe(p, o.id) : undefined}
+            <div class="bude" class:ziel={ziel === o.id} class:leuchtet={tz !== 'tag' && !!medaille} style="left: {o.x - BUDE_BREITE / 2}px; top: {o.boden - BUDE_HOEHE}px; z-index: {Math.round(o.boden)}">
               <button
                 class="bude-knopf"
                 onclick={() => zurBude(o.id)}
-                aria-label={info.spielbar ? `${info.name} öffnen` : `${info.name}, bald geöffnet`}
+                aria-label={info.spielbar ? `${info.name} öffnen${medaille ? `, ${STUFEN_NAME[medaille]} geschafft` : ''}` : `${info.name}, bald geöffnet`}
               >
                 <BudeStand bude={o.id} {zustand} besitzer={o.id === 'dartbude'} katze={mitKatze} />
               </button>
@@ -397,13 +440,14 @@
                 <button class="katze-knopf" onclick={katzeEntdeckt} aria-label="Katze auf dem Dach"></button>
               {/if}
               <div class="schild" class:zu={!info.spielbar}>{info.name}</div>
+              {#if medaille}<div class="medaille m-{medaille}" aria-hidden="true" title="{STUFEN_NAME[medaille]} geschafft"><span>{medaille === 'gold' ? 'G' : medaille === 'silber' ? 'S' : 'B'}</span></div>{/if}
               {#if auftragsBuden.has(o.id)}<div class="auftrag-fahne" aria-hidden="true"><span class="stange"></span><span class="tuch">Auftrag</span></div>{/if}
             </div>
           {/if}
         {/each}
 
         <!-- Festplatz: Riesenrad, Andenkenstand, Eingang, Flinka -->
-        <div class="riesenrad" style="left: {RIESENRAD_X - 170}px; top: {FESTPLATZ_Y - 470}px; z-index: {FESTPLATZ_Y - 40}">
+        <button class="riesenrad" style="left: {RIESENRAD_X - 170}px; top: {FESTPLATZ_Y - 470}px; z-index: {FESTPLATZ_Y - 40}" onclick={() => { app.spieleKlang('tipp'); fahrtOffen = true; }} aria-label="Riesenrad: {laufend} von {TAGESBUDEN.length} Gondeln leuchten. Mitfahren">
           <Riesenrad {gondeln} />
           {#if p.deko.includes('ballons')}
             <svg class="ballons" viewBox="0 0 60 110" aria-hidden="true">
@@ -413,12 +457,13 @@
               <ellipse cx="46" cy="34" rx="12" ry="15" fill="#3c78d8" />
             </svg>
           {/if}
-        </div>
+        </button>
 
         <!-- Fortschrittsschild neben dem Hauptweg: auch auf schmalen Handys ganz sichtbar -->
-        <p class="fortschritt" style="left: {ALLEE_X - 215}px; top: {FESTPLATZ_Y - 150}px; z-index: {FESTPLATZ_Y - 35}">
-          <strong>{laufend} von {TAGESBUDEN.length}</strong> Buden<br />laufen wieder
-        </p>
+        <button class="fortschritt" style="left: {ALLEE_X - 215}px; top: {FESTPLATZ_Y - 150}px; z-index: {FESTPLATZ_Y - 35}" onclick={() => (fahrtOffen = true)} aria-label="{laufend} von {TAGESBUDEN.length} Gondeln leuchten. Riesenrad-Fahrt">
+          <strong>{laufend} von {TAGESBUDEN.length}</strong> Gondeln<br />leuchten
+          <small>Antippen zum Mitfahren</small>
+        </button>
 
         <button class="andenken" style="left: {ANDENKEN_X - 100}px; top: {FESTPLATZ_Y - 250}px; z-index: {FESTPLATZ_Y - 30}" onclick={zumAndenkenstand} aria-label="Andenkenstand">
           <svg viewBox="0 0 200 220" aria-hidden="true">
@@ -453,20 +498,59 @@
           {#if p && !p.belohnt.includes(`raetsel:${wochenKennung(new Date())}`)}<span class="neu-raetsel" aria-hidden="true">Rätsel</span>{/if}
         </button>
 
+        <!-- Fähre zur Bauinsel: Wasser am linken Rand, Steg und Boot -->
+        <button class="faehre" style="left: {FAEHRE_X - 110}px; top: {FESTPLATZ_Y - 190}px; z-index: {FESTPLATZ_Y - 25}" onclick={zurFaehre} aria-label="Fähre zur Bauinsel{app.paket ? '' : ' (Zusatzpaket)'}">
+          <svg viewBox="0 0 220 200" aria-hidden="true">
+            <path d="M0 40 Q40 20 70 40 L70 200 L0 200 Z" fill="#6cc3ec" />
+            <path d="M6 70 q10 -6 20 0 q10 6 20 0 M10 120 q10 -6 20 0 q10 6 20 0 M4 165 q10 -6 20 0 q10 6 20 0" stroke="#fff" stroke-width="3" fill="none" opacity="0.7" class="welle" />
+            <rect x="50" y="110" width="120" height="22" rx="4" fill="#b9763f" stroke="#1f2a6b" stroke-width="3" />
+            {#each [62, 92, 122, 152] as px (px)}<rect x={px} y="128" width="8" height="26" fill="#87521f" />{/each}
+            <g class="boot">
+              <path d="M-4 96 L60 96 L50 116 L6 116 Z" fill="#e23a4e" stroke="#1f2a6b" stroke-width="3" stroke-linejoin="round" />
+              <rect x="22" y="56" width="5" height="40" fill="#1f2a6b" />
+              <path d="M27 58 L52 88 L27 88 Z" fill="#fffdf7" stroke="#1f2a6b" stroke-width="2" />
+            </g>
+            <rect x="150" y="40" width="8" height="74" fill="#87521f" />
+          </svg>
+          <span class="schild">Fähre zur Bauinsel{#if !app.paket} <Icon name="schloss" groesse={16} />{/if}</span>
+        </button>
+
         <div class="eingang" style="left: {EINGANG.x - 190}px; top: {WELT_HOEHE - 200}px" aria-hidden="true">
           <div class="bogen">Mathe-Jahrmarkt</div>
         </div>
 
-        <div class="flinka" style="left: {EINGANG.x + 90}px; top: {FESTPLATZ_Y - 150}px; z-index: {FESTPLATZ_Y - 20}" aria-hidden="true">
+        <button class="flinka" style="left: {EINGANG.x + 90}px; top: {FESTPLATZ_Y - 150}px; z-index: {FESTPLATZ_Y - 20}" onclick={zuFlinka} aria-label="Flinka nach einem Tipp fragen">
           <Flinka groesse={84} winkt={!laeuft} />
-        </div>
+          <span class="tipp-blase" aria-hidden="true">Tipp?</span>
+        </button>
 
         <!-- Die Figur -->
         <div class="figur" style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
           <Laeufer figur={p.figur} aussehen={p.aussehen} {laeuft} {richtung} groesse={104} />
         </div>
+
+        <!-- Abend und Nacht: Himmel dunkler, Laternen und geschaffte Buden leuchten -->
+        {#if tz !== 'tag'}
+          <div class="dunkel" class:nacht={tz === 'nacht'} aria-hidden="true"></div>
+          <div class="lichter" aria-hidden="true">
+            {#each REIHEN as r (r.index)}
+              {#each [-1, 1] as s (s)}<span class="schein" style="left: {ALLEE_X + s * 70}px; top: {r.y + 94}px"></span>{/each}
+            {/each}
+            {#each BUDEN_ORTE as o (o.id)}
+              {#if budeInfo(o.id).spielbar && hoechsteStufe(p, o.id)}<span class="schein bude-schein" style="left: {o.x}px; top: {o.boden - BUDE_HOEHE * 0.45}px"></span>{/if}
+            {/each}
+            <span class="schein gross" style="left: {RIESENRAD_X}px; top: {FESTPLATZ_Y - 370}px; opacity: {0.3 + (0.7 * laufend) / TAGESBUDEN.length}"></span>
+          </div>
+        {/if}
       </div>
     </div>
+  </div>
+
+  {#if (jz === 'winter' || jz === 'herbst' || jz === 'fruehling') && !reduziert()}
+    <div class="wetter {jz}" aria-hidden="true">
+      {#each flocken as f, i (i)}<span style="left: {f.x}%; animation-duration: {f.d}s; animation-delay: {f.v}s; --g: {f.g}"></span>{/each}
+    </div>
+  {/if}
   </div>
 
   <div class="leiste">
@@ -510,6 +594,10 @@
     </div>
   {/if}
 
+  {#if fahrtOffen}
+    <RiesenradFahrt profil={p} paket={app.paket} onzu={() => (fahrtOffen = false)} onbude={fahrtZurBude} />
+  {/if}
+
   {#if feiern[0] && !dialog}
     {#key feierSchluessel(feiern[0])}<Feier feier={feiern[0]} onweiter={feierFertig} />{/key}
   {/if}
@@ -523,6 +611,183 @@
 {/if}
 
 <style>
+  .kartenrahmen {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  /* Medaille an der Bude: Bronze, Silber oder Gold */
+  .medaille {
+    position: absolute;
+    left: 6px;
+    top: 18%;
+    width: 40px;
+    height: 40px;
+    z-index: 3;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 0 rgb(31 42 107 / 0.35));
+  }
+  .medaille::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: -12px;
+    width: 20px;
+    height: 18px;
+    background: linear-gradient(90deg, #e23a4e 50%, #3c78d8 50%);
+    clip-path: polygon(0 0, 100% 0, 75% 100%, 25% 100%);
+  }
+  .medaille span {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 3px solid #1f2a6b;
+    font-weight: 900;
+    font-size: 1.15rem;
+    color: #1f2a6b;
+  }
+  .m-bronze span {
+    background: radial-gradient(circle at 35% 35%, #f0c08c, #c98a4b 60%, #a8692f);
+  }
+  .m-silber span {
+    background: radial-gradient(circle at 35% 35%, #ffffff, #c9d2de 60%, #98a3b4);
+  }
+  .m-gold span {
+    background: radial-gradient(circle at 35% 35%, #fff2a8, #f2b705 60%, #c98f00);
+  }
+  .bude.leuchtet .bude-knopf {
+    filter: drop-shadow(0 0 14px rgb(255 214 90 / 0.9));
+  }
+  /* Riesenrad und Schild sind Knöpfe */
+  button.riesenrad {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  button.fortschritt {
+    pointer-events: auto;
+    cursor: pointer;
+    color: var(--tinte);
+    font-family: inherit;
+  }
+  .fortschritt small {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--tinte-weich, #5a628c);
+    margin-top: 2px;
+  }
+  button.flinka {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .tipp-blase {
+    position: absolute;
+    right: -26px;
+    top: -8px;
+    background: #fff;
+    border: 3px solid var(--tinte);
+    border-radius: 14px 14px 14px 2px;
+    padding: 0 8px;
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--tinte);
+    animation: tippen 2.6s ease-in-out infinite;
+  }
+  @keyframes tippen {
+    0%, 70%, 100% { transform: translateY(0); }
+    80% { transform: translateY(-6px); }
+    90% { transform: translateY(0); }
+  }
+  /* Abend und Nacht */
+  .dunkel {
+    position: absolute;
+    inset: 0;
+    z-index: 9000;
+    pointer-events: none;
+    background: rgb(40 45 120 / 0.5);
+    mix-blend-mode: multiply;
+  }
+  .dunkel.nacht {
+    background: rgb(20 22 80 / 0.68);
+  }
+  .lichter {
+    position: absolute;
+    inset: 0;
+    z-index: 9001;
+    pointer-events: none;
+  }
+  .schein {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    margin: -70px 0 0 -70px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(255 225 120 / 0.7), rgb(255 225 120 / 0) 70%);
+    mix-blend-mode: screen;
+  }
+  .schein.bude-schein {
+    width: 220px;
+    height: 200px;
+    margin: -100px 0 0 -110px;
+    background: radial-gradient(ellipse, rgb(255 205 110 / 0.55), rgb(255 205 110 / 0) 70%);
+  }
+  .schein.gross {
+    width: 380px;
+    height: 380px;
+    margin: -190px 0 0 -190px;
+    background: radial-gradient(circle, rgb(255 230 150 / 0.5), rgb(255 230 150 / 0) 70%);
+  }
+  /* Jahreszeit: Schnee, Laub oder Blüten über der Karte */
+  .wetter {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .wetter span {
+    position: absolute;
+    top: -20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    opacity: 0.9;
+    scale: var(--g);
+    animation: rieseln linear infinite;
+  }
+  .wetter.herbst span {
+    width: 14px;
+    height: 9px;
+    border-radius: 0 80% 0 80%;
+    background: #d9822b;
+  }
+  .wetter.herbst span:nth-child(3n) {
+    background: #c9572f;
+  }
+  .wetter.herbst span:nth-child(3n + 1) {
+    background: #e8b43d;
+  }
+  .wetter.fruehling span {
+    width: 9px;
+    height: 9px;
+    border-radius: 60% 0 60% 0;
+    background: #f9c4d4;
+  }
+  @keyframes rieseln {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(24px, 50vh) rotate(180deg); }
+    100% { transform: translate(-12px, 105vh) rotate(360deg); }
+  }
   .karte {
     flex: 1;
     min-height: 0;
@@ -662,6 +927,33 @@
     top: 30px;
     width: 70px;
   }
+  .faehre {
+    position: absolute;
+    width: 220px;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .faehre .schild {
+    bottom: auto;
+    top: 6px;
+    left: 62%;
+  }
+  .faehre .boot {
+    animation: schaukeln-boot 3s ease-in-out infinite;
+    transform-origin: 28px 110px;
+  }
+  @keyframes schaukeln-boot {
+    50% {
+      transform: rotate(-4deg) translateY(2px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .faehre .boot {
+      animation: none;
+    }
+  }
   .andenken {
     position: absolute;
     width: 200px;
@@ -736,7 +1028,6 @@
   }
   .flinka {
     position: absolute;
-    pointer-events: none;
   }
   .figur {
     position: absolute;

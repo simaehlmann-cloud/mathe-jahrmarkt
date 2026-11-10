@@ -3,7 +3,7 @@ import { istGeschafft } from './fortschritt/fortschritt';
 import type { Profil } from './profil';
 
 /**
- * Ränge statt Lobsätzen: Jede geschaffte Stufe einer Bude zählt einen Stern (höchstens 27 · 3 = 81).
+ * Ränge statt Lobsätzen: Jede geschaffte Stufe einer Bude zählt einen Stern (höchstens 30 · 3 = 90).
  * Die Schwellen werden nach hinten weiter, damit es lange etwas zu erreichen gibt.
  */
 export const RAENGE: readonly { name: string; ab: number }[] = [
@@ -14,6 +14,8 @@ export const RAENGE: readonly { name: string; ab: number }[] = [
   { name: 'Jahrmarkt-Manager', ab: 40 },
   { name: 'Jahrmarkt-Direktor', ab: 62 },
   { name: 'Mathe-Legende', ab: 81 },
+  // Seit 0.11 gibt es 30 Buden; die bisherigen Schwellen bleiben, damit niemand einen Rang verliert
+  { name: 'Jahrmarkt-Großmeister', ab: BUDEN.length * 3 },
 ];
 
 export const sterne = (p: Profil): number => BUDEN.reduce((n, b) => n + STUFEN.filter((s) => istGeschafft(p, b.id, s)).length, 0);

@@ -1,12 +1,16 @@
 <script lang="ts">
   import { DEKO, dekoKaufen } from '../../domain/deko';
-  import { EINRICHTUNG, kaufeEinrichtung } from '../../domain/insel';
+  import { EINRICHTUNG, KATEGORIE_NAME, TIERE, kaufeEinrichtung, type Kategorie } from '../../domain/insel';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import { app } from '../zustand.svelte';
 
   /** Andenkenstand: Taler gegen Deko, feste Preise, kein echtes Geld, keine Zufallsgewinne. */
   let p = $derived(app.profil);
+  /** Inselsachen nach Oberbegriffen. */
+  let kategorie = $state<Kategorie>('bauen');
+  const KATEGORIEN = Object.keys(KATEGORIE_NAME) as Kategorie[];
+  let angebot = $derived(kategorie === 'tiere' ? TIERE.map((t) => ({ id: t.id, name: t.name, preis: t.preis })) : EINRICHTUNG.filter((e) => e.kategorie === kategorie));
 
   function kaufe(id: string, name: string) {
     const q = app.profil;
@@ -62,9 +66,14 @@
     {#if !app.paket}
       <p class="erklaerung"><Icon name="schloss" groesse={18} /> Die Bauinsel gehört zum Zusatzpaket.</p>
     {:else}
-      <p class="erklaerung">Kaufe Türen, Treppen und Möbel. Du setzt sie auf der Bauinsel wie Blöcke. Abbauen legt sie zurück ins Inventar.</p>
+      <p class="erklaerung">Kaufe Türen, Möbel, Blumen und Tiere. Du setzt sie auf der Bauinsel wie Blöcke. Abbauen legt sie zurück ins Inventar. Tiere laufen auf der Insel umher.</p>
+      <div class="kategorien" role="tablist" aria-label="Bereiche">
+        {#each KATEGORIEN as k (k)}
+          <button role="tab" aria-selected={kategorie === k} class:an={kategorie === k} onclick={() => (kategorie = k)}>{KATEGORIE_NAME[k]}</button>
+        {/each}
+      </div>
       <ul class="moebel">
-        {#each EINRICHTUNG as e (e.id)}
+        {#each angebot as e (e.id)}
           <li>
             <strong>{e.name}</strong>
             <small>hast du: {p.insel.inventar[String(e.id)] ?? 0}</small>
@@ -79,6 +88,25 @@
 <style>
   .titel {
     margin: 6px 0 0;
+  }
+  .kategorien {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .kategorien button {
+    min-height: 40px;
+    padding: 4px 14px;
+    border: 3px solid var(--tinte);
+    border-radius: 20px;
+    background: var(--papier);
+    color: var(--tinte);
+    font: inherit;
+    font-weight: 900;
+  }
+  .kategorien button.an {
+    background: var(--tinte);
+    color: #fff;
   }
   .moebel {
     list-style: none;

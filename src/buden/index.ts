@@ -8,6 +8,7 @@ import { achterbahn, kasse, schaetzbude, uhrkarussell, umrechnungsmemory } from 
 import { diagrammreporter, murmellabor, rechenmauer, riesenradtechniker, zahlenfolgenzug } from './musterbahn';
 import { geisterbahn, hauDenLukas, pizzabaeckerei } from './sternenmarkt';
 import { seilbahn } from './seilbahn';
+import { gluecksrad, lageplan, wuerfelbauer } from './erkunden';
 import { einmaleinsTurbo } from './turbo';
 import { zahlenraetselTresor } from './tresor';
 import { waage } from './waage';
@@ -43,6 +44,9 @@ export const BUDEN_DEFINITIONEN: Readonly<Record<string, BudeDefinition>> = {
   geisterbahn,
   pizzabaeckerei,
   hauDenLukas,
+  wuerfelbauer,
+  lageplan,
+  gluecksrad,
 };
 
 export function budeDefinition(id: string): BudeDefinition {

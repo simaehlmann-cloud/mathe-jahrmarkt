@@ -8,6 +8,7 @@
   import { createRng, randomSeed } from '../../domain/rng';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
+  import Forscher from '../components/Forscher.svelte';
   import { app } from '../zustand.svelte';
 
   /**
@@ -19,7 +20,7 @@
   const raetsel = raetselDerWoche(woche);
   let raetselGeloest = $derived(p?.belohnt.includes(`raetsel:${woche}`) ?? false);
 
-  let phase = $state<'start' | 'aufgabe' | 'ende' | 'raetsel'>('start');
+  let phase = $state<'start' | 'aufgabe' | 'ende' | 'raetsel' | 'forscher'>('start');
   let aufgaben = $state<Knobelaufgabe[]>([]);
   let nr = $state(0);
   let schritt = $state(0);
@@ -152,6 +153,10 @@
           </div>
         </div>
       </div>
+      <button class="tafel karte raetsel-karte forscher-karte" onclick={() => (phase = 'forscher')}>
+        <span class="symbol" aria-hidden="true">∴</span>
+        <span><strong>Forscheraufgaben</strong><br />Aufgaben mit vielen Lösungen – wie viele findest du?</span>
+      </button>
       <button class="tafel karte raetsel-karte" onclick={() => { phase = 'raetsel'; rStatus = raetselGeloest ? 'richtig' : ''; }}>
         <span class="symbol" aria-hidden="true">?</span>
         <span><strong>Rätsel der Woche</strong><br />{raetsel.titel}{raetselGeloest ? ' – gelöst!' : ` · +${RAETSEL_BLOECKE} Blöcke`}</span>
@@ -213,6 +218,8 @@
           </div>
         </div>
       </div>
+    {:else if phase === 'forscher'}
+      <Forscher onende={() => (phase = 'start')} />
     {:else if phase === 'raetsel'}
       <div class="tafel aufgabe" class:wackeln>
         <div class="kopf">
@@ -292,6 +299,9 @@
   }
   .stufe strong {
     font-size: 1.2rem;
+  }
+  .forscher-karte {
+    background: linear-gradient(135deg, #e3f1ff, #fffdf7);
   }
   .raetsel-karte {
     display: flex;

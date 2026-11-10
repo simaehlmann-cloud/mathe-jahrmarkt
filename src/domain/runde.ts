@@ -7,6 +7,7 @@ import type { Ereignis } from './lernprofil/lernprofil';
 import type { Runde } from './profil';
 import type { Rng } from './rng';
 import type { Zwischenstand } from './pause';
+import { frischeAufgabe, leererVerlauf, merke, type Verlauf } from './abwechslung';
 
 export const PUNKTE_RICHTIG = 100;
 export const PUNKTE_SERIE = 20;
@@ -26,6 +27,10 @@ export interface RundenKonfig {
   probe?: Aufgabe | undefined;
   /** Unterbrochene Runde fortsetzen: ohne Probewurf, mit den bisherigen Zählern. */
   fortsetzen?: Zwischenstand | undefined;
+  /** Zuletzt gestellte Aufgaben und Motive dieser Bude (aus früheren Runden). */
+  verlauf?: Verlauf | undefined;
+  /** Feste Aufgaben statt erzeugter (Fundbüro). Die Runde hat dann genau so viele Hauptaufgaben. */
+  vorgaben?: readonly Aufgabe[] | undefined;
   jetzt?: () => number;
 }
 
@@ -56,12 +61,17 @@ export class Rundensteuerung {
   private durchhaltePunkte = 0;
   /** Beantwortete Hauptaufgaben (für den Zwischenstand). */
   private beantwortet = 0;
+  private verlaufStand: Verlauf;
   readonly ereignisse: Ereignis[] = [];
+  /** Hauptaufgaben dieser Runde (10, im Fundbüro so viele wie Vorgaben). */
+  readonly anzahl: number;
 
   constructor(konfig: RundenKonfig) {
     this.k = konfig;
     this.jetzt = konfig.jetzt ?? Date.now;
     this.start = this.jetzt();
+    this.verlaufStand = konfig.verlauf ?? leererVerlauf();
+    this.anzahl = konfig.vorgaben?.length || AUFGABEN_PRO_RUNDE;
     const f = konfig.fortsetzen;
     if (f) {
       this.hauptGestellt = f.gestellt;
@@ -89,7 +99,7 @@ export class Rundensteuerung {
   }
   /** Fortschritt in der Runde: gestellte Hauptaufgaben (1-basiert für die Anzeige). */
   get nummer(): number {
-    return this.phase === 'probe' ? 0 : Math.min(this.hauptGestellt, AUFGABEN_PRO_RUNDE);
+    return this.phase === 'probe' ? 0 : Math.min(this.hauptGestellt, this.anzahl);
   }
   get punkte(): number {
     return this.punkteSumme;
@@ -171,7 +181,7 @@ export class Rundensteuerung {
       this.phase = 'nochmal';
       return this.aufgabe;
     }
-    if (this.hauptGestellt >= AUFGABEN_PRO_RUNDE) {
+    if (this.hauptGestellt >= this.anzahl) {
       this.phase = 'fertig';
       return undefined;
     }
@@ -181,7 +191,7 @@ export class Rundensteuerung {
 
   /** Stand zum Merken beim Abbrechen; undefined, wenn noch nichts oder schon alles beantwortet ist. */
   zwischenstand(): Zwischenstand | undefined {
-    if (this.beantwortet < 1 || this.beantwortet >= AUFGABEN_PRO_RUNDE || this.phase === 'fertig') return undefined;
+    if (this.beantwortet < 1 || this.beantwortet >= this.anzahl || this.phase === 'fertig') return undefined;
     return { gestellt: this.beantwortet, richtig: this.richtig, serie: this.serie, punkte: this.punkteSumme, durchhalte: this.durchhaltePunkte };
   }
 
@@ -193,12 +203,21 @@ export class Rundensteuerung {
       dauerMs: Math.max(0, this.jetzt() - this.start),
       punkte: this.punkteSumme,
       richtig: this.richtig,
-      gesamt: Math.min(this.hauptGestellt, AUFGABEN_PRO_RUNDE),
+      gesamt: Math.min(this.hauptGestellt, this.anzahl),
     };
+  }
+
+  /** Verlauf mit allen in dieser Runde gestellten Hauptaufgaben – zum Speichern im Profil. */
+  get verlauf(): Verlauf {
+    return this.verlaufStand;
   }
 
   private neueHauptaufgabe(): Aufgabe {
     this.hauptGestellt++;
-    return this.k.erzeuge(this.k.stufe, this.k.rng, this.k.gewichtung);
+    const vorgabe = this.k.vorgaben?.[this.hauptGestellt - 1];
+    if (vorgabe) return vorgabe;
+    const a = frischeAufgabe(() => this.k.erzeuge(this.k.stufe, this.k.rng, this.k.gewichtung), this.verlaufStand);
+    this.verlaufStand = merke(this.verlaufStand, a);
+    return a;
   }
 }

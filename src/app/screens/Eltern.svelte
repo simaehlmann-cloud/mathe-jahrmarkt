@@ -7,6 +7,7 @@
   import { STATUS_TEXT, einschaetzen, elternSaetze } from '../../domain/lernprofil/lernprofil';
   import { SUBTRAKTION_NAMEN, type Schrift, type Subtraktionsverfahren } from '../../services/datenbestand';
   import { berichtDateiname, elternbericht } from '../../domain/elternbericht';
+  import Ueber from '../components/Ueber.svelte';
   import { PREIS_ANZEIGE } from '../../services/kauf';
   import { sicherungEinspielen, sicherungErstellen } from '../../services/sicherung';
   import type { Stimme } from '../../services/sprache';
@@ -14,13 +15,14 @@
   import Icon from '../components/Icon.svelte';
   import { app } from '../zustand.svelte';
 
-  type Reiter = 'bericht' | 'lernprofil' | 'paket' | 'einstellungen' | 'profile';
+  type Reiter = 'bericht' | 'lernprofil' | 'paket' | 'einstellungen' | 'profile' | 'ueber';
   const REITER: { id: Reiter; name: string }[] = [
     { id: 'bericht', name: 'Wochenbericht' },
     { id: 'lernprofil', name: 'Lernprofil' },
     { id: 'paket', name: 'Zusatzpaket' },
     { id: 'einstellungen', name: 'Einstellungen' },
     { id: 'profile', name: 'Profile und Sicherung' },
+    { id: 'ueber', name: 'Über die App' },
   ];
 
   let offen = $state(false);
@@ -323,6 +325,10 @@
             <input type="checkbox" checked={app.einstellungen.animationenReduziert} onchange={(e) => app.aendereEinstellungen({ animationenReduziert: (e.target as HTMLInputElement).checked })} />
             Animationen und Bewegung reduzieren
           </label>
+          <label class="schalter">
+            <input type="checkbox" checked={app.einstellungen.stimmung} onchange={(e) => app.aendereEinstellungen({ stimmung: (e.target as HTMLInputElement).checked })} />
+            Tageszeit und Jahreszeit auf dem Jahrmarkt zeigen (Abendlichter, Laub, Schnee, Blüten)
+          </label>
           <fieldset>
             <legend>Schriftgröße</legend>
             {#each [['normal', 'Normal'], ['gross', 'Groß'], ['sehrGross', 'Sehr groß']] as [wert, name] (wert)}
@@ -341,7 +347,7 @@
           </label>
           <p class="hinweis">Welches Verfahren die Schule nutzt, legt dort die Fachkonferenz fest. Es wird in der Rechen-Werkstatt verwendet.</p>
         </section>
-      {:else}
+      {:else if reiter === 'profile'}
         <section>
           <h2>Profile</h2>
           <p class="hinweis">Jedes Kind hat ein eigenes Profil mit eigenem Fortschritt (bis zu vier). Zum Wechseln tippt man im Spiel oben auf die eigene Figur.</p>
@@ -382,6 +388,8 @@
           </label>
           <button class="ticket" disabled={!einspielText.trim()} onclick={einspielen}>Sicherung einspielen</button>
         </section>
+      {:else if reiter === 'ueber'}
+        <Ueber />
       {/if}
     </div>
   </div>

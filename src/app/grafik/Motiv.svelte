@@ -155,5 +155,48 @@
     {#each [-24, -12, 0, 12, 24] as y (y)}<path d="M-6 {y} h12" fill="none" />{/each}
     <rect x="-3" y="10" width="6" height="8" fill="#e23a4e" />
     <rect x="18" y="14" width="24" height="10" rx="3" fill="#b9763f" transform="rotate(-30 30 19)" />
+  {:else if bude === 'wuerfelbauer'}
+    <!-- kleine Treppe aus Würfeln im Schrägbild -->
+    {#each [[-36, 28], [-14, 28], [8, 28], [-14, 6], [8, 6], [8, -16]] as [number, number][] as [x, y] (`${x}${y}`)}
+      <path d="M{x} {y} h22 v-22 h-22 z" fill="#e86f51" />
+      <path d="M{x} {y - 22} l9 -9 h22 l-9 9 z" fill="#f6a58d" />
+      <path d="M{x + 22} {y} l9 -9 v-22 l-9 9 z" fill="#b84a33" />
+    {/each}
+  {:else if bude === 'lageplan'}
+    <rect x="-40" y="-30" width="80" height="60" fill="#e9f5df" />
+    {#each [-20, 0, 20] as x (x)}<path d="M{x} -30 v60" fill="none" stroke-width="1" />{/each}
+    {#each [-10, 10] as y (y)}<path d="M-40 {y} h80" fill="none" stroke-width="1" />{/each}
+    <rect x="-40" y="-30" width="80" height="60" fill="none" stroke-width="2.5" />
+    <rect x="-17" y="-7" width="14" height="14" rx="3" fill="#e23a4e" />
+    <path d="M30 -24 v16 M30 -24 l10 4 -10 4" fill="#ffc62b" />
+  {:else if bude === 'gluecksrad'}
+    <g class="dreht">
+      {#each ['#e23a4e', '#3c78d8', '#ffc62b', '#3fae6a', '#e23a4e', '#3c78d8'] as f, i (i)}
+        <path d="M0 0 L0 -30 A30 30 0 0 1 25.98 -15 Z" transform="rotate({i * 60})" fill={f} stroke-width="1.5" />
+      {/each}
+    </g>
+    <circle r="30" fill="none" stroke-width="3" />
+    <circle r="5" fill={W} />
+    <path d="M-6 -40 h12 l-6 12 z" fill={T} />
   {/if}
 </g>
+
+<style>
+  /* Kleine Bewegung an der Bude: Das Glücksrad dreht sich langsam (aus bei reduzierter Bewegung). */
+  .dreht {
+    animation: drehen 14s linear infinite;
+  }
+  @keyframes drehen {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dreht {
+      animation: none;
+    }
+  }
+  :global([data-ruhig='1']) .dreht {
+    animation: none;
+  }
+</style>

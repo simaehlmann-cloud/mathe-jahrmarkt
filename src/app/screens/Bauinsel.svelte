@@ -1,7 +1,27 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
   import { BLOCKARTEN } from '../../domain/bau';
-  import { EINRICHTUNG, LANDSCHAFT, INSEL, boeden, nimmAn, setzeAn, wegAufInsel, zielAufFeld } from '../../domain/insel';
+  import {
+    BREITE,
+    EINRICHTUNG,
+    GRUNDSTUECKE,
+    INSEL_AUFTRAG_BLOECKE,
+    INSEL_AUFTRAG_TALER,
+    LANDSCHAFT,
+    TIERE,
+    boeden,
+    nimmAn,
+    nimmTier,
+    offenerInselAuftrag,
+    pruefeInselAuftrag,
+    setzeAn,
+    setzeTier,
+    tierArt,
+    tiereBummeln,
+    wegAufInsel,
+    zielAufFeld,
+    type InselStand,
+  } from '../../domain/insel';
   import type { Seite } from '../grafik/InselWelt.svelte';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
@@ -13,6 +33,44 @@
    * Einrichtung aus dem Andenkenstand. Die Figur läuft per Antippen; Treppen führen hinauf, Türen hindurch.
    */
   let p = $derived(app.profil);
+  /**
+   * Figur und Tiere bewegen sich zuerst nur hier (schnell, ohne Speichern bei jedem Schritt);
+   * gespeichert wird am Ende eines Wegs, beim Bauen und beim Verlassen.
+   */
+  let lokalFigur = $state<InselStand['figur'] | null>(null);
+  let lokalTiere = $state<InselStand['tiere'] | null>(null);
+  let stand = $derived.by((): InselStand | null => {
+    if (!p) return null;
+    if (!lokalFigur && !lokalTiere) return p.insel;
+    return { ...p.insel, figur: lokalFigur ?? p.insel.figur, tiere: lokalTiere ?? p.insel.tiere };
+  });
+  let auftrag = $derived(stand ? offenerInselAuftrag(stand) : undefined);
+  let auftragOffen = $state(false);
+  const SCHRITT_MS = 200;
+
+  /** Lokale Bewegung ins Profil übernehmen. */
+  function sichern() {
+    if (!lokalFigur && !lokalTiere) return;
+    const f = lokalFigur;
+    const t = lokalTiere;
+    app.aendereProfil((r) => ({ ...r, insel: { ...r.insel, ...(f ? { figur: f } : {}), ...(t ? { tiere: t } : {}) } }));
+    lokalFigur = null;
+    lokalTiere = null;
+  }
+
+  /** Neuer Inselstand nach Bauen/Abbauen; prüft dabei den Bauauftrag. */
+  function uebernehmen(neu: InselStand, bloecke: number) {
+    lokalFigur = null;
+    lokalTiere = null;
+    const fertig = pruefeInselAuftrag(neu);
+    if (fertig) {
+      app.aendereProfil((r) => ({ ...r, insel: fertig.stand, taler: r.taler + INSEL_AUFTRAG_TALER, bau: { ...r.bau, bloecke: bloecke + INSEL_AUFTRAG_BLOECKE } }));
+      app.spieleKlang('jubel');
+      app.melde(`Bauauftrag geschafft: ${fertig.auftrag.titel}! +${INSEL_AUFTRAG_TALER} Taler, +${INSEL_AUFTRAG_BLOECKE} Blöcke`);
+      return;
+    }
+    app.aendereProfil((r) => ({ ...r, insel: neu, bau: { ...r.bau, bloecke } }));
+  }
   let modus = $state<'laufen' | 'bauen' | 'abbauen'>('laufen');
   let art = $state(2);
   let drehung = $state(0);
@@ -49,72 +107,127 @@
     return seite === 'links' ? (links[r] ?? [1, 0]) : seite === 'rechts' ? (rechts[r] ?? [0, 1]) : [0, 0];
   }
 
-  function tippe(x: number, y: number, z: number, seite: Seite) {
+  function tippe(x: number, y: number, z: number, seiteRoh: Seite) {
     const q = app.profil;
-    if (!q || laeuft) return;
+    const st = stand;
+    if (!q || !st || laeuft) return;
+    // Bodenkacheln (z = −1) zählen immer als Oberseite, auch an der Uferkante
+    const seite: Seite = z < 0 ? 'oben' : seiteRoh;
     markiert = { x, y };
     setTimeout(() => (markiert = null), 400);
     if (modus === 'laufen') {
-      const ziel = zielAufFeld(q.insel, x, y, seite === 'oben' ? z + 1 : undefined);
+      const ziel = zielAufFeld(st, x, y, seite === 'oben' ? z + 1 : undefined);
       if (!ziel) {
         app.melde('Da kannst du nicht hin.');
         return;
       }
-      const weg = wegAufInsel(q.insel, q.insel.figur, ziel);
+      const weg = wegAufInsel(st, st.figur, ziel);
       if (weg.length === 0) {
-        app.melde(boeden(q.insel, x, y).length ? 'Da kommst du nicht hin. Baue eine Treppe oder eine Tür!' : 'Da kannst du nicht hin.');
+        app.melde(boeden(st, x, y).length ? 'Da kommst du nicht hin. Baue eine Treppe oder eine Tür!' : 'Da kannst du nicht hin.');
         return;
       }
       laufe(weg.slice(1));
       return;
     }
     if (modus === 'bauen') {
-      // Wie in Bauspielen: an die angetippte Fläche setzen (oben drauf oder seitlich daneben)
       const [dx, dy] = nachbar(seite);
-      const e = setzeAn(q.insel, x + dx, y + dy, seite === 'oben' ? z + 1 : z, art, q.bau.bloecke);
+      const zz = seite === 'oben' ? z + 1 : z;
+      if (tierArt(art)) {
+        const e = setzeTier(st, x + dx, y + dy, zz, art);
+        if (!e.ok) {
+          app.melde(e.grund === 'hoch' ? 'Mehr Tiere passen nicht auf die Inseln.' : e.grund === 'feld' ? 'Hier kann kein Tier stehen.' : (MELDUNG[e.grund] ?? 'Geht nicht.'));
+          return;
+        }
+        uebernehmen(e.stand, q.bau.bloecke);
+        app.spieleKlang('pop');
+        return;
+      }
+      // Wie in Bauspielen: an die angetippte Fläche setzen (oben drauf oder seitlich daneben)
+      const e = setzeAn(st, x + dx, y + dy, zz, art, q.bau.bloecke);
       if (!e.ok) {
         app.melde(MELDUNG[e.grund] ?? 'Geht nicht.');
         return;
       }
-      app.aendereProfil((r) => ({ ...r, insel: e.stand, bau: { ...r.bau, bloecke: e.bloecke } }));
+      uebernehmen(e.stand, e.bloecke);
       app.spieleKlang('pop');
       return;
     }
-    if (z < (LANDSCHAFT.hoehe[y * INSEL + x] ?? 0)) {
+    // Abbauen: zuerst ein Tier auf dem Feld, sonst der angetippte Teil
+    const ohneTier = nimmTier(st, x, y);
+    if (ohneTier) {
+      uebernehmen(ohneTier, q.bau.bloecke);
+      app.spieleKlang('tipp');
+      return;
+    }
+    if (z < (LANDSCHAFT.hoehe[y * BREITE + x] ?? 0)) {
       app.melde('Die Landschaft bleibt stehen. Abbauen kannst du nur, was du gebaut hast.');
       return;
     }
-    const e = nimmAn(q.insel, x, y, z, q.bau.bloecke);
+    const e = nimmAn(st, x, y, z, q.bau.bloecke);
     if (!e.ok) {
       app.melde(MELDUNG[e.grund] ?? 'Geht nicht.');
       return;
     }
-    app.aendereProfil((r) => ({ ...r, insel: e.stand, bau: { ...r.bau, bloecke: e.bloecke } }));
+    uebernehmen(e.stand, e.bloecke);
     app.spieleKlang('tipp');
   }
 
   function laufe(weg: { x: number; y: number; z: number }[]) {
     if (weg.length === 0 || zerstoert) {
       laeuft = false;
+      sichern();
       return;
     }
     laeuft = true;
     const [naechster, ...rest] = weg;
     if (!naechster) return;
-    app.aendereProfil((r) => ({ ...r, insel: { ...r.insel, figur: naechster } }));
-    void tick().then(() => kamera(false));
-    timer = setTimeout(() => laufe(rest), app.einstellungen.animationenReduziert ? 40 : 180);
+    lokalFigur = naechster;
+    kamera(true);
+    timer = setTimeout(() => laufe(rest), app.einstellungen.animationenReduziert ? 40 : SCHRITT_MS);
   }
 
-  const inventar = $derived(p ? EINRICHTUNG.filter((e) => (p.insel.inventar[String(e.id)] ?? 0) > 0) : []);
+  const inventar = $derived(p ? [...EINRICHTUNG, ...TIERE].filter((e) => (p.insel.inventar[String(e.id)] ?? 0) > 0) : []);
   const istMoebel = $derived(art >= 100);
 
+  /** Zum Rand des Grundstücks des aktuellen Auftrags laufen. */
+  function zumGrundstueck() {
+    const st = stand;
+    if (!st || !auftrag) return;
+    const g = GRUNDSTUECKE.find((x) => x.id === auftrag.grundstueck);
+    if (!g) return;
+    modus = 'laufen';
+    // Ein freies Feld direkt vor dem Grundstück (unten Mitte), notfalls ein anderes Randfeld
+    const kandidaten: [number, number][] = [[g.x0 + 1, g.y0 + g.n], [g.x0 - 1, g.y0 + 1], [g.x0 + g.n, g.y0 + 1], [g.x0 + 1, g.y0 - 1], [g.x0 + 1, g.y0 + 1]];
+    for (const [x, y] of kandidaten) {
+      const ziel = zielAufFeld(st, x, y);
+      if (!ziel) continue;
+      const weg = wegAufInsel(st, st.figur, ziel);
+      if (weg.length) {
+        auftragOffen = false;
+        laufe(weg.slice(1));
+        return;
+      }
+    }
+    app.melde('Da kommst du gerade nicht hin.');
+  }
+
+  let bummeln: ReturnType<typeof setInterval> | undefined;
   onMount(() => {
     void tick().then(() => kamera(false));
+    // Tiere bummeln alle paar Sekunden ein Feld weiter (nur angezeigt; gespeichert beim Verlassen)
+    if (!app.einstellungen.animationenReduziert)
+      bummeln = setInterval(() => {
+        const st = stand;
+        if (!st || st.tiere.length === 0 || laeuft) return;
+        const neu = tiereBummeln(st, Math.random);
+        if (neu !== st) lokalTiere = neu.tiere;
+      }, 2600);
   });
   onDestroy(() => {
     zerstoert = true;
     clearTimeout(timer);
+    clearInterval(bummeln);
+    sichern();
   });
 </script>
 
@@ -134,8 +247,27 @@
     </div>
   {:else}
     <div class="feld" bind:this={feld}>
-      <InselWelt bind:this={welt} stand={p.insel} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} ontippe={tippe} />
+      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} schrittMs={SCHRITT_MS} ontippe={tippe} />{/if}
     </div>
+    {#if auftragOffen}
+      <div class="auftrag karte" role="region" aria-label="Bauauftrag">
+        {#if auftrag}
+          {@const g = GRUNDSTUECKE.find((x) => x.id === auftrag.grundstueck)}
+          <h2>{auftrag.titel}</h2>
+          <p>{auftrag.text}</p>
+          <p class="tipp">Tipp: {auftrag.tipp}</p>
+          <p class="klein">Das {g?.name ?? 'Grundstück'} liegt auf der zweiten Insel hinter der Brücke und ist gelb markiert. Belohnung: {INSEL_AUFTRAG_TALER} Taler und {INSEL_AUFTRAG_BLOECKE} Blöcke.</p>
+          <div class="knoepfe">
+            <button class="ticket gelb" onclick={zumGrundstueck}>Hinlaufen</button>
+            <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Bauplatz-Aufträge</button>
+          </div>
+        {:else}
+          <h2>Alle Inselaufträge geschafft!</h2>
+          <p>Du hast alle Grundstücke bebaut. Weitere Aufträge gibt es auf dem Bauplatz.</p>
+          <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Zum Bauplatz</button>
+        {/if}
+      </div>
+    {/if}
     <div class="werkzeug">
       <div class="zeile">
         <div class="modus" role="radiogroup" aria-label="Was möchtest du tun?">
@@ -164,7 +296,7 @@
         <button class="rund" onclick={() => { massstab = Math.max(0.6, massstab - 0.2); void tick().then(() => kamera()); }} aria-label="Kleiner">−</button>
         <button class="rund" onclick={() => { massstab = Math.min(1.8, massstab + 0.2); void tick().then(() => kamera()); }} aria-label="Größer">+</button>
         <button class="rund" onclick={() => kamera(true)} aria-label="Wo bin ich?">◎</button>
-        <button class="ticket hell auftraege" onclick={() => app.zeige({ name: 'bauplatz' })}>Bauaufträge</button>
+        <button class="ticket hell auftraege" onclick={() => (auftragOffen = !auftragOffen)} aria-expanded={auftragOffen}>Bauauftrag</button>
       </div>
     </div>
   {/if}
@@ -228,6 +360,39 @@
   .zeile.klein .rund {
     width: 44px;
     height: 44px;
+  }
+  .auftrag {
+    background: var(--papier);
+    border: 3px solid var(--tinte);
+    border-radius: 16px;
+    box-shadow: 0 6px 0 rgb(31 42 107 / 0.2);
+    max-height: 60%;
+    overflow: auto;
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 190px;
+    z-index: 3;
+    padding: 12px 16px;
+    display: grid;
+    gap: 6px;
+    max-width: 30rem;
+    margin: 0 auto;
+  }
+  .auftrag h2 {
+    font-size: 1.15rem;
+  }
+  .auftrag .tipp {
+    font-weight: 700;
+    color: var(--tinte-weich);
+  }
+  .auftrag .klein {
+    font-size: 0.9rem;
+  }
+  .auftrag .knoepfe {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .auftraege {
     margin-left: auto;

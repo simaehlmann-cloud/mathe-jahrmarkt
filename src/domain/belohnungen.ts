@@ -101,7 +101,8 @@ export const KARTEN: readonly Sammelkarte[] = [
       seltenheit: 'selten',
       bild: { symbol: 'feuerwerk' },
       farbe: g.farbe,
-      hat: (p) => gasseLaeuft(p, g.id),
+      // Einmal gefeiert bleibt die Karte, auch wenn später neue Buden in die Gasse kommen
+      hat: (p) => p.belohnt.includes(`gasse:${g.id}`) || gasseLaeuft(p, g.id),
     }),
   ),
   {
@@ -142,7 +143,7 @@ export const KARTEN: readonly Sammelkarte[] = [
   },
   {
     id: 'sommerfest', titel: 'Sommerfest', text: 'Der ganze Jahrmarkt läuft wieder. Danke!', hinweis: 'Bring alle Buden auf dem Jahrmarkt mindestens auf Bronze.',
-    seltenheit: 'legendaer', bild: { symbol: 'feuerwerk' }, farbe: '#e23a4e', hat: (p) => sommerfest(p),
+    seltenheit: 'legendaer', bild: { symbol: 'feuerwerk' }, farbe: '#e23a4e', hat: (p) => p.belohnt.includes('sommerfest') || sommerfest(p),
   },
 ];
 

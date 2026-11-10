@@ -1,4 +1,4 @@
-# Code-Review Version 0.7.0
+# Code-Review bis Version 0.11.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -138,13 +138,28 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Tablet | Oberfläche auf dem iPad zu klein | Zoom 1,2 bzw. 1,4 für die ganze Oberfläche, PixiJS mit passender Auflösung |
 | Oberfläche | Fortschrittsschild unter dem Riesenrad wurde am Rand abgeschnitten | zweizeilig und schmaler |
 
+## Neu in 0.11.0 geprüft
+
+| Bereich | Befund | Lösung |
+| --- | --- | --- |
+| Abwechslung | dieselbe Form (Kreis) oder dasselbe Schätz-Ding (Ameise) kam mehrmals hintereinander | jede Bude merkt sich 40 Aufgaben und die letzten Motive, neue Aufgaben werden bis zu 16-mal neu gezogen; Pools vergrößert (46 Schätz-Dinge, Pizzabeläge, Ecken zählen, Drehfolgen); Test: zehn Runden ohne Wiederholung je Bude |
+| Karte | man sah nicht, welche Stufe an einer Bude geschafft ist | Medaille B/S/G an jeder Bude, auch im Bildschirmleser-Text |
+| Riesenrad | Gondeln standen still, „1 von 24 Gondeln laufen wieder“ passte nicht | Rad dreht sich, Gondeln hängen senkrecht, „x von 27 Gondeln leuchten“; Antippen startet die Fahrt mit Übersicht und „Nächster Schritt“ |
+| Flinka | Antippen bewirkte nichts | Tipp: offene Aufträge, Fundbüro, Frischmacher oder nächste Stufe, Wochenziel, Rechentrick oder Knobelfrage |
+| Rechtliches | Impressum, Datenschutz, „Über“ fehlten | Elternbereich → Über die App; Daten von Wisdompeak Apps wie bei MatheSnack; Lizenzliste wird beim Bauen erzeugt; Webseiten in `docs/` (Test hält sie aktuell) |
+| Bauinsel | Figur lief ruckelig, Welt zu klein | Figur gleitet (Tween), Laufen als lokaler Zustand, Speichern am Ende; zweite Insel mit Brücke, Fähre von der Karte, Tiere, Shop nach Oberbegriffen, sechs Bauaufträge auf Bauplätzen; alte Inseln werden übernommen (Tests) |
+| Neue Buden | Würfelgebäude, Lageplan, Glücksrad fehlten | drei Auswahl-Buden mit Bild; Eigenschaftstests über je 1 200 Aufgaben (Antwort passt zum Bild, Optionen eindeutig, Weg nachgegangen) |
+| Sternenmarkt | neue Tagesbuden hätten den schon offenen Sternenmarkt wieder geschlossen | Bedingung bleibt Silber an den 24 ursprünglichen Buden; schon gefeierte Gassen, Sommerfest und Ränge bleiben erhalten |
+| Fundbüro | Fehler wurden nicht gezielt wiederholt | Fächer nach 1, 3, 7 Tagen, Abholen als kurze Runde in der Bude mit ähnlichen Aufgaben, zählt nicht für Rekorde (Tests) |
+| Geschwister | Wettbewerb nur über die Bestenliste | Duell mit gleichen Aufgaben, Ergebnis des ersten Kindes bleibt verdeckt (Ablauftest rechnet die Aufgaben aus) |
+| Menü | mit zwei neuen Einträgen passte das Menü im Querformat nicht mehr | Menü blättert, bei wenig Höhe zweispaltig |
+
 ## Offen
 
 | Stufe | Befund | Vorschlag |
 | --- | --- | --- |
 | kritisch vor Veröffentlichung | Kauf ist angebunden, aber noch nicht mit echten Store-Konten geprüft | Produkt anlegen, Sandbox (iOS) und Lizenz-Tester (Android) |
 | wichtig | Sprachausgabe hängt von installierten Systemstimmen ab; ohne deutsche Offline-Stimme bleibt es still | Hinweis im Elternbereich ist da; später eingesprochene Aufnahmen |
-| Verbesserung | Bauaufträge auf der Bauinsel selbst | bisher führt ein Knopf zum Bauplatz |
 | Verbesserung | Sicherung läuft über Kopieren und Einfügen von Text | das Teilen-Plugin ist jetzt da (PDF), Sicherung als Datei wäre der nächste Schritt |
 
 ## Prüfstand

@@ -1,7 +1,7 @@
 {
   "name": "mathe-jahrmarkt",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Mathe-Jahrmarkt – Fit für Klasse 5. Spielerische Vorbereitung auf den Übergang zur weiterführenden Schule.",
   "type": "module",
   "scripts": {
@@ -15,7 +15,8 @@
     "e2e": "node scripts/e2e.mjs",
     "verify": "npm run check && npm test && npm run build && npm run store-check",
     "cap:sync": "npm run build && cap sync",
-    "store-bilder": "node scripts/store-bilder.mjs"
+    "store-bilder": "node scripts/store-bilder.mjs",
+    "rechtliches": "node scripts/rechtliches-seiten.mjs"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.2",

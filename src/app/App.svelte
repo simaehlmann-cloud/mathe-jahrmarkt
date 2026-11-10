@@ -14,6 +14,8 @@
   import Blitzrechnen from './screens/Blitzrechnen.svelte';
   import Knobelzelt from './screens/Knobelzelt.svelte';
   import Bauinsel from './screens/Bauinsel.svelte';
+  import Fundbuero from './screens/Fundbuero.svelte';
+  import Duell from './screens/Duell.svelte';
   import { erstelleMusik } from '../services/musik';
   import { app } from './zustand.svelte';
 
@@ -71,7 +73,7 @@
   {:else if b.name === 'bude'}
     {#key b.bude}<BudeVorplatz bude={b.bude} />{/key}
   {:else if b.name === 'spiel'}
-    {#key `${b.bude}-${b.stufe}-${b.n ?? 0}`}<Spiel bude={b.bude} stufe={b.stufe} fortsetzen={b.fortsetzen ?? false} />{/key}
+    {#key `${b.bude}-${b.stufe}-${b.n ?? 0}-${b.fundbuero ?? false}`}<Spiel bude={b.bude} stufe={b.stufe} fortsetzen={b.fortsetzen ?? false} fundbuero={b.fundbuero ?? false} />{/key}
   {:else if b.name === 'profil'}
     <MatheProfil />
   {:else if b.name === 'andenken'}
@@ -92,6 +94,10 @@
     <Knobelzelt />
   {:else if b.name === 'insel'}
     <Bauinsel />
+  {:else if b.name === 'fundbuero'}
+    <Fundbuero />
+  {:else if b.name === 'duell'}
+    <Duell />
   {/if}
 
   {#if app.ladefehler && b.name !== 'laden'}
