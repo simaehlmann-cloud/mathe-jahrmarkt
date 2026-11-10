@@ -32,6 +32,8 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
       return b.fundbuero ? { name: 'fundbuero' } : { name: 'bude', bude: b.bude };
     case 'figur':
       return { name: 'profil' };
+    case 'ueber':
+      return b.von === 'start' || !hatProfil ? { name: 'start' } : { name: 'jahrmarkt' };
   }
 }
 

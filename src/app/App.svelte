@@ -16,6 +16,7 @@
   import Bauinsel from './screens/Bauinsel.svelte';
   import Fundbuero from './screens/Fundbuero.svelte';
   import Duell from './screens/Duell.svelte';
+  import UeberSeite from './screens/UeberSeite.svelte';
   import { erstelleMusik } from '../services/musik';
   import { app } from './zustand.svelte';
 
@@ -93,11 +94,13 @@
   {:else if b.name === 'knobel'}
     <Knobelzelt />
   {:else if b.name === 'insel'}
-    <Bauinsel />
+    <Bauinsel anreise={b.anreise} />
   {:else if b.name === 'fundbuero'}
     <Fundbuero />
   {:else if b.name === 'duell'}
     <Duell />
+  {:else if b.name === 'ueber'}
+    <UeberSeite abschnitt={b.abschnitt} von={b.von} />
   {/if}
 
   {#if app.ladefehler && b.name !== 'laden'}

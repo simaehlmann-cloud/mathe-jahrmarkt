@@ -13,7 +13,10 @@ import { BLOCKARTEN, MAX_HOEHE } from './bau';
 export const INSEL = 24;
 /** Breite des Bauplans: erste Insel, Wasserstraße mit Brücke, zweite Insel. */
 export const BREITE = 44;
-export const HOEHE = INSEL;
+/** Höhe des Bauplans: oben die beiden ersten Inseln, darunter (seit 0.11.1) Steg und Strandinsel. */
+export const HOEHE = 40;
+/** Frühere Höhe (bis 0.11.0), für das Umrechnen alter Spielstände. */
+const HOEHE_ALT = INSEL;
 export const INSEL_MAX = MAX_HOEHE;
 
 export type Gelaende = 'gras' | 'sand' | 'wasser' | 'weg' | 'bruecke' | 'blumen';
@@ -111,6 +114,15 @@ export const BRUECKE = { x0: 24, x1: 27, y: 11 } as const;
 /** Mitte und Halbachsen der zweiten Insel. */
 const INSEL2 = { x: 35.5, y: 11.5, rx: 8.2, ry: 9.2 };
 export const aufInsel2 = (x: number, y: number): boolean => Math.hypot((x + 0.5 - INSEL2.x) / INSEL2.rx, (y + 0.5 - INSEL2.y) / INSEL2.ry) < 1;
+/** Dritte Insel (Strandinsel) unter der zweiten, über eine zweite Brücke erreichbar. */
+const INSEL3 = { x: 33.5, y: 31.2, rx: 10.4, ry: 7.4 };
+const abstand3 = (x: number, y: number): number => Math.hypot((x + 0.5 - INSEL3.x) / INSEL3.rx, (y + 0.5 - INSEL3.y) / INSEL3.ry);
+export const aufInsel3 = (x: number, y: number): boolean => abstand3(x, y) < 1;
+/** Zweite Brücke: von der zweiten Insel nach Süden zur Strandinsel (zwei Felder breit). */
+export const BRUECKE2 = { x: 34, y0: 21, y1: 23 } as const;
+/** Bootssteg am Strand der ersten Insel; am Ende liegt das Boot zurück zum Jahrmarkt. */
+export const STEG = { x: 11, y0: 24, y1: 25 } as const;
+export const BOOT = { x: 11, y: 26 } as const;
 
 export const LANDSCHAFT: Landschaft = (() => {
   const n = BREITE * HOEHE;
@@ -152,9 +164,31 @@ export const LANDSCHAFT: Landschaft = (() => {
       if (dHuegel < 1) hoehe[i] = 1;
       if ((y === BRUECKE.y || y === BRUECKE.y + 1) && x <= 35) art[i] = 'weg';
     }
+  // Zweite Brücke nach Süden und Weg dorthin
+  for (let y = BRUECKE.y + 2; y < BRUECKE2.y0; y++) for (const x of [BRUECKE2.x, BRUECKE2.x + 1]) if (aufInsel2(x, y) && art[idx(x, y)] !== 'wasser') art[idx(x, y)] = 'weg';
+  for (let y = BRUECKE2.y0; y <= BRUECKE2.y1; y++) for (const x of [BRUECKE2.x, BRUECKE2.x + 1]) art[idx(x, y)] = 'bruecke';
+  // Dritte Insel: breiter Sandstrand, Wiese, Lagune, Düne, Blumen
+  for (let y = BRUECKE2.y1 + 1; y < HOEHE; y++)
+    for (let x = 0; x < BREITE; x++) {
+      const d = abstand3(x, y);
+      if (d >= 1) continue;
+      const i = idx(x, y);
+      art[i] = d > 0.74 ? 'sand' : 'gras';
+      if (Math.hypot((x - 27) / 2.2, (y - 31.5) / 1.6) < 1) art[i] = 'wasser';
+      else if (Math.hypot((x - 27) / 3, (y - 31.5) / 2.3) < 1) art[i] = 'sand';
+      if (Math.hypot((x - 31) / 2.2, (y - 35) / 1.4) < 1) art[i] = 'blumen';
+      const dDuene = Math.hypot((x - 40) / 2.6, (y - 31) / 2.2);
+      if (dDuene < 0.55) hoehe[i] = 2;
+      else if (dDuene < 1) hoehe[i] = 1;
+      if ((x === BRUECKE2.x || x === BRUECKE2.x + 1) && y <= 30) art[i] = 'weg';
+      if (y === 30 && x >= 30 && x <= 36) art[i] = 'weg';
+    }
+  // Bootssteg auf der ersten Insel (unten am Strand)
+  for (let y = STEG.y0; y <= STEG.y1; y++) for (const x of [STEG.x, STEG.x + 1]) art[idx(x, y)] = 'bruecke';
   // Bäume (fest), nicht auf Weg, Wasser oder Bauplätzen
   for (const [x, y] of [[1, 9], [2, 14], [1, 19], [7, 1], [10, 2], [14, 1], [22, 14], [21, 16], [22, 20], [8, 22], [16, 22], [3, 22], [20, 9], [6, 7], [8, 14],
-    [33, 4], [41, 11], [36, 20], [30, 19], [42, 15], [29, 8]] as [number, number][]) baum[idx(x, y)] = true;
+    [33, 4], [41, 11], [36, 20], [30, 19], [42, 15], [29, 8],
+    [25, 28], [29, 26], [38, 26], [32, 33], [36, 36], [42, 34], [26, 35]] as [number, number][]) baum[idx(x, y)] = true;
   // Leichte Erhebung am Steg: Treppenstufen auf den Hügel bei (6..7, 4)
   hoehe[idx(7, 4)] = 1;
   return { art, hoehe, baum };
@@ -412,12 +446,14 @@ export interface Grundstueck {
   y0: number;
   /** Seitenlänge (quadratisch). */
   n: number;
+  /** Wo er liegt, für die Wegbeschreibung im Auftrag. */
+  wo: string;
 }
-/** Drei Grundstücke auf der zweiten Insel, je 4 × 4 Felder. */
+/** Drei Bauplätze, je 4 × 4 Felder: A und B auf der zweiten Insel, C (seit 0.11.1) auf der Strandinsel. */
 export const GRUNDSTUECKE: readonly Grundstueck[] = [
-  { id: 'a', name: 'Grundstück A', x0: 30, y0: 5, n: 4 },
-  { id: 'b', name: 'Grundstück B', x0: 36, y0: 13, n: 4 },
-  { id: 'c', name: 'Grundstück C', x0: 30, y0: 12, n: 4 },
+  { id: 'a', name: 'Bauplatz A', x0: 30, y0: 5, n: 4, wo: 'auf der zweiten Insel hinter der Brücke' },
+  { id: 'b', name: 'Bauplatz B', x0: 36, y0: 13, n: 4, wo: 'auf der zweiten Insel, rechts vom Weg' },
+  { id: 'c', name: 'Bauplatz C', x0: 30, y0: 26, n: 4, wo: 'auf der Strandinsel, über die zweite Brücke nach unten' },
 ];
 export const imGrundstueck = (g: Grundstueck, x: number, y: number): boolean => x >= g.x0 && y >= g.y0 && x < g.x0 + g.n && y < g.y0 + g.n;
 
@@ -451,7 +487,7 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     id: 'flaeche8',
     grundstueck: 'a',
     titel: 'Fläche: 8 Felder',
-    text: 'Belege auf Grundstück A genau 8 Felder mit Blöcken – eine Lage, alles auf dem Boden.',
+    text: 'Belege auf Bauplatz A genau 8 Felder mit Blöcken – eine Lage, alles auf dem Boden.',
     tipp: 'Ein Rechteck aus 2 Reihen mit je 4 Feldern hat 2 · 4 = 8 Felder.',
     pruefe: (s, g) => felder(g).filter(([x, y]) => { const u = unten(s, x, y); return u !== null && istBlock(u); }).length === 8,
   },
@@ -459,7 +495,7 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     id: 'umfang',
     grundstueck: 'a',
     titel: 'Umfang: ein Zaun rundherum',
-    text: 'Baue auf Grundstück A ganz außen herum einen Zaun oder eine Mauer – jedes Randfeld bekommt ein Teil.',
+    text: 'Baue auf Bauplatz A ganz außen herum einen Zaun oder eine Mauer – jedes Randfeld bekommt ein Teil.',
     tipp: 'Ein Quadrat mit 4 Feldern Seitenlänge hat 12 Randfelder: 4 + 4 + 2 + 2.',
     pruefe: (s, g) => randFelder(g).every(([x, y]) => unten(s, x, y) !== null),
   },
@@ -467,7 +503,7 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     id: 'turm5',
     grundstueck: 'b',
     titel: 'Turm: 5 Blöcke hoch',
-    text: 'Baue auf Grundstück B einen Turm, der genau 5 Blöcke hoch ist.',
+    text: 'Baue auf Bauplatz B einen Turm, der genau 5 Blöcke hoch ist.',
     tipp: 'Zähle beim Bauen mit: 1, 2, 3, 4, 5.',
     pruefe: (s, g) => felder(g).some(([x, y]) => { const st = s.stapel[idx(x, y)] ?? []; return st.length === 5 && st.every((a) => istBlock(a)); }),
   },
@@ -475,7 +511,7 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     id: 'wuerfel8',
     grundstueck: 'b',
     titel: 'Würfel: 2 · 2 · 2',
-    text: 'Baue auf Grundstück B einen großen Würfel: 2 Blöcke lang, 2 breit und 2 hoch.',
+    text: 'Baue auf Bauplatz B einen großen Würfel: 2 Blöcke lang, 2 breit und 2 hoch.',
     tipp: '2 · 2 = 4 Blöcke in der unteren Lage, noch einmal 4 darauf: 8 Blöcke.',
     pruefe: (s, g) =>
       felder(g).some(([x, y]) =>
@@ -489,7 +525,7 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     id: 'haus',
     grundstueck: 'c',
     titel: 'Haus mit Tür, Fenster und Dach',
-    text: 'Baue auf Grundstück C ein Haus: Wände, eine Tür, mindestens ein Fenster und ein Dach.',
+    text: 'Baue auf Bauplatz C ein Haus: Wände, eine Tür, mindestens ein Fenster und ein Dach.',
     tipp: 'Das Dach kommt auf die Wände – setze die Blöcke seitlich an, dann halten sie.',
     pruefe: (s, g) =>
       anzahlVon(s, g, [101]) >= 1 &&
@@ -500,7 +536,7 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     id: 'garten6',
     grundstueck: 'c',
     titel: 'Garten mit 6 Blumen',
-    text: 'Pflanze auf Grundstück C 6 Blumen. Blumen gibt es im Andenkenstand unter „Garten“.',
+    text: 'Pflanze auf Bauplatz C 6 Blumen. Blumen gibt es im Andenkenstand unter „Garten“.',
     tipp: 'Zum Beispiel 2 rote, 2 gelbe und 2 blaue: 2 + 2 + 2 = 6.',
     pruefe: (s, g) => anzahlVon(s, g, BLUMEN) >= 6,
   },
@@ -529,7 +565,10 @@ export function pruefeInsel(x: unknown): InselStand {
   // Alte Spielstände (nur eine Insel, 24 × 24) auf den breiteren Bauplan umrechnen
   let roh: unknown[] | undefined;
   if (Array.isArray(o.stapel) && o.stapel.length === BREITE * HOEHE) roh = o.stapel;
-  else if (Array.isArray(o.stapel) && o.stapel.length === INSEL * INSEL) {
+  else if (Array.isArray(o.stapel) && o.stapel.length === BREITE * HOEHE_ALT) {
+    // 0.11.0: gleiche Breite, weniger Reihen – die neuen Reihen kommen unten dazu
+    roh = [...o.stapel, ...Array.from({ length: BREITE * (HOEHE - HOEHE_ALT) }, () => [])];
+  } else if (Array.isArray(o.stapel) && o.stapel.length === INSEL * INSEL) {
     roh = Array.from({ length: BREITE * HOEHE }, () => []);
     o.stapel.forEach((st, i) => {
       (roh as unknown[])[idx(i % INSEL, Math.floor(i / INSEL))] = st;

@@ -168,3 +168,31 @@ describe('Bauinsel: Bauaufträge auf den Grundstücken', () => {
     expect(s.erledigt).toEqual(INSEL_AUFTRAEGE.map((x) => x.id));
   });
 });
+
+import { BOOT, BRUECKE2, STEG, aufInsel3 } from '../src/domain/insel';
+describe('Strandinsel und Steg (0.11.1)', () => {
+  it('Strandinsel über die zweite Brücke erreichbar, Steg vom Ankunftsplatz', () => {
+    const s = leereInsel();
+    const nach = (x: number, y: number) => wegAufInsel(s, START, { x, y, z: 0 });
+    expect(nach(BRUECKE2.x, BRUECKE2.y1).length).toBeGreaterThan(0);
+    expect(nach(33, 29).length).toBeGreaterThan(0);
+    expect(aufInsel3(33, 29)).toBe(true);
+    expect(nach(STEG.x, STEG.y1).length).toBeGreaterThan(0);
+    expect(LANDSCHAFT.art[BOOT.y * BREITE + BOOT.x]).toBe('wasser');
+  });
+  it('Spielstände aus 0.11.0 (44 × 24) bleiben erhalten', () => {
+    const alt = Array.from({ length: BREITE * 24 }, () => [] as number[]);
+    alt[10 * BREITE + 5] = [2, 2];
+    const p = pruefeInsel({ stapel: alt, inventar: {}, figur: { x: 12, y: 21, z: 0 }, tiere: [], erledigt: [] });
+    expect(p.stapel).toHaveLength(BREITE * HOEHE);
+    expect(p.stapel[10 * BREITE + 5]).toEqual([2, 2]);
+  });
+  it('Bauplätze bleiben frei von Wegen und Bäumen', () => {
+    for (const g of GRUNDSTUECKE)
+      for (let y = g.y0; y < g.y0 + g.n; y++)
+        for (let x = g.x0; x < g.x0 + g.n; x++) {
+          expect(LANDSCHAFT.art[y * BREITE + x], `${g.id} ${x},${y}`).not.toBe('weg');
+          expect(LANDSCHAFT.baum[y * BREITE + x]).toBe(false);
+        }
+  });
+});

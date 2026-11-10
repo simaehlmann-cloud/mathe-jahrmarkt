@@ -4,12 +4,11 @@
 
 <script lang="ts">
   import { BLOCKARTEN } from '../../domain/bau';
-  import { BREITE, GRUNDSTUECKE, HOEHE, LANDSCHAFT, LUFT, TUER_OBEN, type InselStand } from '../../domain/insel';
+  import { BOOT, BREITE, GRUNDSTUECKE, HOEHE, LANDSCHAFT, LUFT, TUER_OBEN, type InselStand } from '../../domain/insel';
   import type { Aussehen } from '../../domain/aussehen';
   import { koerperFarben } from '../../domain/aussehen';
   import type { FigurId } from '../../domain/profil';
   import Figur from './Figur.svelte';
-  import { Tween } from 'svelte/motion';
 
   /**
    * Die Bauinsel in isometrischer Ansicht. Alles wird in Diagonalreihen (x + y) von hinten nach vorne gezeichnet,
@@ -26,8 +25,11 @@
     laeuft = false,
     markiert = null,
     grundstueck = null,
-    schrittMs = 200,
+    gleitPos = null,
+    funkeln = false,
     ontippe,
+    onboot,
+    onschild,
   }: {
     stand: InselStand;
     drehung?: number;
@@ -38,9 +40,15 @@
     markiert?: { x: number; y: number } | null;
     /** Hervorgehobenes Grundstück (Bauauftrag). */
     grundstueck?: string | null;
-    /** Dauer eines Schritts in ms (zum Gleiten der Figur). */
-    schrittMs?: number;
+    /** Stetige Position der Figur beim Laufen (Plan-Koordinaten); null = sie steht auf ihrem Feld. */
+    gleitPos?: { x: number; y: number; z: number } | null;
+    /** Kurzes Glitzern um die Figur (Ankunft mit dem Teleporter). */
+    funkeln?: boolean;
     ontippe: (x: number, y: number, z: number, seite: Seite) => void;
+    /** Boot am Steg angetippt (zurück zum Jahrmarkt). */
+    onboot?: () => void;
+    /** Schild des Bauplatzes angetippt (Auftrag zeigen). */
+    onschild?: () => void;
   } = $props();
 
   const W = BREITE;
@@ -233,26 +241,33 @@
     const [a, b] = dreh(x + 0.5, y + 0.5);
     return [(a - b) * A, ((a + b) * A) / 2 - (h + 1.6) * C];
   }
-  const figurPunkt = $derived.by(() => {
-    const [a, b] = dreh(stand.figur.x + 0.5, stand.figur.y + 0.5);
-    return [(a - b) * A, ((a + b) * A) / 2 - stand.figur.z * C];
-  });
+  /** Bildpunkt (SVG-Koordinaten) einer stetigen Plan-Position, Fußpunkt der Figur. */
+  const punktVon = (x: number, y: number, z: number): [number, number] => {
+    const [a, b] = dreh(x + 0.5, y + 0.5);
+    return [(a - b) * A, ((a + b) * A) / 2 - z * C];
+  };
+  /**
+   * Beim Laufen kommt die Position Bild für Bild von außen (gleitPos), sonst steht die Figur auf ihrem Feld.
+   * Gezeichnet wird sie in der Reihe des Feldes, dem sie gerade am nächsten ist.
+   */
+  const figurPunkt = $derived(gleitPos ? punktVon(gleitPos.x, gleitPos.y, gleitPos.z) : punktVon(stand.figur.x, stand.figur.y, stand.figur.z));
   const fReihe = $derived(reihe(stand.figur.x, stand.figur.y));
-  /** Gezeichnete Position gleitet zur echten (keine Sprünge beim Laufen, auch nicht beim Drehen der Ansicht). */
-  const gleiten = new Tween<[number, number]>([0, 0], { duration: 0 });
-  let erstes = true;
-  $effect(() => {
-    const ziel: [number, number] = [figurPunkt[0]!, figurPunkt[1]!];
-    void gleiten.set(ziel, { duration: erstes || !laeuft ? 0 : schrittMs });
-    erstes = false;
-  });
   const farben = $derived(koerperFarben(figur, aussehen.fell));
   const breite = N * A;
   const oben = 9 * C + 20;
-  /** Grundstücke als Umrisse auf dem Boden. */
+  /** Nur der Bauplatz des offenen Auftrags wird markiert: Umriss auf dem Boden und ein Holzschild davor. */
   const umrisse = $derived(
-    GRUNDSTUECKE.map((g) => ({ id: g.id, name: g.name, punkte: `${P(g.x0, g.y0, 0.02)} ${P(g.x0 + g.n, g.y0, 0.02)} ${P(g.x0 + g.n, g.y0 + g.n, 0.02)} ${P(g.x0, g.y0 + g.n, 0.02)}`, mitte: P(g.x0 + g.n / 2, g.y0 + g.n / 2, 0.02) })),
+    GRUNDSTUECKE.filter((g) => g.id === grundstueck).map((g) => {
+      // Schild an der vorderen Ecke (nach der Drehung die unterste Ecke im Bild)
+      const ecken: [number, number][] = [[g.x0, g.y0], [g.x0 + g.n, g.y0], [g.x0 + g.n, g.y0 + g.n], [g.x0, g.y0 + g.n]];
+      const vorne = ecken.map(([x, y]) => P(x, y, 0).split(',').map(Number) as [number, number]).reduce((a, b) => (b[1] > a[1] ? b : a));
+      return { id: g.id, name: g.name, punkte: ecken.map(([x, y]) => P(x, y, 0.02)).join(' '), schild: vorne };
+    }),
   );
+  const FUNKEN: [number, number][] = [[-18, -50], [16, -44], [-12, -18], [20, -14], [0, -66], [-24, -32], [24, -30]];
+  /** Boot am Ende des Stegs. */
+  const bootReihe = $derived(reihe(BOOT.x, BOOT.y));
+  const bootPunkt = $derived(punktVon(BOOT.x, BOOT.y, -0.2));
   /** Tiere je Reihe. */
   const tiere = $derived(stand.tiere);
   const tierReihen = $derived.by(() => {
@@ -268,7 +283,12 @@
   });
   /** Mittelpunkt der Figur in Bildschirmkoordinaten (für die Kamera). */
   export function figurBildpunkt(): [number, number] {
-    return [(figurPunkt[0]! + breite + 10) * massstab, (figurPunkt[1]! + oben) * massstab];
+    return [(figurPunkt[0] + breite + 10) * massstab, (figurPunkt[1] + oben) * massstab];
+  }
+  /** Bildschirmkoordinaten einer stetigen Plan-Position (Kamera folgt der Figur Bild für Bild). */
+  export function bildpunkt(x: number, y: number, z: number): [number, number] {
+    const [px, py] = punktVon(x, y, z);
+    return [(px + breite + 10) * massstab, (py + oben) * massstab];
   }
 </script>
 
@@ -337,11 +357,22 @@
           {/if}
         </g>
       {/each}
+      {#if rr === bootReihe && onboot}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <g class="boot" transform="translate({bootPunkt[0]} {bootPunkt[1]})" onclick={onboot} data-boot="1">
+          <g class="schaukeln">
+            <path d="M-26 -6 L26 -6 L18 8 L-18 8 Z" fill="#e23a4e" stroke="#1f2a6b" stroke-width="2" stroke-linejoin="round" />
+            <rect x="-2" y="-40" width="3.5" height="34" fill="#1f2a6b" />
+            <path d="M1.5 -38 L22 -12 L1.5 -12 Z" fill="#fffdf7" stroke="#1f2a6b" stroke-width="1.5" />
+            <path d="M-2 -40 L-14 -36 L-2 -32 Z" fill="#ffc62b" />
+          </g>
+        </g>
+      {/if}
       {#each tierReihen.get(rr) ?? [] as t (t.schluessel)}
         <g class="tier" style="transform: translate({t.px}px, {t.py}px)" pointer-events="none">{@render tierBild(t.art)}</g>
       {/each}
       {#if rr === fReihe}
-        <g class="figur" transform="translate({gleiten.current[0]} {gleiten.current[1]})" pointer-events="none">
+        <g class="figur" transform="translate({figurPunkt[0]} {figurPunkt[1]})" pointer-events="none">
           <g class:laeuft>
             <ellipse cx="0" cy="0" rx="9" ry="4" fill="#1f2a6b" opacity="0.25" />
             <rect x="-4.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein l" />
@@ -349,15 +380,26 @@
             <path d="M-7 -28 Q0 -31 7 -28 L7 -12 Q0 -10 -7 -12 Z" fill="#3c78d8" stroke="#1f2a6b" stroke-width="1" />
             <svg x="-14" y="-56" width="28" height="28" viewBox="-4 -6 72 74" overflow="visible"><Figur {figur} {aussehen} groesse={64} /></svg>
           </g>
+          {#if funkeln}
+            <g class="funkeln" aria-hidden="true">
+              {#each FUNKEN as [sx, sy], k (k)}
+                <path d="M{sx} {sy - 6} L{sx + 2} {sy - 2} L{sx + 6} {sy} L{sx + 2} {sy + 2} L{sx} {sy + 6} L{sx - 2} {sy + 2} L{sx - 6} {sy} L{sx - 2} {sy - 2} Z" fill={k % 2 ? '#ffe57a' : '#a6e3ff'} style="animation-delay: {k * 70}ms" />
+              {/each}
+            </g>
+          {/if}
         </g>
       {/if}
     </g>
   {/each}
-  <!-- Grundstücke für Bauaufträge (über allem, nur als Markierung) -->
+  <!-- Bauplatz des offenen Auftrags (über allem, nur als Markierung) mit Holzschild -->
   {#each umrisse as u (u.id)}
-    <polygon points={u.punkte} fill={grundstueck === u.id ? 'rgb(255 198 43 / 0.28)' : 'rgb(255 255 255 / 0.08)'} stroke={grundstueck === u.id ? '#e23a4e' : '#fff'} stroke-width="2" stroke-dasharray="6 4" pointer-events="none" class="umriss" />
-    {@const [mx, my] = u.mitte.split(',').map(Number)}
-    <text x={mx} y={(my ?? 0) + 6} text-anchor="middle" font-size="18" font-weight="900" fill={grundstueck === u.id ? '#e23a4e' : '#fff'} stroke="#1f2a6b" stroke-width="0.8" pointer-events="none" opacity="0.9">{u.id.toUpperCase()}</text>
+    <polygon points={u.punkte} fill="rgb(255 198 43 / 0.25)" stroke="#e23a4e" stroke-width="2" stroke-dasharray="6 4" pointer-events="none" class="umriss" />
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <g class="schild" transform="translate({u.schild[0]} {u.schild[1] + 6})" onclick={() => onschild?.()} data-schild={u.id}>
+      <rect x="-3" y="-40" width="6" height="40" fill="#87521f" />
+      <rect x="-58" y="-74" width="116" height="36" rx="5" fill="#d9a066" stroke="#1f2a6b" stroke-width="2.5" />
+      <text x="0" y="-50" text-anchor="middle" font-size="18" font-weight="900" fill="#1f2a6b">{u.name}</text>
+    </g>
   {/each}
 </svg>
 
@@ -403,6 +445,33 @@
       translate: 0 0;
     }
   }
+  .boot,
+  .schild {
+    cursor: pointer;
+  }
+  .schaukeln {
+    animation: schaukeln 3s ease-in-out infinite;
+  }
+  @keyframes schaukeln {
+    50% {
+      rotate: -3deg;
+      translate: 0 2px;
+    }
+  }
+  .funkeln path {
+    opacity: 0;
+    animation: funkeln 0.9s ease-out 2;
+  }
+  @keyframes funkeln {
+    30% {
+      opacity: 1;
+      scale: 1.3;
+    }
+    100% {
+      opacity: 0;
+      scale: 0.4;
+    }
+  }
   .wackeln {
     animation: wackeln 2.4s ease-in-out infinite;
     transform-origin: 0 0;
@@ -421,6 +490,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .tier { animation: none; }
-    .wackeln, .picken, .figur .laeuft, .figur .laeuft .bein.l, .figur .laeuft .bein.r { animation: none; }
+    .wackeln, .picken, .schaukeln, .figur .laeuft, .figur .laeuft .bein.l, .figur .laeuft .bein.r { animation: none; }
+    .funkeln path { animation: none; opacity: 0; }
   }
 </style>

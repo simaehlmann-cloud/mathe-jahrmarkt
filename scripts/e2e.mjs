@@ -885,12 +885,41 @@ try {
       await page.getByRole('button', { name: 'Schließen' }).click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
 
-      // Fähre zur Bauinsel
+      // Fähre zur Bauinsel (über den Wegweiser am Eingang), zurück mit dem Boot am Steg
       await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
-      await page.getByRole('button', { name: /Fähre zur Bauinsel/ }).click();
+      await page.getByRole('button', { name: 'Wegweiser: Fähre zur Bauinsel' }).click();
       await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached', timeout: 30000 });
-      pruefe(true, `${name}: Fähre bringt zur Bauinsel`);
+      pruefe(true, `${name}: Wegweiser und Fähre bringen zur Bauinsel`);
+      await page.locator('[data-boot]').dispatchEvent('click');
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor({ timeout: 30000 });
+      pruefe(true, `${name}: Boot am Steg fährt zurück zum Jahrmarkt`);
+      // Teleporter in der Leiste
+      await page.getByRole('button', { name: 'Teleporter zur Bauinsel' }).click();
+      await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached', timeout: 30000 });
+      await page.waitForTimeout(300);
+      await foto('81-teleport-ankunft');
+      // Bauplatz-Schild des offenen Auftrags öffnet den Auftrag
+      await page.locator('[data-schild]').first().dispatchEvent('click');
+      await page.getByRole('region', { name: 'Bauauftrag' }).waitFor();
+      pruefe((await page.locator('[data-schild]').count()) === 1, `${name}: nur der Bauplatz des offenen Auftrags ist markiert`);
       await page.getByRole('button', { name: 'Zurück' }).first().click();
+
+      // Über die App ohne Elternsperre: Menü und Startbildschirm
+      await menue('Über Mathe-Jahrmarkt');
+      await page.getByRole('button', { name: 'Impressum' }).click();
+      await page.getByText('Wisdompeak Apps').first().waitFor();
+      pruefe(true, `${name}: Impressum ohne Elternsperre aus dem Menü`);
+      await page.getByRole('button', { name: 'Zurück' }).click();
+      await menue('Spieler wechseln');
+      await page.getByRole('heading', { name: /Wer spielt/ }).waitFor();
+      await page.waitForTimeout(400);
+      await foto('82-start-eintrittskarten');
+      await page.locator('nav.fuss').getByRole('button', { name: 'Datenschutz' }).click();
+      await page.getByText('Grundsatz: keine Datenerhebung').waitFor();
+      await page.getByRole('button', { name: 'Zurück' }).click();
+      await page.getByRole('button', { name: /^Mia:/ }).click();
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      pruefe(true, `${name}: Startbildschirm – Datenschutz ohne Sperre, Eintrittskarte führt auf den Jahrmarkt`);
       pruefe(konsole2.length === 0, `${name}: zweiter Durchgang ohne Fehler in der Konsole${konsole2.length ? `: ${konsole2.join(' | ')}` : ''}`);
       await ctx2.close();
     }

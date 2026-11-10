@@ -9,9 +9,13 @@
     autor: string;
     text: string;
   }
+  let { start = null }: { start?: 'impressum' | 'datenschutz' | 'lizenzen' | null } = $props();
   let lizenzen = $state<Lizenz[] | null>(null);
   let lizenzFehler = $state(false);
-  let offen = $state<'impressum' | 'datenschutz' | 'lizenzen' | null>(null);
+  // svelte-ignore state_referenced_locally
+  let offen = $state<'impressum' | 'datenschutz' | 'lizenzen' | null>(start);
+  // svelte-ignore state_referenced_locally
+  if (start === 'lizenzen') void ladeLizenzen();
 
   async function ladeLizenzen() {
     if (lizenzen || lizenzFehler) return;

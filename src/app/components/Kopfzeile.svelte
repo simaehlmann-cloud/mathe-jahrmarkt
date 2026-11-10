@@ -79,6 +79,7 @@
       <button onclick={() => gehe({ name: 'album' })}><Icon name="album" groesse={22} />Sammelalbum{#if neu}<span class="punkt">{neu} neu</span>{/if}</button>
       <button onclick={() => gehe({ name: 'blitz' })}><Icon name="blitz" groesse={22} />Blitzrechnen</button>
       <button onclick={() => gehe({ name: 'duell' })}><Icon name="duell" groesse={22} />Geschwister-Duell</button>
+      <button onclick={() => gehe({ name: 'ueber' })}><Icon name="info" groesse={22} />Über Mathe-Jahrmarkt</button>
       <button onclick={() => gehe({ name: 'knobel' })}><Icon name="raetsel" groesse={22} />Knobelzelt</button>
       <button onclick={() => gehe({ name: 'fundbuero' })}><Icon name="kiste" groesse={22} />Fundbüro{#if fund}<span class="punkt">{fund} zum Abholen</span>{/if}</button>
       <button onclick={() => gehe({ name: 'bauplatz' })}><Icon name="block" groesse={22} />Bauplatz</button>

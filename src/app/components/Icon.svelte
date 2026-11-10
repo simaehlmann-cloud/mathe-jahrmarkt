@@ -1,5 +1,5 @@
 <script lang="ts">
-  export type IconName = 'zurueck' | 'laut' | 'stumm' | 'musik' | 'musikAus' | 'schloss' | 'taler' | 'profil' | 'haken' | 'kreuz' | 'menue' | 'block' | 'auftrag' | 'check' | 'stern' | 'blitz' | 'album' | 'raetsel' | 'insel' | 'kiste' | 'duell';
+  export type IconName = 'zurueck' | 'laut' | 'stumm' | 'musik' | 'musikAus' | 'schloss' | 'taler' | 'profil' | 'haken' | 'kreuz' | 'menue' | 'block' | 'auftrag' | 'check' | 'stern' | 'blitz' | 'album' | 'raetsel' | 'insel' | 'kiste' | 'duell' | 'info';
   let { name, groesse = 24 }: { name: IconName; groesse?: number } = $props();
 </script>
 
@@ -42,6 +42,10 @@
     <path d="M2 17 Q12 12 22 17 L22 20 L2 20 Z" fill="#3c8fc2" stroke-width="1.8" />
     <path d="M5 16 Q12 9 19 16" fill="#7cc96b" stroke-width="1.8" />
     <path d="M12 12 V5 M12 5 Q15 3 17 6 M12 5 Q9 3 7 6" stroke-width="1.8" />
+  {:else if name === 'info'}
+    <circle cx="12" cy="12" r="9" fill="#a6e3ff" stroke-width="2" />
+    <path d="M12 11 V17" stroke-width="2.6" />
+    <circle cx="12" cy="7.5" r="1.4" fill="currentColor" stroke="none" />
   {:else if name === 'duell'}
     <circle cx="7" cy="7" r="3" fill="#3c78d8" stroke-width="2" />
     <circle cx="17" cy="7" r="3" fill="#e23a4e" stroke-width="2" />

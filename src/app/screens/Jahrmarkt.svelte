@@ -197,6 +197,19 @@
     laufeZu({ x: KNOBEL_X, y: FESTPLATZ_Y }, () => app.zeige({ name: 'knobel' }));
   }
 
+  /** Teleporter: kurzes Glitzern um die Figur, dann ist man auf der Bauinsel. */
+  let teleport = $state(false);
+  function teleportieren() {
+    if (teleport) return;
+    app.spieleKlang('tipp');
+    if (!app.paket || app.einstellungen.animationenReduziert) {
+      app.zeige({ name: 'insel', anreise: 'teleport' });
+      return;
+    }
+    teleport = true;
+    setTimeout(() => app.zeige({ name: 'insel', anreise: 'teleport' }), 750);
+  }
+
   function zurFaehre() {
     app.spieleKlang('tipp');
     laufeZu({ x: FAEHRE_X, y: FESTPLATZ_Y }, () => app.zeige({ name: 'insel' }));
@@ -525,9 +538,20 @@
         </button>
 
         <!-- Die Figur -->
-        <div class="figur" style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
+        <div class="figur" class:teleport style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
           <Laeufer figur={p.figur} aussehen={p.aussehen} {laeuft} {richtung} groesse={104} />
+          {#if teleport}{#each [0, 1, 2, 3, 4, 5, 6, 7] as k (k)}<span class="funke" style="--w: {k * 45}deg; --v: {k * 40}ms"></span>{/each}{/if}
         </div>
+
+        <!-- Wegweiser zur Fähre, gleich neben dem Eingang -->
+        <button class="wegweiser" style="left: {ALLEE_X - 168}px; top: {FESTPLATZ_Y - 30}px; z-index: {FESTPLATZ_Y + 20}" onclick={zurFaehre} aria-label="Wegweiser: Fähre zur Bauinsel">
+          <svg viewBox="0 0 90 96" aria-hidden="true">
+            <rect x="40" y="18" width="8" height="78" rx="2" fill="#87521f" stroke="#1f2a6b" stroke-width="2" />
+            <path d="M84 8 H22 L6 22 L22 36 H84 Z" fill="#6cc3ec" stroke="#1f2a6b" stroke-width="3" stroke-linejoin="round" />
+            <path d="M34 30 L68 30 L63 37 L39 37 Z" fill="#e23a4e" />
+            <text x="50" y="27" text-anchor="middle" font-size="12" font-weight="900" fill="#1f2a6b">Fähre</text>
+          </svg>
+        </button>
 
         <!-- Abend und Nacht: Himmel dunkler, Laternen und geschaffte Buden leuchten -->
         {#if tz !== 'tag'}
@@ -557,7 +581,8 @@
     <button class="ticket gelb" onclick={() => (auftraegeOffen = true)} aria-label="Tagesaufträge, {erledigt} von {auftraege.length} erledigt">
       <Icon name="auftrag" groesse={22} /> Aufträge {erledigt}/{auftraege.length}
     </button>
-    <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}><Icon name="block" groesse={22} /> Bauplatz</button>
+    <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })} aria-label="Bauplatz"><Icon name="block" groesse={22} /><span class="lang"> Bauplatz</span></button>
+    <button class="ticket hell" onclick={teleportieren} aria-label="Teleporter zur Bauinsel{app.paket ? '' : ' (Zusatzpaket)'}"><Icon name="insel" groesse={22} /><span class="lang"> Insel</span></button>
     <button class="ticket hell rund-klein" onclick={() => kamera(false)} aria-label="Wo bin ich?">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22" /></svg>
     </button>
@@ -1091,6 +1116,58 @@
   }
   .leiste .rund-klein {
     padding-inline: 10px;
+  }
+  .leiste .ticket {
+    white-space: nowrap;
+  }
+  /* Schmale Handys: Bauplatz und Insel nur mit Bild */
+  @media (max-width: 32rem) {
+    .leiste .lang {
+      display: none;
+    }
+  }
+  .wegweiser {
+    position: absolute;
+    width: 90px;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .wegweiser svg {
+    display: block;
+    width: 100%;
+  }
+  .figur.teleport :global(svg) {
+    animation: wegbeamen 0.75s ease-in forwards;
+  }
+  @keyframes wegbeamen {
+    60% {
+      opacity: 1;
+      filter: brightness(1.8);
+    }
+    100% {
+      opacity: 0;
+      scale: 0.2 1.4;
+      filter: brightness(3);
+    }
+  }
+  .funke {
+    position: absolute;
+    left: 50%;
+    top: -50px;
+    width: 12px;
+    height: 12px;
+    background: #ffe57a;
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    transform: rotate(var(--w)) translateY(-10px);
+    animation: funke 0.7s ease-out var(--v) both;
+  }
+  @keyframes funke {
+    to {
+      transform: rotate(var(--w)) translateY(-60px) scale(0.3);
+      opacity: 0;
+    }
   }
   /* Tagesauftrag: Fähnchen am Dach der Bude */
   .auftrag-fahne {

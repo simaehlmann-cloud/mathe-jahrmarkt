@@ -153,6 +153,9 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Fundbüro | Fehler wurden nicht gezielt wiederholt | Fächer nach 1, 3, 7 Tagen, Abholen als kurze Runde in der Bude mit ähnlichen Aufgaben, zählt nicht für Rekorde (Tests) |
 | Geschwister | Wettbewerb nur über die Bestenliste | Duell mit gleichen Aufgaben, Ergebnis des ersten Kindes bleibt verdeckt (Ablauftest rechnet die Aufgaben aus) |
 | Menü | mit zwei neuen Einträgen passte das Menü im Querformat nicht mehr | Menü blättert, bei wenig Höhe zweispaltig |
+| Bauinsel (0.11.1) | Figur ruckelte auf dem Gerät: Bei jedem Feld startete eine neue weiche Scroll-Animation, die Kamera stand in zwei Dritteln der Bilder still und pulsierte | Laufen als eine Bildschleife (requestAnimationFrame), Kamera folgt Bild für Bild; gemessen: Kamera ohne Stillstand, Tempo gleichmäßig (Schwankung 66 % → 15 %) |
+| Bauinsel (0.11.1) | Fähre am Kartenrand nicht zu finden, Bauplätze A–C rätselhaft | Wegweiser am Eingang, Teleporter in der Leiste, Boot am Steg; nur der Bauplatz des offenen Auftrags ist markiert, mit Schild |
+| Rechtliches (0.11.1) | Impressum und Datenschutz lagen hinter der Elternsperre | ohne Sperre über Startbildschirm und Menü (nur Text, keine Links nach außen) |
 
 ## Offen
 

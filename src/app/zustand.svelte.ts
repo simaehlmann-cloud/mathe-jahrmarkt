@@ -27,9 +27,10 @@ export type Bildschirm =
   | { name: 'album' }
   | { name: 'blitz' }
   | { name: 'knobel' }
-  | { name: 'insel' }
+  | { name: 'insel'; anreise?: 'teleport' | 'boot' }
   | { name: 'fundbuero' }
-  | { name: 'duell' };
+  | { name: 'duell' }
+  | { name: 'ueber'; abschnitt?: 'impressum' | 'datenschutz' | 'lizenzen'; von?: 'start' };
 
 /** Zentraler Zustand. Jede Änderung am Bestand läuft über `aendere`, damit sie gespeichert wird. */
 class AppZustand {

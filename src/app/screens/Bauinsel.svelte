@@ -4,6 +4,7 @@
   import {
     BREITE,
     EINRICHTUNG,
+    STEG,
     GRUNDSTUECKE,
     INSEL_AUFTRAG_BLOECKE,
     INSEL_AUFTRAG_TALER,
@@ -32,7 +33,10 @@
    * Bauinsel (Zusatzpaket): Laufen, Bauen, Abbauen. Blöcke kommen aus demselben Lager wie auf dem Bauplatz,
    * Einrichtung aus dem Andenkenstand. Die Figur läuft per Antippen; Treppen führen hinauf, Türen hindurch.
    */
+  let { anreise }: { anreise?: 'teleport' | 'boot' | undefined } = $props();
   let p = $derived(app.profil);
+  /** Nach dem Teleport glitzert es kurz um die Figur. */
+  let funkeln = $state(false);
   /**
    * Figur und Tiere bewegen sich zuerst nur hier (schnell, ohne Speichern bei jedem Schritt);
    * gespeichert wird am Ende eines Wegs, beim Bauen und beim Verlassen.
@@ -79,7 +83,6 @@
   let markiert = $state<{ x: number; y: number } | null>(null);
   let feld = $state<HTMLDivElement>();
   let welt = $state<InselWelt>();
-  let timer: ReturnType<typeof setTimeout> | undefined;
   let zerstoert = false;
 
   const MELDUNG: Record<string, string> = {
@@ -97,6 +100,13 @@
     if (!feld || !welt) return;
     const [x, y] = welt.figurBildpunkt();
     feld.scrollTo({ left: x - feld.clientWidth / 2, top: y - feld.clientHeight / 2, behavior: weich ? 'smooth' : 'auto' });
+  }
+  /** Kamera ohne eigene Animation genau auf einen Punkt setzen (beim Laufen in jedem Bild). */
+  function kameraAuf(pos: { x: number; y: number; z: number }) {
+    if (!feld || !welt) return;
+    const [x, y] = welt.bildpunkt(pos.x, pos.y, pos.z);
+    feld.scrollLeft = x - feld.clientWidth / 2;
+    feld.scrollTop = y - feld.clientHeight / 2;
   }
 
   /** Richtung der angetippten Seitenfläche im Bauplan (hängt von der Drehung ab). */
@@ -172,18 +182,57 @@
     app.spieleKlang('tipp');
   }
 
+  /** Stetige Position beim Laufen; die Kamera folgt ihr Bild für Bild. */
+  let gleitPos = $state<{ x: number; y: number; z: number } | null>(null);
+  let bild = 0;
+  /**
+   * Laufen in einem durchgehenden Bildschleifen-Takt (requestAnimationFrame): Die Figur gleitet gleichmäßig
+   * über den ganzen Weg, die Kamera wird in jedem Bild mitgeführt (kein Neustart einer Scroll-Animation je Feld).
+   * Das Feld der Figur (für Speichern und Zeichenreihenfolge) wechselt erst, wenn sie näher am nächsten Feld ist.
+   */
   function laufe(weg: { x: number; y: number; z: number }[]) {
-    if (weg.length === 0 || zerstoert) {
+    const start = stand?.figur;
+    cancelAnimationFrame(bild);
+    if (weg.length === 0 || zerstoert || !start) {
       laeuft = false;
+      gleitPos = null;
       sichern();
+      const danach = nachLaufen;
+      nachLaufen = null;
+      danach?.();
       return;
     }
+    const pfad = [{ ...start }, ...weg];
+    const ms = app.einstellungen.animationenReduziert ? 40 : SCHRITT_MS;
+    const t0 = performance.now();
     laeuft = true;
-    const [naechster, ...rest] = weg;
-    if (!naechster) return;
-    lokalFigur = naechster;
-    kamera(true);
-    timer = setTimeout(() => laufe(rest), app.einstellungen.animationenReduziert ? 40 : SCHRITT_MS);
+    const schritt = (t: number) => {
+      if (zerstoert) return;
+      const s = Math.max(0, (t - t0) / ms);
+      const ende = s >= pfad.length - 1;
+      const i = Math.min(Math.floor(s), pfad.length - 1);
+      const a = pfad[i]!;
+      const b = pfad[Math.min(i + 1, pfad.length - 1)]!;
+      const f = ende ? 0 : s - i;
+      const pos = { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f };
+      const nah = f < 0.5 ? a : b;
+      const jetzt = lokalFigur ?? stand?.figur;
+      if (!jetzt || jetzt.x !== nah.x || jetzt.y !== nah.y || jetzt.z !== nah.z) lokalFigur = nah;
+      if (ende) {
+        gleitPos = null;
+        laeuft = false;
+        kameraAuf(nah);
+        sichern();
+        const danach = nachLaufen;
+        nachLaufen = null;
+        danach?.();
+        return;
+      }
+      gleitPos = pos;
+      kameraAuf(pos);
+      bild = requestAnimationFrame(schritt);
+    };
+    bild = requestAnimationFrame(schritt);
   }
 
   const inventar = $derived(p ? [...EINRICHTUNG, ...TIERE].filter((e) => (p.insel.inventar[String(e.id)] ?? 0) > 0) : []);
@@ -211,9 +260,33 @@
     app.melde('Da kommst du gerade nicht hin.');
   }
 
+  /** Zum Boot am Steg laufen und zurück zum Jahrmarkt fahren. */
+  function zumBoot() {
+    const st = stand;
+    if (!st || laeuft) return;
+    modus = 'laufen';
+    const ziel = zielAufFeld(st, STEG.x, STEG.y1) ?? zielAufFeld(st, STEG.x + 1, STEG.y1);
+    const weg = ziel ? wegAufInsel(st, st.figur, ziel) : [];
+    app.spieleKlang('tipp');
+    if (!ziel || weg.length === 0) {
+      // Zugebaut? Dann fährt das Boot trotzdem.
+      app.zeige({ name: 'jahrmarkt' });
+      return;
+    }
+    nachLaufen = () => app.zeige({ name: 'jahrmarkt' });
+    laufe(weg.slice(1));
+  }
+  /** Wird nach dem Ende eines Wegs einmal ausgeführt. */
+  let nachLaufen: (() => void) | null = null;
+
   let bummeln: ReturnType<typeof setInterval> | undefined;
   onMount(() => {
     void tick().then(() => kamera(false));
+    if (anreise === 'teleport' && !app.einstellungen.animationenReduziert) {
+      funkeln = true;
+      app.spieleKlang('richtig');
+      setTimeout(() => (funkeln = false), 2000);
+    }
     // Tiere bummeln alle paar Sekunden ein Feld weiter (nur angezeigt; gespeichert beim Verlassen)
     if (!app.einstellungen.animationenReduziert)
       bummeln = setInterval(() => {
@@ -225,7 +298,7 @@
   });
   onDestroy(() => {
     zerstoert = true;
-    clearTimeout(timer);
+    cancelAnimationFrame(bild);
     clearInterval(bummeln);
     sichern();
   });
@@ -247,7 +320,7 @@
     </div>
   {:else}
     <div class="feld" bind:this={feld}>
-      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} schrittMs={SCHRITT_MS} ontippe={tippe} />{/if}
+      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} {gleitPos} {funkeln} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
     </div>
     {#if auftragOffen}
       <div class="auftrag karte" role="region" aria-label="Bauauftrag">
@@ -256,14 +329,14 @@
           <h2>{auftrag.titel}</h2>
           <p>{auftrag.text}</p>
           <p class="tipp">Tipp: {auftrag.tipp}</p>
-          <p class="klein">Das {g?.name ?? 'Grundstück'} liegt auf der zweiten Insel hinter der Brücke und ist gelb markiert. Belohnung: {INSEL_AUFTRAG_TALER} Taler und {INSEL_AUFTRAG_BLOECKE} Blöcke.</p>
+          <p class="klein">{g?.name ?? 'Der Bauplatz'} liegt {g?.wo ?? 'auf einer Insel'} und hat ein Schild. Belohnung: {INSEL_AUFTRAG_TALER} Taler und {INSEL_AUFTRAG_BLOECKE} Blöcke.</p>
           <div class="knoepfe">
             <button class="ticket gelb" onclick={zumGrundstueck}>Hinlaufen</button>
             <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Bauplatz-Aufträge</button>
           </div>
         {:else}
           <h2>Alle Inselaufträge geschafft!</h2>
-          <p>Du hast alle Grundstücke bebaut. Weitere Aufträge gibt es auf dem Bauplatz.</p>
+          <p>Du hast alle Bauplätze bebaut. Weitere Aufträge gibt es auf dem Bauplatz.</p>
           <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Zum Bauplatz</button>
         {/if}
       </div>
