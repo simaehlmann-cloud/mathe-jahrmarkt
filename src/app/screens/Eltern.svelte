@@ -10,7 +10,7 @@
   import Ueber from '../components/Ueber.svelte';
   import { PREIS_ANZEIGE } from '../../services/kauf';
   import { sicherungEinspielen, sicherungErstellen } from '../../services/sicherung';
-  import type { Stimme } from '../../services/sprache';
+  import { standardStimme, stimmenKennung, type Stimme } from '../../services/sprache';
   import Elternsperre from '../components/Elternsperre.svelte';
   import Icon from '../components/Icon.svelte';
   import { app } from '../zustand.svelte';
@@ -311,6 +311,11 @@
             </select>
           </label>
           <button class="ticket hell" onclick={() => app.sprich('Hallo! Ich bin Flinka. Was ist sieben mal acht?', true)}>Probehören</button>
+          {#if stimmen.length}
+            {@const aktiv = stimmen.find((x) => x.uri === app.einstellungen.stimme) ?? standardStimme(stimmen)}
+            <!-- Kennung der Stimme auf dem Gerät: Hilft, falsch erkannte Frauen- und Männerstimmen zu melden -->
+            {#if aktiv}<p class="kennung">Gerätekennung: {stimmenKennung({ name: aktiv.uri, voiceURI: aktiv.uri })} ({aktiv.uri})</p>{/if}
+          {/if}
           {#if stimmen.length === 0}
             <p class="hinweis">Auf diesem Gerät wurde keine deutsche Stimme ohne Internet gefunden. In den Android-Einstellungen unter „Sprachausgabe“ lässt sich eine deutsche Stimme herunterladen.</p>
           {:else}
@@ -396,6 +401,12 @@
 {/if}
 
 <style>
+  .kennung {
+    font-size: 0.8rem;
+    color: var(--tinte-weich, #5a628c);
+    word-break: break-all;
+    margin: 4px 0 0;
+  }
   .eltern {
     flex: 1;
     min-height: 0;

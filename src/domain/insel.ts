@@ -13,23 +13,30 @@ import { BLOCKARTEN, MAX_HOEHE } from './bau';
 export const INSEL = 24;
 /** Breite des Bauplans: erste Insel, Wasserstraße mit Brücke, zweite Insel. */
 export const BREITE = 44;
-/** Höhe des Bauplans: oben die beiden ersten Inseln, darunter (seit 0.11.1) Steg und Strandinsel. */
-export const HOEHE = 40;
-/** Frühere Höhe (bis 0.11.0), für das Umrechnen alter Spielstände. */
-const HOEHE_ALT = INSEL;
-export const INSEL_MAX = MAX_HOEHE;
+/**
+ * Höhe des Bauplans: oben die beiden ersten Inseln, darunter (seit 0.11.1) Steg und Strandinsel,
+ * ganz unten (seit 0.12) das große, flache Bauland.
+ */
+export const HOEHE = 58;
+/** Frühere Höhen (0.10/0.11.0: 24 Reihen, 0.11.1: 40 Reihen), für das Umrechnen alter Spielstände. */
+const FRUEHERE_HOEHEN = [INSEL, 40];
+/** Bis zu dieser Höhe darf auf der Insel gebaut werden (höher als auf dem Bauplatz). */
+export const INSEL_MAX = Math.max(MAX_HOEHE, 12);
 
 export type Gelaende = 'gras' | 'sand' | 'wasser' | 'weg' | 'bruecke' | 'blumen';
-export type Kategorie = 'bauen' | 'wohnen' | 'garten' | 'tiere';
-export const KATEGORIE_NAME: Record<Kategorie, string> = { bauen: 'Bauen', wohnen: 'Wohnen', garten: 'Garten', tiere: 'Tiere' };
+export type Kategorie = 'bauen' | 'wohnen' | 'garten' | 'spielen' | 'tiere';
+export const KATEGORIE_NAME: Record<Kategorie, string> = { bauen: 'Bauen', wohnen: 'Wohnen', garten: 'Garten', spielen: 'Spielplatz', tiere: 'Tiere' };
 
 /** Einrichtung: Kennung (im Stapel ab 100), Name, Preis in Talern, Eigenschaften. */
 export interface Einrichtung {
   id: number;
   name: string;
   preis: number;
-  /** Kann man hindurch- bzw. daraufgehen? 'durch' (Tür), 'stufe' (Treppe: man steigt hinauf), 'nein'. */
-  begehbar: 'durch' | 'stufe' | 'nein';
+  /**
+   * Kann man hindurch- bzw. daraufgehen? 'durch' (Tür, Tor), 'flach' (Teppich, Sandkasten: man steht darin),
+   * 'stufe' (Treppe: man steigt hinauf), 'nein'.
+   */
+  begehbar: 'durch' | 'flach' | 'stufe' | 'nein';
   /** Wie viele Ebenen hoch (Tür 2). */
   hoehe: 1 | 2;
   kategorie: Kategorie;
@@ -58,7 +65,37 @@ export const EINRICHTUNG: readonly Einrichtung[] = [
   E(125, 'Brunnen', 30, 'garten'),
   E(126, 'Gartenlaterne', 10, 'garten'),
   E(127, 'Beet', 6, 'garten'),
+  // Seit 0.12: mehr zum Einrichten
+  E(104, 'Säule', 8, 'bauen'),
+  E(105, 'Gartentor', 10, 'bauen', 'durch'),
+  E(106, 'Laterne', 8, 'bauen'),
+  E(130, 'Badewanne', 25, 'wohnen'),
+  E(131, 'Teppich', 10, 'wohnen', 'flach'),
+  E(132, 'Kamin', 30, 'wohnen'),
+  E(133, 'Herd', 20, 'wohnen'),
+  E(134, 'Kühlschrank', 20, 'wohnen'),
+  E(135, 'Fernseher', 25, 'wohnen'),
+  E(136, 'Sessel', 15, 'wohnen'),
+  E(137, 'Standuhr', 20, 'wohnen'),
+  E(138, 'Schreibtisch', 15, 'wohnen'),
+  E(150, 'Sonnenblume', 4, 'garten'),
+  E(151, 'Kürbis', 5, 'garten'),
+  E(152, 'Gartenzwerg', 8, 'garten'),
+  E(153, 'Vogelhaus', 10, 'garten'),
+  E(154, 'Teich', 20, 'garten'),
+  E(155, 'Apfelbäumchen', 15, 'garten'),
+  E(156, 'Sonnenschirm', 12, 'garten'),
+  E(160, 'Schaukel', 25, 'spielen'),
+  E(161, 'Rutsche', 25, 'spielen'),
+  E(162, 'Sandkasten', 15, 'spielen', 'flach'),
+  E(163, 'Trampolin', 20, 'spielen'),
+  E(164, 'Wippe', 15, 'spielen'),
 ];
+/** Hier kann sich die Figur hinsetzen (Sitzhöhe in Ebenen) bzw. hinlegen. */
+export const SITZEN: Readonly<Record<number, number>> = { 116: 0.36, 117: 0.4, 124: 0.42, 136: 0.36 };
+export const LIEGEN: Readonly<Record<number, number>> = { 110: 0.45 };
+/** Teile, durch die man hindurchgeht oder in denen man steht (zählen beim Laufen als frei). */
+const DURCHGANG = new Set<number>([101, 105, 131, 162]);
 export const BLUMEN = [120, 121, 122] as const;
 
 /** Tiere: werden gekauft, auf die Insel gesetzt und laufen dann langsam umher. Keine Gegner. */
@@ -72,6 +109,10 @@ export const TIERE: readonly TierArt[] = [
   { id: 141, name: 'Hund', preis: 35 },
   { id: 142, name: 'Katze', preis: 30 },
   { id: 143, name: 'Huhn', preis: 15 },
+  { id: 144, name: 'Kaninchen', preis: 20 },
+  { id: 145, name: 'Pferd', preis: 45 },
+  { id: 146, name: 'Ente', preis: 15 },
+  { id: 147, name: 'Kuh', preis: 40 },
 ];
 export const tierArt = (id: number): TierArt | undefined => TIERE.find((t) => t.id === id);
 export interface Tier {
@@ -123,6 +164,19 @@ export const BRUECKE2 = { x: 34, y0: 21, y1: 23 } as const;
 /** Bootssteg am Strand der ersten Insel; am Ende liegt das Boot zurück zum Jahrmarkt. */
 export const STEG = { x: 11, y0: 24, y1: 25 } as const;
 export const BOOT = { x: 11, y: 26 } as const;
+/** Dritte Brücke: von der Strandinsel nach Süden ins Bauland. */
+export const BRUECKE3 = { x: 34, y0: 39, y1: 41 } as const;
+/** Bauland (seit 0.12): große, flache Wiese zum freien Bauen, Ecken abgerundet. */
+export const BAULAND = { x0: 3, x1: 40, y0: 42, y1: 56 } as const;
+export const aufBauland = (x: number, y: number): boolean => {
+  const { x0, x1, y0, y1 } = BAULAND;
+  if (x < x0 || x > x1 || y < y0 || y > y1) return false;
+  // abgerundete Ecken (Radius 3)
+  const r = 3;
+  const cx = x < x0 + r ? x0 + r : x > x1 - r ? x1 - r : x;
+  const cy = y < y0 + r ? y0 + r : y > y1 - r ? y1 - r : y;
+  return Math.hypot(x - cx, y - cy) <= r;
+};
 
 export const LANDSCHAFT: Landschaft = (() => {
   const n = BREITE * HOEHE;
@@ -183,12 +237,21 @@ export const LANDSCHAFT: Landschaft = (() => {
       if ((x === BRUECKE2.x || x === BRUECKE2.x + 1) && y <= 30) art[i] = 'weg';
       if (y === 30 && x >= 30 && x <= 36) art[i] = 'weg';
     }
+  // Dritte Brücke und Bauland: flache Wiese mit Sandrand, ein paar Bäume am Rand
+  for (let y = BRUECKE3.y0; y <= BRUECKE3.y1; y++) for (const x of [BRUECKE3.x, BRUECKE3.x + 1]) art[idx(x, y)] = 'bruecke';
+  for (let y = BAULAND.y0; y <= BAULAND.y1; y++)
+    for (let x = BAULAND.x0; x <= BAULAND.x1; x++) {
+      if (!aufBauland(x, y)) continue;
+      const rand = !aufBauland(x - 1, y) || !aufBauland(x + 1, y) || !aufBauland(x, y - 1) || !aufBauland(x, y + 1);
+      art[idx(x, y)] = rand ? 'sand' : 'gras';
+    }
   // Bootssteg auf der ersten Insel (unten am Strand)
   for (let y = STEG.y0; y <= STEG.y1; y++) for (const x of [STEG.x, STEG.x + 1]) art[idx(x, y)] = 'bruecke';
   // Bäume (fest), nicht auf Weg, Wasser oder Bauplätzen
   for (const [x, y] of [[1, 9], [2, 14], [1, 19], [7, 1], [10, 2], [14, 1], [22, 14], [21, 16], [22, 20], [8, 22], [16, 22], [3, 22], [20, 9], [6, 7], [8, 14],
     [33, 4], [41, 11], [36, 20], [30, 19], [42, 15], [29, 8],
-    [25, 28], [29, 26], [38, 26], [32, 33], [36, 36], [42, 34], [26, 35]] as [number, number][]) baum[idx(x, y)] = true;
+    [25, 28], [29, 26], [38, 26], [32, 33], [36, 36], [42, 34], [26, 35],
+    [5, 45], [6, 53], [39, 46], [38, 54], [21, 55]] as [number, number][]) baum[idx(x, y)] = true;
   // Leichte Erhebung am Steg: Treppenstufen auf den Hügel bei (6..7, 4)
   hoehe[idx(7, 4)] = 1;
   return { art, hoehe, baum };
@@ -216,7 +279,7 @@ export function inEbene(s: InselStand, x: number, y: number, z: number): number 
   return e === undefined || e === LUFT ? null : e;
 }
 
-const frei = (e: ReturnType<typeof inEbene>): boolean => e === null || e === 101 || e === TUER_OBEN;
+const frei = (e: ReturnType<typeof inEbene>): boolean => e === null || e === TUER_OBEN || (typeof e === 'number' && DURCHGANG.has(e));
 
 /** Höhe der Stapeloberkante (absolut). */
 export const oberkante = (s: InselStand, x: number, y: number): number => (LANDSCHAFT.hoehe[idx(x, y)] ?? 0) + (s.stapel[idx(x, y)]?.length ?? 0);
@@ -228,7 +291,7 @@ export function istBoden(s: InselStand, x: number, y: number, z: number): boolea
   const drueber = inEbene(s, x, y, z + 1);
   if (!frei(hier) || !frei(drueber)) return false;
   const unten = z === 0 ? 'grund' : inEbene(s, x, y, z - 1);
-  if (unten === null || unten === 'wasser' || unten === 101 || unten === TUER_OBEN) return false;
+  if (unten === null || unten === 'wasser' || unten === TUER_OBEN || (typeof unten === 'number' && DURCHGANG.has(unten))) return false;
   return true;
 }
 
@@ -565,9 +628,9 @@ export function pruefeInsel(x: unknown): InselStand {
   // Alte Spielstände (nur eine Insel, 24 × 24) auf den breiteren Bauplan umrechnen
   let roh: unknown[] | undefined;
   if (Array.isArray(o.stapel) && o.stapel.length === BREITE * HOEHE) roh = o.stapel;
-  else if (Array.isArray(o.stapel) && o.stapel.length === BREITE * HOEHE_ALT) {
-    // 0.11.0: gleiche Breite, weniger Reihen – die neuen Reihen kommen unten dazu
-    roh = [...o.stapel, ...Array.from({ length: BREITE * (HOEHE - HOEHE_ALT) }, () => [])];
+  else if (Array.isArray(o.stapel) && FRUEHERE_HOEHEN.some((h) => (o.stapel as unknown[]).length === BREITE * h)) {
+    // 0.11.x: gleiche Breite, weniger Reihen – die neuen Reihen kommen unten dazu
+    roh = [...o.stapel, ...Array.from({ length: BREITE * HOEHE - o.stapel.length }, () => [])];
   } else if (Array.isArray(o.stapel) && o.stapel.length === INSEL * INSEL) {
     roh = Array.from({ length: BREITE * HOEHE }, () => []);
     o.stapel.forEach((st, i) => {

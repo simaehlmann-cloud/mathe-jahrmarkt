@@ -19,10 +19,10 @@ export type Bildschirm =
   | { name: 'bude'; bude: string }
   | { name: 'spiel'; bude: string; stufe: Stufe; n?: number; fortsetzen?: boolean; fundbuero?: boolean }
   | { name: 'profil' }
-  | { name: 'andenken' }
-  | { name: 'figur' }
+  | { name: 'andenken'; von?: 'insel' }
+  | { name: 'figur'; von?: 'profil' }
   | { name: 'eltern' }
-  | { name: 'bauplatz' }
+  | { name: 'bauplatz'; von?: 'insel' }
   | { name: 'check' }
   | { name: 'album' }
   | { name: 'blitz' }

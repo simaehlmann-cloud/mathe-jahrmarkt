@@ -64,7 +64,7 @@ describe('Bauinsel: zweite Insel und Brücke', () => {
   it('jede Einrichtung hat eine Kategorie, Preise sind positiv, Kennungen eindeutig', () => {
     const ids = [...EINRICHTUNG.map((e) => e.id), ...TIERE.map((t) => t.id)];
     expect(new Set(ids).size).toBe(ids.length);
-    for (const e of EINRICHTUNG) expect(['bauen', 'wohnen', 'garten']).toContain(e.kategorie);
+    for (const e of EINRICHTUNG) expect(['bauen', 'wohnen', 'garten', 'spielen']).toContain(e.kategorie);
     for (const e of [...EINRICHTUNG, ...TIERE]) expect(e.preis).toBeGreaterThan(0);
   });
 });
@@ -194,5 +194,38 @@ describe('Strandinsel und Steg (0.11.1)', () => {
           expect(LANDSCHAFT.art[y * BREITE + x], `${g.id} ${x},${y}`).not.toBe('weg');
           expect(LANDSCHAFT.baum[y * BREITE + x]).toBe(false);
         }
+  });
+});
+
+import { BAULAND, BRUECKE3, INSEL_MAX, LIEGEN, SITZEN, aufBauland, einrichtung } from '../src/domain/insel';
+describe('Bauland, neue Einrichtung, Sitzen und Liegen (0.12)', () => {
+  it('Bauland ist groß, flach und über die dritte Brücke erreichbar', () => {
+    const s = leereInsel();
+    let flaeche = 0;
+    for (let y = BAULAND.y0; y <= BAULAND.y1; y++) for (let x = BAULAND.x0; x <= BAULAND.x1; x++) if (aufBauland(x, y)) flaeche++;
+    expect(flaeche).toBeGreaterThan(450);
+    expect(wegAufInsel(s, START, { x: BRUECKE3.x, y: BRUECKE3.y1, z: 0 }).length).toBeGreaterThan(0);
+    expect(wegAufInsel(s, START, { x: 20, y: 50, z: 0 }).length).toBeGreaterThan(0);
+    expect(INSEL_MAX).toBeGreaterThanOrEqual(12);
+  });
+  it('Spielstände aus 0.11.1 (44 × 40) werden übernommen', () => {
+    const alt = Array.from({ length: BREITE * 40 }, () => [] as number[]);
+    alt[30 * BREITE + 30] = [3];
+    const p = pruefeInsel({ stapel: alt, inventar: {}, figur: { x: 12, y: 21, z: 0 }, tiere: [], erledigt: [] });
+    expect(p.stapel).toHaveLength(BREITE * HOEHE);
+    expect(p.stapel[30 * BREITE + 30]).toEqual([3]);
+  });
+  it('Teppich und Gartentor sind begehbar, Sitz- und Liegemöbel sind Einrichtung', () => {
+    let s = leereInsel();
+    s = { ...s, inventar: { '131': 1, '105': 1 } };
+    const a = setzeAn(s, 20, 50, 0, 131, 0);
+    expect(a.ok).toBe(true);
+    if (!a.ok) return;
+    expect(istBoden(a.stand, 20, 50, 0)).toBe(true);
+    const b = setzeAn(a.stand, 21, 50, 0, 105, 0);
+    expect(b.ok).toBe(true);
+    if (!b.ok) return;
+    expect(wegAufInsel(b.stand, { x: 19, y: 50, z: 0 }, { x: 22, y: 50, z: 0 }).length).toBe(4);
+    for (const id of [...Object.keys(SITZEN), ...Object.keys(LIEGEN)]) expect(einrichtung(Number(id))).toBeTruthy();
   });
 });

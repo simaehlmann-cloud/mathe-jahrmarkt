@@ -19,6 +19,15 @@ export const BLOCKARTEN: readonly { id: number; name: string; oben: string; link
   { id: 5, name: 'Sand', oben: '#f3dc9a', links: '#c9ad60', rechts: '#dcc177' },
   { id: 6, name: 'Gold', oben: '#ffd54a', links: '#c99a0e', rechts: '#e3b222' },
   { id: 7, name: 'Nacht', oben: '#5b5f97', links: '#33366a', rechts: '#44487f' },
+  // Seit 0.12: mehr Baustoffe
+  { id: 8, name: 'Putz', oben: '#f7f2e6', links: '#d6ccb4', rechts: '#e6dfcc' },
+  { id: 9, name: 'Dunkelholz', oben: '#8a5a2b', links: '#5a3416', rechts: '#6b3f1b' },
+  { id: 10, name: 'Laub', oben: '#4fbf78', links: '#2b8550', rechts: '#3fae6a' },
+  { id: 11, name: 'Blau', oben: '#6f9be6', links: '#3c63ad', rechts: '#4f78c4' },
+  { id: 12, name: 'Schnee', oben: '#ffffff', links: '#cfd8e6', rechts: '#e2e8f2' },
+  { id: 13, name: 'Pflaster', oben: '#9a9cab', links: '#6b6e80', rechts: '#7f8294' },
+  { id: 14, name: 'Dachrot', oben: '#c4473b', links: '#8c2b22', rechts: '#a6362c' },
+  { id: 15, name: 'Rosa', oben: '#f6b3cf', links: '#d07a9f', rechts: '#e396b8' },
 ];
 
 export interface BauStand {

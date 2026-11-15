@@ -78,13 +78,13 @@
   {:else if b.name === 'profil'}
     <MatheProfil />
   {:else if b.name === 'andenken'}
-    <Andenken />
+    <Andenken von={b.von} />
   {:else if b.name === 'figur'}
-    <FigurGestalten />
+    <FigurGestalten von={b.von} />
   {:else if b.name === 'eltern'}
     <Eltern />
   {:else if b.name === 'bauplatz'}
-    <Bauplatz />
+    <Bauplatz von={b.von} />
   {:else if b.name === 'check'}
     <JahrmarktCheck />
   {:else if b.name === 'album'}

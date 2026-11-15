@@ -2,58 +2,35 @@
   import { onMount, type Snippet } from 'svelte';
   import Icon from '../../app/components/Icon.svelte';
   import { app } from '../../app/zustand.svelte';
-  import { createRng, randomSeed } from '../../domain/rng';
 
   /**
-   * Gemeinsamer Ablauf der Hilfe nach Fehlern, wie in der Dartbude:
-   * 1 zeigen, 2 hervorheben, 3 selbst lösen (Auswahl), 4 weiter zur ähnlichen Aufgabe.
-   * Die Bude liefert Darstellung und Texte.
+   * Gemeinsamer Ablauf der Hilfe nach Fehlern: 1 zeigen, 2 Lösungsweg mit Lösung, dann direkt die ähnliche Aufgabe.
+   * Seit 0.12 entfällt das erneute Antippen der eben gezeigten Lösung (das war nur Abschreiben);
+   * die ähnliche Aufgabe mit neuen Zahlen prüft, ob es verstanden ist.
+   * Die Bude liefert Darstellung und Texte; Schritt 3 der Inhalte wird nicht mehr gezeigt.
    */
   let {
-    gewaehlt,
-    loesung,
-    frage,
     texte,
     inhalt,
-    format = (n: number) => String(n),
-    hinweisFalsch = 'Schau noch einmal genau hin.',
-    kandidaten = [],
     onfertig,
   }: {
     gewaehlt: number;
     loesung: number;
-    /** Frage in Schritt 3. */
+    /** Frage (früher Schritt 3, wird nicht mehr gezeigt). */
     frage: string;
-    /** Sprechtexte für die Schritte 1 bis 3. */
+    /** Sprechtexte für die Schritte 1 und 2 (der dritte wird nicht mehr genutzt). */
     texte: [string, string, string];
     inhalt: Snippet<[number]>;
     format?: (n: number) => string;
     hinweisFalsch?: string;
-    /** Falsche Auswahlmöglichkeiten in Schritt 3; ohne Angabe nahe Zahlen. */
     kandidaten?: number[];
     onfertig: () => void;
   } = $props();
 
   let schritt = $state(1);
-  let falschGetippt = $state<number | null>(null);
-  const TITEL = ['Schauen wir genau hin', 'So geht es leichter', 'Jetzt du', 'Super!'];
+  const TITEL = ['Schauen wir genau hin', 'So geht es'];
 
-  /** Drei Möglichkeiten: Lösung, die eigene falsche Antwort, dann Vorschläge der Bude oder nahe Zahlen. */
-  const auswahl = $derived.by(() => {
-    const rng = createRng(randomSeed());
-    const wahl = new Set<number>([loesung]);
-    if (gewaehlt !== loesung && gewaehlt > 0) wahl.add(gewaehlt);
-    for (const x of kandidaten) if (wahl.size < 3 && x > 0) wahl.add(x);
-    const stufe = 10 ** Math.max(0, String(loesung).length - 2);
-    for (const d of [10, -10, 1, -1, 2]) {
-      if (wahl.size >= 3) break;
-      const x = loesung + d * stufe;
-      if (x > 0) wahl.add(x);
-    }
-    return rng.shuffle([...wahl]);
-  });
-
-  const sprechtext = (s: number): string => (s <= 3 ? (texte[s - 1] ?? '') : 'Genau! Jetzt kommt eine ähnliche Aufgabe.');
+  const sprechtext = (s: number): string => texte[s - 1] ?? '';
   const sag = (erbeten = false) => app.sprich(sprechtext(schritt), erbeten);
 
   function weiter() {
@@ -62,16 +39,10 @@
     if (app.einstellungen.automatischVorlesen) sag();
   }
 
-  function waehle(w: number) {
-    if (w === loesung) {
-      app.spieleKlang('richtig');
-      falschGetippt = null;
-      schritt = 4;
-      if (app.einstellungen.automatischVorlesen) sag();
-    } else {
-      app.spieleKlang('fehler');
-      falschGetippt = w;
-    }
+  function fertig() {
+    app.spieleKlang('tipp');
+    void app.sprache.stopp();
+    onfertig();
   }
 
   onMount(() => {
@@ -89,18 +60,10 @@
 
     {@render inhalt(schritt)}
 
-    {#if schritt === 3}
-      <p class="frage">{frage}</p>
-      <div class="auswahl">
-        {#each auswahl as w (w)}
-          <button class="ticket" class:wackeln={falschGetippt === w} onclick={() => waehle(w)}>{format(w)}</button>
-        {/each}
-      </div>
-      {#if falschGetippt !== null}<p class="sanft">{hinweisFalsch}</p>{/if}
-    {:else if schritt < 3}
+    {#if schritt < 2}
       <button class="ticket weiter" onclick={weiter}>Weiter</button>
     {:else}
-      <button class="ticket gruen weiter" onclick={onfertig}>Nochmal probieren</button>
+      <button class="ticket gruen weiter" onclick={fertig}>Ähnliche Aufgabe probieren</button>
     {/if}
   </div>
 </div>
@@ -125,24 +88,6 @@
   .inhalt :global(p) {
     font-size: 1.15rem;
   }
-  .frage {
-    font-weight: 900;
-    font-size: 1.45rem;
-  }
-  .auswahl {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .auswahl .ticket {
-    font-size: 1.4rem;
-    min-width: 90px;
-  }
-  .wackeln {
-    animation: wackeln 0.4s;
-    --farbe: #f1f2f7;
-  }
   @keyframes wackeln {
     25% {
       transform: translateX(-6px);
@@ -150,10 +95,6 @@
     75% {
       transform: translateX(6px);
     }
-  }
-  .sanft {
-    text-align: center;
-    font-size: 1rem;
   }
   .weiter {
     justify-self: end;

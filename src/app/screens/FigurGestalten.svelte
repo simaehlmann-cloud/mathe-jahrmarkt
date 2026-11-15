@@ -5,6 +5,9 @@
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import { app } from '../zustand.svelte';
 
+  let { von }: { von?: 'profil' | undefined } = $props();
+  /** Zurück dorthin, woher man kam: Mathe-Profil oder Jahrmarkt (Menü, Startbildschirm). */
+  const zurueckZiel = () => app.zeige(von === 'profil' ? { name: 'profil' } : { name: 'jahrmarkt' });
   const start = app.profil;
   let figur = $state<FigurId>(start?.figur ?? 'fuchs');
   let aussehen = $state<Aussehen>(start ? { ...start.aussehen } : { fell: 0, tuch: 'keins', extra: 'keins' });
@@ -14,19 +17,19 @@
     const a = $state.snapshot(aussehen);
     app.aendereProfil((p) => ({ ...p, figur: f, aussehen: a }));
     app.spieleKlang('jubel');
-    app.zeige({ name: 'profil' });
+    zurueckZiel();
   }
 </script>
 
 {#if start}
-  <Kopfzeile titel="Figur gestalten" zurueck={() => app.zeige({ name: 'profil' })} />
+  <Kopfzeile titel="Figur gestalten" zurueck={() => zurueckZiel()} />
   <div class="seite">
     <div class="tafel karte">
       <div class="markise"></div>
       <div class="inhalt">
         <Baukasten bind:figur bind:aussehen deko={start.deko} />
         <div class="knoepfe">
-          <button class="ticket hell" onclick={() => app.zeige({ name: 'profil' })}>Abbrechen</button>
+          <button class="ticket hell" onclick={() => zurueckZiel()}>Abbrechen</button>
           <button class="ticket rot" onclick={speichern}>Speichern</button>
         </div>
       </div>

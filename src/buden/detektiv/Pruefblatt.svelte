@@ -180,8 +180,12 @@
     font-size: calc(var(--k) * 0.62);
     color: var(--tinte);
   }
-  .ziffer:hover:not(:disabled) {
-    border-color: #c9b8f0;
+  /* Nur mit echter Maus: Auf Touch-Geräten bleibt :hover nach dem Tippen hängen und sah bei der
+     nächsten Aufgabe wie eine Markierung aus („lila Kreis“). */
+  @media (hover: hover) and (pointer: fine) {
+    .ziffer:hover:not(:disabled) {
+      border-color: #c9b8f0;
+    }
   }
   .ziffer.markiert {
     border-color: var(--markise);

@@ -18,6 +18,7 @@
   import IsoBau from '../grafik/IsoBau.svelte';
   import { app } from '../zustand.svelte';
 
+  let { von }: { von?: 'insel' | undefined } = $props();
   /**
    * Bauplatz: frei bauen mit verdienten Blöcken oder Bauaufträge lösen.
    * Gebaut wird im Bauplan (Draufsicht mit Zahlen = Anzahl der Würfel übereinander), oben erscheint das Gebäude.
@@ -126,7 +127,7 @@
 </script>
 
 {#if p}
-  <Kopfzeile titel="Bauplatz" zurueck={() => app.zeige({ name: 'jahrmarkt' })} />
+  <Kopfzeile titel="Bauplatz" zurueck={() => app.zeige(von === 'insel' ? { name: 'insel' } : { name: 'jahrmarkt' })} />
   <div class="bauplatz">
     <div class="reiter" role="tablist">
       <button role="tab" aria-selected={ansicht === 'frei'} class:an={ansicht === 'frei'} onclick={() => (ansicht = 'frei')}>Frei bauen</button>

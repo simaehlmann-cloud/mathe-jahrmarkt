@@ -303,12 +303,7 @@ try {
       await foto('23-dosen-hilfe');
       await page.getByRole('button', { name: 'Weiter' }).click();
       await foto('24-dosen-hilfe-null');
-      await page.getByRole('button', { name: 'Weiter' }).click();
-      for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
-        if (await page.getByText('Super!').isVisible()) break;
-        await knopf.click();
-      }
-      await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+      await page.getByRole('button', { name: 'Ähnliche Aufgabe probieren' }).click();
     }
     pruefe(hilfeGesehen, `${name}: Dosenwerfen mit Stellenwert-Hilfe spielbar`);
 
@@ -336,12 +331,7 @@ try {
         await foto(`${kurz}-hilfe-1`);
         await page.getByRole('button', { name: 'Weiter' }).click();
         await foto(`${kurz}-hilfe-2`);
-        await page.getByRole('button', { name: 'Weiter' }).click();
-        for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
-          if (await page.getByText('Super!').isVisible()) break;
-          await knopf.click();
-        }
-        await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+        await page.getByRole('button', { name: 'Ähnliche Aufgabe probieren' }).click();
       }
       pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
     };
@@ -376,12 +366,7 @@ try {
         await foto(`${kurz}-hilfe-1`);
         await page.getByRole('button', { name: 'Weiter' }).click();
         await foto(`${kurz}-hilfe-2`);
-        await page.getByRole('button', { name: 'Weiter' }).click();
-        for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
-          if (await page.getByText('Super!').isVisible()) break;
-          await knopf.click();
-        }
-        await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+        await page.getByRole('button', { name: 'Ähnliche Aufgabe probieren' }).click();
       }
       pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
     };
@@ -443,12 +428,7 @@ try {
         await foto(`${kurz}-hilfe-1`);
         await page.getByRole('button', { name: 'Weiter' }).click();
         await foto(`${kurz}-hilfe-2`);
-        await page.getByRole('button', { name: 'Weiter' }).click();
-        for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
-          if (await page.getByText('Super!').isVisible()) break;
-          await knopf.click();
-        }
-        await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+        await page.getByRole('button', { name: 'Ähnliche Aufgabe probieren' }).click();
       }
       pruefe(hilfe, `${name}: ${titel} spielbar, Hilfe erscheint`);
     };
@@ -701,12 +681,7 @@ try {
         if (hilfe) {
           await page.getByRole('button', { name: 'Weiter' }).click();
           await foto(`${kurz}-hilfe`);
-          await page.getByRole('button', { name: 'Weiter' }).click();
-          for (const knopf of await page.locator('.hilfe .auswahl button').all()) {
-            if (await page.getByText('Super!').isVisible()) break;
-            await knopf.click();
-          }
-          await page.getByRole('button', { name: 'Nochmal probieren' }).click();
+          await page.getByRole('button', { name: 'Ähnliche Aufgabe probieren' }).click();
         }
         pruefe(hilfe, `${name}: ${titel} (${stufe}) spielbar, Hilfe erscheint`);
         await page.getByRole('button', { name: 'Runde beenden und zurück' }).click();
@@ -902,6 +877,16 @@ try {
       await page.locator('[data-schild]').first().dispatchEvent('click');
       await page.getByRole('region', { name: 'Bauauftrag' }).waitFor();
       pruefe((await page.locator('[data-schild]').count()) === 1, `${name}: nur der Bauplatz des offenen Auftrags ist markiert`);
+      await page.getByRole('button', { name: 'Bauauftrag schließen' }).click();
+      await page.getByRole('region', { name: 'Bauauftrag' }).waitFor({ state: 'detached' });
+      pruefe(true, `${name}: Bauauftrag lässt sich mit ✕ schließen`);
+      // Einrichtung kaufen und mit „Zurück“ wieder auf der Insel landen
+      await page.getByRole('radio', { name: 'Bauen', exact: true }).click().catch(() => {});
+      await page.getByRole('button', { name: '+ Einrichtung' }).click();
+      await page.getByRole('heading', { name: 'Andenkenstand' }).waitFor();
+      await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached', timeout: 30000 });
+      pruefe(true, `${name}: Zurück aus dem Andenkenstand führt auf die Insel`);
       await page.getByRole('button', { name: 'Zurück' }).first().click();
 
       // Über die App ohne Elternsperre: Menü und Startbildschirm

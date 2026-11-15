@@ -372,7 +372,7 @@ describe('Knobelzelt', () => {
   });
 });
 
-import { INSEL, BREITE, LANDSCHAFT, START, boeden, istBoden, kaufeEinrichtung, leereInsel, nimm, oberkante, pruefeInsel, setze, wegAufInsel, TUER_OBEN } from '../src/domain/insel';
+import { INSEL, INSEL_MAX, BREITE, LANDSCHAFT, START, boeden, istBoden, kaufeEinrichtung, leereInsel, nimm, oberkante, pruefeInsel, setze, wegAufInsel, TUER_OBEN } from '../src/domain/insel';
 
 describe('Bauinsel', () => {
   const bau = (s: ReturnType<typeof leereInsel>, x: number, y: number, art: number, n = 1) => {
@@ -441,8 +441,8 @@ describe('Bauinsel', () => {
     const wasser = LANDSCHAFT.art.indexOf('wasser');
     expect(setze(s, wasser % BREITE, Math.floor(wasser / BREITE), 3, 5)).toEqual({ ok: false, grund: 'feld' });
     let hoch = s;
-    for (let i = 0; i < 8; i++) hoch = (setze(hoch, 5, 15, 1, 99) as { stand: typeof s }).stand;
-    expect(oberkante(hoch, 5, 15)).toBe(8);
+    for (let i = 0; i < INSEL_MAX; i++) hoch = (setze(hoch, 5, 15, 1, 99) as { stand: typeof s }).stand;
+    expect(oberkante(hoch, 5, 15)).toBe(INSEL_MAX);
     expect(setze(hoch, 5, 15, 1, 99)).toEqual({ ok: false, grund: 'hoch' });
     const k = kaufeEinrichtung(s, 30, 110);
     expect(k.ok && k.taler).toBe(5);

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  export type Seite = 'oben' | 'links' | 'rechts';
+  export type { Seite } from './inselTeile';
 </script>
 
 <script lang="ts">
@@ -9,6 +9,8 @@
   import { koerperFarben } from '../../domain/aussehen';
   import type { FigurId } from '../../domain/profil';
   import Figur from './Figur.svelte';
+  import TierBild from './TierBild.svelte';
+  import { A, C, zeichner, type Seite } from './inselTeile';
 
   /**
    * Die Bauinsel in isometrischer Ansicht. Alles wird in Diagonalreihen (x + y) von hinten nach vorne gezeichnet,
@@ -27,6 +29,7 @@
     grundstueck = null,
     gleitPos = null,
     funkeln = false,
+    pose = null,
     ontippe,
     onboot,
     onschild,
@@ -44,6 +47,8 @@
     gleitPos?: { x: number; y: number; z: number } | null;
     /** Kurzes Glitzern um die Figur (Ankunft mit dem Teleporter). */
     funkeln?: boolean;
+    /** Figur sitzt oder liegt auf einem Möbel (Feld des Möbels, Ebene, Sitz-/Liegehöhe). */
+    pose?: { x: number; y: number; z: number; typ: 'sitzen' | 'liegen'; hoehe: number } | null;
     ontippe: (x: number, y: number, z: number, seite: Seite) => void;
     /** Boot am Steg angetippt (zurück zum Jahrmarkt). */
     onboot?: () => void;
@@ -55,8 +60,6 @@
   const H = HOEHE;
   /** Größere Seite: bestimmt die Bildfläche, damit jede Drehung hineinpasst. */
   const N = Math.max(W, H);
-  const A = 22;
-  const C = 25;
   const r = $derived(((drehung % 4) + 4) % 4);
   /** Punkt (Plan-Koordinaten, stetig) → gedrehte Koordinaten. */
   const dreh = (x: number, y: number): [number, number] =>
@@ -73,21 +76,7 @@
 
   type Teil = { schluessel: string; x: number; y: number; z: number; flaechen: { punkte: string; farbe: string; seite?: Seite }[]; extra?: string; tippbar: boolean; durchsichtig: boolean };
 
-  /** Quader von (x0, y0, z0) bis (x1, y1, z1) in Plan-Koordinaten: sichtbare Seiten nach der Drehung + Deckel. */
-  function quader(x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, oben: string, links: string, rechts: string) {
-    const ecken = [dreh(x0, y0), dreh(x1, y1)];
-    const ax0 = Math.min(ecken[0]![0], ecken[1]![0]);
-    const ax1 = Math.max(ecken[0]![0], ecken[1]![0]);
-    const ay0 = Math.min(ecken[0]![1], ecken[1]![1]);
-    const ay1 = Math.max(ecken[0]![1], ecken[1]![1]);
-    // In gedrehten Koordinaten zeichnen (P mit Drehung 0)
-    const Q = (a: number, b: number, z: number): string => `${(a - b) * A},${((a + b) * A) / 2 - z * C}`;
-    return [
-      { punkte: `${Q(ax1, ay0, z0)} ${Q(ax1, ay1, z0)} ${Q(ax1, ay1, z1)} ${Q(ax1, ay0, z1)}`, farbe: links, seite: 'links' as Seite },
-      { punkte: `${Q(ax0, ay1, z0)} ${Q(ax1, ay1, z0)} ${Q(ax1, ay1, z1)} ${Q(ax0, ay1, z1)}`, farbe: rechts, seite: 'rechts' as Seite },
-      { punkte: `${Q(ax0, ay0, z1)} ${Q(ax1, ay0, z1)} ${Q(ax1, ay1, z1)} ${Q(ax0, ay1, z1)}`, farbe: oben, seite: 'oben' as Seite },
-    ];
-  }
+  const { quader, moebel } = zeichner(dreh);
 
   const GELAENDE: Record<string, [string, string, string]> = {
     gras: ['#8bd17a', '#7a5233', '#94603c'],
@@ -97,76 +86,6 @@
     bruecke: ['#c99a5f', '#8a5a2b', '#9c6634'],
     blumen: ['#8bd17a', '#7a5233', '#94603c'],
   };
-
-  /** Teile einer Einrichtung (Kennung ab 100) als Quader. */
-  function moebel(art: number, x: number, y: number, z: number) {
-    const q = (a: number, b: number, c: number, d: number, e: number, f: number, o: string, l: string, rr: string) => quader(x + a, y + b, z + c, x + d, y + e, z + f, o, l, rr);
-    switch (art) {
-      case 101:
-        return q(0, 0, 0, 1, 1, 1, '#9c6634', '#7a4a22', '#8a5a2b');
-      case TUER_OBEN:
-        return q(0, 0, 0, 1, 1, 1, '#9c6634', '#7a4a22', '#8a5a2b');
-      case 102:
-        return q(0, 0, 0, 1, 1, 1, '#d8f1ff', '#9fd2f0', '#b8e0f6');
-      case 103:
-        return [...q(0, 0, 0, 1, 1, 0.5, '#d9a066', '#9c6634', '#b57a42'), ...q(0, 0, 0.5, 1, 0.5, 1, '#d9a066', '#9c6634', '#b57a42')];
-      case 110:
-        return [...q(0.08, 0.05, 0, 0.92, 0.95, 0.35, '#3c78d8', '#2a5aa8', '#3368bf'), ...q(0.15, 0.08, 0.35, 0.85, 0.3, 0.5, '#ffffff', '#d7dae6', '#e6e8f0')];
-      case 111:
-        return q(0.12, 0.2, 0, 0.88, 0.8, 1, '#b57a42', '#87521f', '#9c6634');
-      case 112:
-        return [
-          ...q(0.15, 0.15, 0, 0.22, 0.22, 0.55, '#87521f', '#6b3f17', '#7a4a22'),
-          ...q(0.78, 0.15, 0, 0.85, 0.22, 0.55, '#87521f', '#6b3f17', '#7a4a22'),
-          ...q(0.15, 0.78, 0, 0.22, 0.85, 0.55, '#87521f', '#6b3f17', '#7a4a22'),
-          ...q(0.78, 0.78, 0, 0.85, 0.85, 0.55, '#87521f', '#6b3f17', '#7a4a22'),
-          ...q(0.08, 0.08, 0.55, 0.92, 0.92, 0.65, '#d9a066', '#9c6634', '#b57a42'),
-        ];
-      case 113:
-        return [...q(0.42, 0.42, 0, 0.58, 0.58, 0.75, '#3a3d4f', '#2a2c3a', '#33364a'), ...q(0.3, 0.3, 0.75, 0.7, 0.7, 0.95, '#ffe57a', '#f2c41b', '#ffd54a')];
-      case 114:
-        return [...q(0.3, 0.3, 0, 0.7, 0.7, 0.3, '#c26a2c', '#9c4f1c', '#ad5c24'), ...q(0.2, 0.2, 0.3, 0.8, 0.8, 0.85, '#4fbf78', '#2b8550', '#3fae6a')];
-      case 115:
-        return [
-          ...q(0.05, 0.4, 0, 0.2, 0.6, 0.7, '#b9763f', '#87521f', '#9c6634'),
-          ...q(0.8, 0.4, 0, 0.95, 0.6, 0.7, '#b9763f', '#87521f', '#9c6634'),
-          ...q(0, 0.45, 0.4, 1, 0.55, 0.55, '#d9a066', '#9c6634', '#b57a42'),
-        ];
-      case 116:
-        return [...q(0.1, 0.25, 0, 0.9, 0.85, 0.35, '#e23a4e', '#a82838', '#c22f42'), ...q(0.1, 0.65, 0.35, 0.9, 0.85, 0.75, '#e23a4e', '#a82838', '#c22f42')];
-      case 117:
-        return [...q(0.25, 0.25, 0, 0.75, 0.75, 0.4, '#d9a066', '#9c6634', '#b57a42'), ...q(0.25, 0.65, 0.4, 0.75, 0.75, 0.9, '#d9a066', '#9c6634', '#b57a42')];
-      case 118:
-        return [
-          ...q(0.1, 0.35, 0, 0.9, 0.65, 1, '#b57a42', '#87521f', '#9c6634'),
-          ...q(0.15, 0.3, 0.3, 0.85, 0.4, 0.38, '#3c78d8', '#2a5aa8', '#3368bf'),
-          ...q(0.15, 0.3, 0.65, 0.85, 0.4, 0.73, '#3fae6a', '#2b8550', '#36985c'),
-        ];
-      case 120:
-      case 121:
-      case 122: {
-        const bl = art === 120 ? '#e23a4e' : art === 121 ? '#ffc62b' : '#3c78d8';
-        return [...q(0.47, 0.47, 0, 0.53, 0.53, 0.5, '#3fae6a', '#2b8550', '#36985c'), ...q(0.33, 0.33, 0.5, 0.67, 0.67, 0.7, bl, bl, bl)];
-      }
-      case 123:
-        return q(0.05, 0.2, 0, 0.95, 0.8, 0.8, '#3d9a5a', '#2b7544', '#33854e');
-      case 124:
-        return [
-          ...q(0.1, 0.3, 0, 0.18, 0.7, 0.3, '#5a5d70', '#3a3d4f', '#4a4d60'),
-          ...q(0.82, 0.3, 0, 0.9, 0.7, 0.3, '#5a5d70', '#3a3d4f', '#4a4d60'),
-          ...q(0.05, 0.3, 0.3, 0.95, 0.7, 0.4, '#d9a066', '#9c6634', '#b57a42'),
-          ...q(0.05, 0.62, 0.4, 0.95, 0.7, 0.75, '#d9a066', '#9c6634', '#b57a42'),
-        ];
-      case 125:
-        return [...q(0.05, 0.05, 0, 0.95, 0.95, 0.45, '#b7bccb', '#8b90a3', '#9ca1b4'), ...q(0.18, 0.18, 0.45, 0.82, 0.82, 0.5, '#6cc3ec', '#4aa2d4', '#5ab3e0'), ...q(0.42, 0.42, 0.5, 0.58, 0.58, 0.9, '#b7bccb', '#8b90a3', '#9ca1b4')];
-      case 126:
-        return [...q(0.45, 0.45, 0, 0.55, 0.55, 0.85, '#3a3d4f', '#2a2c3a', '#33364a'), ...q(0.36, 0.36, 0.85, 0.64, 0.64, 1, '#ffe57a', '#f2c41b', '#ffd54a')];
-      case 127:
-        return [...q(0.05, 0.05, 0, 0.95, 0.95, 0.25, '#7a4a22', '#5a3416', '#6b3f1b'), ...q(0.15, 0.15, 0.25, 0.85, 0.85, 0.3, '#5a3416', '#4a2a10', '#4f2e12')];
-      default:
-        return q(0, 0, 0, 1, 1, 1, '#ccc', '#999', '#aaa');
-    }
-  }
 
   // Einzelne Teile des Stands als eigene Werte: Läuft nur die Figur, wird die Landschaft nicht neu berechnet.
   const stapel = $derived(stand.stapel);
@@ -223,11 +142,24 @@
           const vorne = innen && rr > fReihe && Math.abs(x - f.x) <= 3 && Math.abs(y - f.y) <= 3 && z >= f.z;
           const block = BLOCKARTEN[a];
           const flaechen = a >= 100 ? moebel(a, x, y, z) : quader(x, y, z, x + 1, y + 1, z + 1, block?.oben ?? '#ccc', block?.links ?? '#999', block?.rechts ?? '#aaa');
-          liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen, tippbar: true, durchsichtig: vorne, extra: a === 102 ? 'fenster' : a === 101 ? 'tuer' : undefined });
+          liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen, tippbar: true, durchsichtig: vorne, extra: a === 102 ? 'fenster' : a === 101 ? 'tuer' : a === TUER_OBEN ? 'tueroben' : undefined });
         });
       }
     return liste;
   });
+
+  /** Punkt auf einer Seitenfläche (Ecken: unten-a, unten-b, oben-b, oben-a), u quer, v nach oben, beide 0 bis 1. */
+  function aufFlaeche(punkte: string, u: number, v: number): string {
+    const p = punkte.split(' ').map((e) => e.split(',').map(Number) as [number, number]);
+    const [p0, p1, p2, p3] = p as [[number, number], [number, number], [number, number], [number, number]];
+    const unten = [p0[0] + (p1[0] - p0[0]) * u, p0[1] + (p1[1] - p0[1]) * u];
+    const oben = [p3[0] + (p2[0] - p3[0]) * u, p3[1] + (p2[1] - p3[1]) * u];
+    return `${unten[0]! + (oben[0]! - unten[0]!) * v},${unten[1]! + (oben[1]! - unten[1]!) * v}`;
+  }
+  /** Rechteck auf einer Seitenfläche von (u0, v0) bis (u1, v1). */
+  const feldAuf = (punkte: string, u0: number, v0: number, u1: number, v1: number): string =>
+    `${aufFlaeche(punkte, u0, v0)} ${aufFlaeche(punkte, u1, v0)} ${aufFlaeche(punkte, u1, v1)} ${aufFlaeche(punkte, u0, v1)}`;
+  const linieAuf = (punkte: string, u0: number, v0: number, u1: number, v1: number): string => `M${aufFlaeche(punkte, u0, v0)} L${aufFlaeche(punkte, u1, v1)}`;
 
   function shade(farbe: string): string {
     // leicht dunklere Variante für das Schachbrettmuster
@@ -250,8 +182,14 @@
    * Beim Laufen kommt die Position Bild für Bild von außen (gleitPos), sonst steht die Figur auf ihrem Feld.
    * Gezeichnet wird sie in der Reihe des Feldes, dem sie gerade am nächsten ist.
    */
-  const figurPunkt = $derived(gleitPos ? punktVon(gleitPos.x, gleitPos.y, gleitPos.z) : punktVon(stand.figur.x, stand.figur.y, stand.figur.z));
-  const fReihe = $derived(reihe(stand.figur.x, stand.figur.y));
+  const figurPunkt = $derived(
+    pose
+      ? punktVon(pose.x, pose.y, pose.z + pose.hoehe)
+      : gleitPos
+        ? punktVon(gleitPos.x, gleitPos.y, gleitPos.z)
+        : punktVon(stand.figur.x, stand.figur.y, stand.figur.z),
+  );
+  const fReihe = $derived(pose ? reihe(pose.x, pose.y) : reihe(stand.figur.x, stand.figur.y));
   const farben = $derived(koerperFarben(figur, aussehen.fell));
   const breite = N * A;
   const oben = 9 * C + 20;
@@ -292,18 +230,7 @@
   }
 </script>
 
-{#snippet tierBild(art: number)}
-  <ellipse cx="0" cy="0" rx="9" ry="3.5" fill="#1f2a6b" opacity="0.22" />
-  {#if art === 140}
-    <g class="wackeln"><ellipse cx="0" cy="-9" rx="10" ry="7" fill="#fbfaf5" stroke="#1f2a6b" stroke-width="1.2" /><circle cx="-6" cy="-14" r="4" fill="#fbfaf5" stroke="#1f2a6b" stroke-width="1" /><circle cx="2" cy="-15" r="4" fill="#fbfaf5" stroke="#1f2a6b" stroke-width="1" /><ellipse cx="10" cy="-12" rx="4" ry="3.4" fill="#3a3d4f" /><rect x="-6" y="-3" width="2" height="4" fill="#3a3d4f" /><rect x="4" y="-3" width="2" height="4" fill="#3a3d4f" /></g>
-  {:else if art === 141}
-    <g class="wackeln"><ellipse cx="0" cy="-8" rx="9" ry="5.5" fill="#c98a4b" stroke="#1f2a6b" stroke-width="1.2" /><circle cx="9" cy="-13" r="4.5" fill="#c98a4b" stroke="#1f2a6b" stroke-width="1.2" /><ellipse cx="7" cy="-16" rx="1.8" ry="3" fill="#87521f" /><path d="M-9 -9 Q-14 -15 -12 -18" stroke="#c98a4b" stroke-width="2.4" fill="none" class="schwanz" /><rect x="-6" y="-4" width="2.2" height="5" fill="#87521f" /><rect x="4" y="-4" width="2.2" height="5" fill="#87521f" /><circle cx="10.5" cy="-14" r="0.9" fill="#1f2a6b" /></g>
-  {:else if art === 142}
-    <g class="wackeln"><ellipse cx="0" cy="-7" rx="7" ry="5" fill="#6b6f86" stroke="#1f2a6b" stroke-width="1.2" /><circle cx="7" cy="-12" r="4" fill="#6b6f86" stroke="#1f2a6b" stroke-width="1.2" /><path d="M4.5 -15 L5.5 -18.5 L7.5 -15.5 M8 -15.5 L10 -18.5 L10.5 -14.5" fill="#6b6f86" stroke="#1f2a6b" stroke-width="0.8" /><path d="M-7 -8 Q-12 -14 -9 -19" stroke="#6b6f86" stroke-width="2.2" fill="none" class="schwanz" /></g>
-  {:else}
-    <g class="picken"><ellipse cx="0" cy="-6" rx="5.5" ry="5" fill="#fff" stroke="#1f2a6b" stroke-width="1.1" /><circle cx="4" cy="-11" r="3" fill="#fff" stroke="#1f2a6b" stroke-width="1" /><path d="M6.6 -11.4 L9 -10.6 L6.6 -10" fill="#f2b705" /><path d="M3 -14 Q4 -16 5 -14" fill="#e23a4e" /><line x1="-1" y1="-1" x2="-1" y2="1.5" stroke="#f2b705" stroke-width="1.2" /><line x1="2" y1="-1" x2="2" y2="1.5" stroke="#f2b705" stroke-width="1.2" /></g>
-  {/if}
-{/snippet}
+
 
 <svg
   viewBox="{-breite - 10} {-oben} {2 * breite + 20} {oben + N * A + 20}"
@@ -337,6 +264,27 @@
               data-seite={f.seite ?? 'oben'}
               onclick={() => t.tippbar && ontippe(t.x, t.y, t.z, f.seite ?? 'oben')}
             />{/each}
+          {#if t.extra === 'fenster' || t.extra === 'tuer' || t.extra === 'tueroben'}
+            <!-- Fenster und Tür auf den sichtbaren Seiten: Glas mit Sprossen bzw. Türblatt mit Griff -->
+            <g pointer-events="none">
+              {#each t.flaechen.filter((f) => f.seite === 'links' || f.seite === 'rechts') as f, k (k)}
+                {#if t.extra === 'fenster'}
+                  <polygon points={feldAuf(f.punkte, 0.16, 0.16, 0.84, 0.84)} fill={f.seite === 'links' ? '#8fd0f2' : '#a9dcf6'} stroke="#1f2a6b" stroke-width="1" />
+                  <path d="{linieAuf(f.punkte, 0.5, 0.16, 0.5, 0.84)} {linieAuf(f.punkte, 0.16, 0.5, 0.84, 0.5)}" stroke="#fffdf7" stroke-width="2" />
+                  <path d={linieAuf(f.punkte, 0.25, 0.7, 0.4, 0.78)} stroke="#fff" stroke-width="1.5" opacity="0.8" />
+                {:else}
+                  <polygon points={feldAuf(f.punkte, 0.2, 0, 0.8, t.extra === 'tuer' ? 1 : 0.85)} fill={f.seite === 'links' ? '#6b3f17' : '#7a4a22'} stroke="#1f2a6b" stroke-width="1" />
+                  {#if t.extra === 'tuer'}
+                    <path d="{linieAuf(f.punkte, 0.3, 0.12, 0.3, 0.88)} {linieAuf(f.punkte, 0.7, 0.12, 0.7, 0.88)}" stroke="#4f2e12" stroke-width="1" />
+                    {@const [gx, gy] = aufFlaeche(f.punkte, 0.68, 0.55).split(',').map(Number)}
+                    <circle cx={gx} cy={gy} r="2.2" fill="#ffc62b" stroke="#1f2a6b" stroke-width="0.8" />
+                  {:else}
+                    <polygon points={feldAuf(f.punkte, 0.32, 0.25, 0.68, 0.65)} fill="#a9dcf6" stroke="#1f2a6b" stroke-width="0.8" />
+                  {/if}
+                {/if}
+              {/each}
+            </g>
+          {/if}
           {#if t.extra === 'blumen'}
             {@const [bx, by] = krone(t.x, t.y, -1.6)}
             <g pointer-events="none">
@@ -369,17 +317,20 @@
         </g>
       {/if}
       {#each tierReihen.get(rr) ?? [] as t (t.schluessel)}
-        <g class="tier" style="transform: translate({t.px}px, {t.py}px)" pointer-events="none">{@render tierBild(t.art)}</g>
+        <g class="tier" style="transform: translate({t.px}px, {t.py}px)" pointer-events="none"><TierBild art={t.art} /></g>
       {/each}
       {#if rr === fReihe}
         <g class="figur" transform="translate({figurPunkt[0]} {figurPunkt[1]})" pointer-events="none">
-          <g class:laeuft>
-            <ellipse cx="0" cy="0" rx="9" ry="4" fill="#1f2a6b" opacity="0.25" />
+          <g class:laeuft class:sitzt={pose?.typ === 'sitzen'} class:liegt={pose?.typ === 'liegen'}>
+            {#if !pose}<ellipse cx="0" cy="0" rx="9" ry="4" fill="#1f2a6b" opacity="0.25" />{/if}
             <rect x="-4.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein l" />
             <rect x="0.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein r" />
             <path d="M-7 -28 Q0 -31 7 -28 L7 -12 Q0 -10 -7 -12 Z" fill="#3c78d8" stroke="#1f2a6b" stroke-width="1" />
             <svg x="-14" y="-56" width="28" height="28" viewBox="-4 -6 72 74" overflow="visible"><Figur {figur} {aussehen} groesse={64} /></svg>
           </g>
+          {#if pose?.typ === 'liegen'}
+            <g class="zzz" aria-hidden="true"><text x="10" y="-30">z</text><text x="18" y="-40">z</text><text x="27" y="-52">Z</text></g>
+          {/if}
           {#if funkeln}
             <g class="funkeln" aria-hidden="true">
               {#each FUNKEN as [sx, sy], k (k)}
@@ -445,6 +396,39 @@
       translate: 0 0;
     }
   }
+  /* Sitzen: Beine verschwinden im Sitz; Liegen: Figur kippt auf die Seite */
+  .sitzt :global(.bein) {
+    display: none;
+  }
+  .sitzt {
+    translate: 0 6px;
+  }
+  .liegt {
+    rotate: -78deg;
+    translate: -14px -2px;
+  }
+  .zzz text {
+    font: 900 11px Nunito, sans-serif;
+    fill: #fffdf7;
+    stroke: #1f2a6b;
+    stroke-width: 0.6;
+    animation: zzz 2.4s ease-in-out infinite;
+  }
+  .zzz text:nth-child(2) {
+    animation-delay: 0.4s;
+  }
+  .zzz text:nth-child(3) {
+    animation-delay: 0.8s;
+  }
+  @keyframes zzz {
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
   .boot,
   .schild {
     cursor: pointer;
@@ -472,25 +456,9 @@
       scale: 0.4;
     }
   }
-  .wackeln {
-    animation: wackeln 2.4s ease-in-out infinite;
-    transform-origin: 0 0;
-  }
-  .picken {
-    animation: picken 1.6s ease-in-out infinite;
-    transform-origin: 0 0;
-  }
-  @keyframes wackeln {
-    0%, 100% { rotate: 0deg; }
-    50% { rotate: 3deg; }
-  }
-  @keyframes picken {
-    0%, 60%, 100% { rotate: 0deg; }
-    75% { rotate: 18deg; }
-  }
   @media (prefers-reduced-motion: reduce) {
     .tier { animation: none; }
-    .wackeln, .picken, .schaukeln, .figur .laeuft, .figur .laeuft .bein.l, .figur .laeuft .bein.r { animation: none; }
+    .schaukeln, .figur .laeuft, .figur .laeuft .bein.l, .figur .laeuft .bein.r { animation: none; }
     .funkeln path { animation: none; opacity: 0; }
   }
 </style>

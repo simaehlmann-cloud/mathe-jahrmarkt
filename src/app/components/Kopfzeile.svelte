@@ -75,6 +75,7 @@
           {#if r?.naechster}<small>noch {r.fehlen} bis {r.naechster}</small>{/if}
         </div>
       </div>
+      <button onclick={() => gehe({ name: 'figur' })}><Figur figur={p.figur} groesse={22} aussehen={p.aussehen} />Figur gestalten</button>
       <button onclick={() => gehe({ name: 'profil' })}><Icon name="profil" groesse={22} />Mein Mathe-Profil</button>
       <button onclick={() => gehe({ name: 'album' })}><Icon name="album" groesse={22} />Sammelalbum{#if neu}<span class="punkt">{neu} neu</span>{/if}</button>
       <button onclick={() => gehe({ name: 'blitz' })}><Icon name="blitz" groesse={22} />Blitzrechnen</button>
@@ -85,7 +86,7 @@
       <button onclick={() => gehe({ name: 'bauplatz' })}><Icon name="block" groesse={22} />Bauplatz</button>
       <button onclick={() => gehe({ name: 'insel' })}><Icon name="insel" groesse={22} />Bauinsel{#if !app.paket}<Icon name="schloss" groesse={16} />{/if}</button>
       <button onclick={() => gehe({ name: 'check' })}><Icon name="check" groesse={22} />Jahrmarkt-Check</button>
-      <button onclick={() => gehe({ name: 'start' })}><Figur figur={p.figur} groesse={22} aussehen={p.aussehen} />Spieler wechseln</button>
+      <button onclick={() => gehe({ name: 'start' })}><Icon name="zurueck" groesse={22} />Startbildschirm · Spieler wechseln</button>
       <button class="leise" onclick={() => gehe({ name: 'eltern' })}><Icon name="schloss" groesse={20} />Elternbereich</button>
     </nav>
   {/if}

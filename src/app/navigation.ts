@@ -15,8 +15,6 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
     case 'jahrmarkt':
       return 'jahrmarktVerlassen';
     case 'profil':
-    case 'andenken':
-    case 'bauplatz':
     case 'check':
     case 'album':
     case 'blitz':
@@ -31,7 +29,10 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
     case 'spiel':
       return b.fundbuero ? { name: 'fundbuero' } : { name: 'bude', bude: b.bude };
     case 'figur':
-      return { name: 'profil' };
+      return b.von === 'profil' ? { name: 'profil' } : { name: 'jahrmarkt' };
+    case 'bauplatz':
+    case 'andenken':
+      return b.von === 'insel' ? { name: 'insel' } : hatProfil ? { name: 'jahrmarkt' } : { name: 'start' };
     case 'ueber':
       return b.von === 'start' || !hatProfil ? { name: 'start' } : { name: 'jahrmarkt' };
   }

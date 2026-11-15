@@ -12,6 +12,13 @@
   let i = $state(0);
   let text = $derived(saetze[i] ?? '');
 
+  /** Jederzeit schließen, ohne alle Blasen zu lesen. */
+  function schliessen() {
+    app.spieleKlang('tipp');
+    void app.sprache.stopp();
+    onfertig();
+  }
+
   function weiter() {
     app.spieleKlang('tipp');
     if (i < saetze.length - 1) {
@@ -31,6 +38,7 @@
 <div class="szene" role="dialog" aria-modal="false" aria-label="Flinka sagt">
   <div class="flinka"><Flinka groesse={110} /></div>
   <div class="blase">
+    {#if saetze.length > 1}<button class="zu" onclick={schliessen} aria-label="Schließen">✕</button>{/if}
     <p aria-live="polite">{text}</p>
     <div class="knoepfe">
       <button class="rund" onclick={() => app.sprich(text, true)} aria-label="Vorlesen"><Icon name="laut" /></button>
@@ -40,6 +48,22 @@
 </div>
 
 <style>
+  .zu {
+    position: absolute;
+    top: -14px;
+    right: -10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid var(--tinte);
+    background: #fff;
+    color: var(--tinte);
+    font: inherit;
+    font-weight: 900;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--tinte);
+  }
   .szene {
     position: absolute;
     left: var(--rand);

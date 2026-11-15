@@ -5,6 +5,9 @@
     BREITE,
     EINRICHTUNG,
     STEG,
+    SITZEN,
+    LIEGEN,
+    inEbene,
     GRUNDSTUECKE,
     INSEL_AUFTRAG_BLOECKE,
     INSEL_AUFTRAG_TALER,
@@ -26,6 +29,7 @@
   import type { Seite } from '../grafik/InselWelt.svelte';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
+  import TeilVorschau from '../grafik/TeilVorschau.svelte';
   import InselWelt from '../grafik/InselWelt.svelte';
   import { app } from '../zustand.svelte';
 
@@ -126,6 +130,8 @@
     markiert = { x, y };
     setTimeout(() => (markiert = null), 400);
     if (modus === 'laufen') {
+      pose = null;
+      if (z >= 0 && platzNehmen(st, x, y, z)) return;
       const ziel = zielAufFeld(st, x, y, seite === 'oben' ? z + 1 : undefined);
       if (!ziel) {
         app.melde('Da kannst du nicht hin.');
@@ -180,6 +186,41 @@
     }
     uebernehmen(e.stand, e.bloecke);
     app.spieleKlang('tipp');
+  }
+
+  /** Figur sitzt oder liegt (nur zur Anzeige, wird nicht gespeichert). */
+  let pose = $state<{ x: number; y: number; z: number; typ: 'sitzen' | 'liegen'; hoehe: number } | null>(null);
+  // Beim Wechsel zu Bauen oder Abbauen steht die Figur wieder auf
+  $effect(() => {
+    if (modus !== 'laufen') pose = null;
+  });
+
+  /**
+   * Hinsetzen bzw. Hinlegen: zum nächsten freien Nachbarfeld des Möbels laufen, dann Platz nehmen.
+   * Gibt false zurück, wenn das angetippte Teil kein Sitz- oder Liegemöbel ist.
+   */
+  function platzNehmen(st: InselStand, x: number, y: number, z: number): boolean {
+    const e = inEbene(st, x, y, z);
+    if (typeof e !== 'number') return false;
+    const sitz = SITZEN[e];
+    const lieg = LIEGEN[e];
+    if (sitz === undefined && lieg === undefined) return false;
+    let besterWeg: { x: number; y: number; z: number }[] | null = null;
+    for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]] as const) {
+      const weg = wegAufInsel(st, st.figur, { x: x + dx, y: y + dy, z });
+      if (weg.length && (!besterWeg || weg.length < besterWeg.length)) besterWeg = weg;
+    }
+    if (!besterWeg) {
+      app.melde('Da kommst du nicht hin.');
+      return true;
+    }
+    const typ = lieg !== undefined ? 'liegen' : 'sitzen';
+    nachLaufen = () => {
+      pose = { x, y, z, typ, hoehe: (lieg ?? sitz ?? 0.4) };
+      app.spieleKlang('pop');
+    };
+    laufe(besterWeg.slice(1));
+    return true;
   }
 
   /** Stetige Position beim Laufen; die Kamera folgt ihr Bild für Bild. */
@@ -314,16 +355,17 @@
           <h2>Die Bauinsel</h2>
           <p>Eine eigene Insel mit See, Hügel und Bäumen: Häuser bauen, einrichten und mit deiner Figur durch die Türen gehen. Die Blöcke verdienst du beim Rechnen.</p>
           <p class="schloss"><Icon name="schloss" groesse={20} /> Die Bauinsel gehört zum Zusatzpaket. Frag deine Eltern!</p>
-          <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Zum Bauplatz</button>
+          <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz', von: 'insel' })}>Zum Bauplatz</button>
         </div>
       </div>
     </div>
   {:else}
     <div class="feld" bind:this={feld}>
-      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} {gleitPos} {funkeln} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
+      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} {gleitPos} {funkeln} {pose} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
     </div>
     {#if auftragOffen}
       <div class="auftrag karte" role="region" aria-label="Bauauftrag">
+        <button class="zu" onclick={() => (auftragOffen = false)} aria-label="Bauauftrag schließen">✕</button>
         {#if auftrag}
           {@const g = GRUNDSTUECKE.find((x) => x.id === auftrag.grundstueck)}
           <h2>{auftrag.titel}</h2>
@@ -332,12 +374,13 @@
           <p class="klein">{g?.name ?? 'Der Bauplatz'} liegt {g?.wo ?? 'auf einer Insel'} und hat ein Schild. Belohnung: {INSEL_AUFTRAG_TALER} Taler und {INSEL_AUFTRAG_BLOECKE} Blöcke.</p>
           <div class="knoepfe">
             <button class="ticket gelb" onclick={zumGrundstueck}>Hinlaufen</button>
-            <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Bauplatz-Aufträge</button>
+            <button class="ticket hell" onclick={() => (auftragOffen = false)}>Schließen</button>
+            <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz', von: 'insel' })}>Bauplatz-Aufträge</button>
           </div>
         {:else}
           <h2>Alle Inselaufträge geschafft!</h2>
           <p>Du hast alle Bauplätze bebaut. Weitere Aufträge gibt es auf dem Bauplatz.</p>
-          <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })}>Zum Bauplatz</button>
+          <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz', von: 'insel' })}>Zum Bauplatz</button>
         {/if}
       </div>
     {/if}
@@ -356,9 +399,9 @@
             <button role="radio" aria-checked={art === b.id} aria-label={b.name} class="block" class:an={art === b.id} style="--o: {b.oben}; --l: {b.links}" onclick={() => (art = b.id)}></button>
           {/each}
           {#each inventar as e (e.id)}
-            <button role="radio" aria-checked={art === e.id} aria-label="{e.name}, {p.insel.inventar[String(e.id)]} Stück" class="teil" class:an={art === e.id} onclick={() => (art = e.id)}>{e.name}<small>{p.insel.inventar[String(e.id)]}</small></button>
+            <button role="radio" aria-checked={art === e.id} aria-label="{e.name}, {p.insel.inventar[String(e.id)]} Stück" class="teil" class:an={art === e.id} onclick={() => (art = e.id)}><TeilVorschau art={e.id} groesse={30} />{e.name}<small>{p.insel.inventar[String(e.id)]}</small></button>
           {/each}
-          <button class="laden" onclick={() => app.zeige({ name: 'andenken' })}>+ Einrichtung</button>
+          <button class="laden" onclick={() => app.zeige({ name: 'andenken', von: 'insel' })}>+ Einrichtung</button>
         </div>
         {#if istMoebel && !(p.insel.inventar[String(art)] ?? 0)}<p class="hinweis">Davon hast du keins mehr.</p>{/if}
       {:else}
@@ -434,7 +477,27 @@
     width: 44px;
     height: 44px;
   }
+  .auftrag .zu {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid var(--tinte);
+    background: #fff;
+    color: var(--tinte);
+    font: inherit;
+    font-weight: 900;
+    font-size: 1.1rem;
+    z-index: 1;
+    cursor: pointer;
+  }
+  .auftrag h2 {
+    padding-right: 44px;
+  }
   .auftrag {
+    width: auto;
     background: var(--papier);
     border: 3px solid var(--tinte);
     border-radius: 16px;

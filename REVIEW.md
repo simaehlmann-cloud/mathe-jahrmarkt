@@ -1,4 +1,4 @@
-# Code-Review bis Version 0.11.0
+# Code-Review bis Version 0.12.0
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -156,6 +156,10 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Bauinsel (0.11.1) | Figur ruckelte auf dem Gerät: Bei jedem Feld startete eine neue weiche Scroll-Animation, die Kamera stand in zwei Dritteln der Bilder still und pulsierte | Laufen als eine Bildschleife (requestAnimationFrame), Kamera folgt Bild für Bild; gemessen: Kamera ohne Stillstand, Tempo gleichmäßig (Schwankung 66 % → 15 %) |
 | Bauinsel (0.11.1) | Fähre am Kartenrand nicht zu finden, Bauplätze A–C rätselhaft | Wegweiser am Eingang, Teleporter in der Leiste, Boot am Steg; nur der Bauplatz des offenen Auftrags ist markiert, mit Schild |
 | Rechtliches (0.11.1) | Impressum und Datenschutz lagen hinter der Elternsperre | ohne Sperre über Startbildschirm und Menü (nur Text, keine Links nach außen) |
+| Hilfe (0.12.0) | Nach einem Fehler musste das Kind die gerade gezeigte Lösung noch einmal antippen – reines Abschreiben | Hilfe in zwei Schritten (genau hinschauen, so geht es), danach direkt eine ähnliche Aufgabe; Einmaleins-Hilfe mit eigenem Rechenschritt bleibt |
+| Fehlerdetektiv (0.12.0) | Lila Rahmen blieb nach dem Antippen auf Touchgeräten an der Stelle hängen | Hover-Rahmen nur noch bei Maus (`hover: hover`) |
+| Bauinsel (0.12.0) | Größere Welt: Leistung | 44 × 58 Felder, gemessen bei 3-facher Pixeldichte 60 Bilder/s, Tempo-Schwankung 15 %; alte Inseln werden ohne Verlust übernommen (Test) |
+| Navigation (0.12.0) | Zurück aus Laden/Bauplatz landete am Jahrmarkt statt auf der Insel | Ziel merkt sich die Herkunft (`von: 'insel'`), e2e-Test |
 
 ## Offen
 
@@ -167,7 +171,7 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 
 ## Prüfstand
 
-- 146 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
+- 184 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
 - Typprüfung ohne Fehler und Warnungen (`svelte-check --fail-on-warnings`)
 - 54 Store-Regel-Prüfungen
 - Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Figuren-Baukasten, Neustart mit Fortschritt und Figur, keine Konsolenfehler; zweiter Durchgang mit Zusatzpaket: Feiern, Sammelalbum, Blitzrechnen, Knobelzelt, Rätsel, Rang, Bauplatz, Bauinsel, Check, Weiterspielen, acht Spiel-Buden, Eltern-PDF

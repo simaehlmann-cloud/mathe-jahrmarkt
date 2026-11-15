@@ -75,16 +75,19 @@ export function flinkaTipp(p: Profil, auftraege: AuftragsTag | null, paket: bool
   } else {
     saetze.push(`Hallo ${p.name}! Deine Aufträge für heute sind erledigt. Stark!`);
   }
+  // Höchstens drei Blasen: Begrüßung, der wichtigste Hinweis, dann Rechentrick oder (ohne Hinweis) eine Knobelfrage mit Lösung
   const fund = faellige(p.fundbuero, jetzt.getTime()).length;
-  if (fund) saetze.push(`Im Fundbüro ${fund === 1 ? 'wartet eine Aufgabe' : `warten ${fund} Aufgaben`} auf dich, bei denen du dich vertan hattest. Hol sie ab – du findest das Fundbüro im Menü oben rechts.`);
   const frisch = frischmacher(p, paket, jetzt.getTime())[0];
   const naechste = naechsteStufe(p, paket);
-  if (frisch) saetze.push(`Bei der Bude ${budeInfo(frisch.bude).name} warst du lange nicht. Schau mal wieder vorbei, damit nichts einrostet.`);
-  else if (naechste) saetze.push(`Als Nächstes könntest du ${STUFEN_NAME[naechste.stufe]} bei ${budeInfo(naechste.bude).name} schaffen.`);
   const tage = spieltageDieseWoche(p, jetzt);
-  if (tage < WOCHENZIEL_TAGE) saetze.push(`Diese Woche hast du an ${tage === 1 ? 'einem Tag' : `${tage} Tagen`} gespielt. Bei ${WOCHENZIEL_TAGE} Tagen gibt es Extra-Blöcke.`);
-  // Abwechselnd ein Rechentrick oder eine kleine Knobelfrage (die Antwort kommt in der nächsten Blase)
-  if (rng.int(0, 2) === 0) {
+  let hinweis: string | undefined;
+  if (fund) hinweis = `Im Fundbüro ${fund === 1 ? 'wartet eine Aufgabe' : `warten ${fund} Aufgaben`} auf dich, bei denen du dich vertan hattest. Du findest es im Menü oben rechts.`;
+  else if (frisch) hinweis = `Bei der Bude ${budeInfo(frisch.bude).name} warst du lange nicht. Schau mal wieder vorbei, damit nichts einrostet.`;
+  else if (naechste) hinweis = `Als Nächstes könntest du ${STUFEN_NAME[naechste.stufe]} bei ${budeInfo(naechste.bude).name} schaffen.`;
+  else if (tage < WOCHENZIEL_TAGE) hinweis = `Diese Woche hast du an ${tage === 1 ? 'einem Tag' : `${tage} Tagen`} gespielt. Bei ${WOCHENZIEL_TAGE} Tagen gibt es Extra-Blöcke.`;
+  if (hinweis) {
+    saetze.push(hinweis, `Mein Rechentrick: ${rng.pick(RECHENTRICKS)}`);
+  } else if (rng.int(0, 2) === 0) {
     const k = rng.pick(KNOBELFRAGEN);
     saetze.push(`Kleine Knobelfrage: ${k.frage}`, `Die Lösung: ${k.antwort}`);
   } else {

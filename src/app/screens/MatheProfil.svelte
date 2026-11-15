@@ -32,7 +32,7 @@
         <div class="wer">
           <Figur figur={p.figur} groesse={52} aussehen={p.aussehen} />
           <h2>{p.name}</h2>
-          <button class="ticket hell gestalten" onclick={() => app.zeige({ name: 'figur' })}>Figur gestalten</button>
+          <button class="ticket hell gestalten" onclick={() => app.zeige({ name: 'figur', von: 'profil' })}>Figur gestalten</button>
         </div>
         <div class="rangleiste" aria-label="Rang {r.name}, {r.sterne} Sterne{r.naechster ? `, noch ${r.fehlen} bis ${r.naechster}` : ''}">
           <p class="rangname"><Icon name="stern" groesse={22} /> {r.name} <small>· {r.sterne} Sterne</small></p>
