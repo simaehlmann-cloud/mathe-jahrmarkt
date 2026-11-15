@@ -165,7 +165,7 @@ describe('Stimmenwahl', () => {
     expect(liste[0]?.name).toBe('Frau 1');
     expect(liste[0]?.index).toBe(1);
   });
-  it('höchstens vier unterscheidbare Stimmen, auch wenn alle gleich heißen; Standard ist Frau 2', () => {
+  it('höchstens vier unterscheidbare Stimmen, auch wenn alle gleich heißen; Standard ist Mann 1', () => {
     // So meldet ein Samsung-Handy mit Google-Sprachausgabe die Stimmen: Name überall gleich, Kennung verschieden
     const s = (uri: string) => ({ name: 'Deutsch (Deutschland)', voiceURI: uri, lang: 'de-DE', localService: true, default: false });
     const liste = waehleStimmen([
@@ -174,11 +174,22 @@ describe('Stimmenwahl', () => {
     ]);
     expect(liste.length).toBeLessThanOrEqual(4);
     expect(liste.map((x) => x.name)).toEqual(['Frau 1', 'Frau 2', 'Mann 1', 'Mann 2']);
+    expect(liste.find((x) => x.name.startsWith('Mann') && x.uri.includes('deb'))).toBeTruthy();
+    expect(liste.some((x) => x.uri.includes('language'))).toBe(false);
     expect(new Set(liste.map((x) => x.uri)).size).toBe(liste.length);
-    expect(standardStimme(liste)?.name).toBe('Frau 2');
+    expect(standardStimme(liste)?.name).toBe('Mann 1');
     expect(geschlecht({ name: 'SMTf00', voiceURI: 'SMTf00' })).toBe('w');
     expect(geschlecht({ name: 'Markus', voiceURI: 'Markus' })).toBe('m');
     expect(standardStimme([])).toBeUndefined();
+  });
+  it('S25+: dea, deb, deg und der allgemeine Eintrag ergeben Frau 1, Mann 1, Mann 2', () => {
+    const s = (uri: string) => ({ name: uri, voiceURI: uri, lang: 'de-DE', localService: true, default: false });
+    const liste = waehleStimmen([s('de-de-x-dea-local'), s('de-de-x-deb-local'), s('de-de-x-deg-local'), s('de-DE-language')]);
+    expect(liste.map((x) => x.name)).toEqual(['Frau 1', 'Mann 1', 'Mann 2']);
+    expect(standardStimme(liste)?.uri).toContain('deg');
+    expect(liste.find((x) => x.name === 'Mann 2')?.uri).toContain('deb');
+    // nur der allgemeine Eintrag vorhanden: dann bleibt er
+    expect(waehleStimmen([s('de-DE-language')])).toHaveLength(1);
   });
   it('alte Einstellungen bekommen Tempo und Stimme', () => {
     const b = migriere({ schema: 2, profile: [], einstellungen: { lautSprache: 0.5 } });

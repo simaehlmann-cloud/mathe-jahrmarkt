@@ -1,4 +1,4 @@
-# Code-Review bis Version 0.12.0
+# Code-Review bis Version 0.12.1
 
 Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgrenze, Elternsperre, Datenschutz, Barrierefreiheit, Leistung, kindgerecht, Tests). Stufen: **kritisch** (Absturz, falsche Mathematik, Datenverlust, Store-Ablehnung), **wichtig** (Bedienung, Barrierefreiheit, Wartbarkeit), **Verbesserung**.
 
@@ -160,6 +160,10 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 | Fehlerdetektiv (0.12.0) | Lila Rahmen blieb nach dem Antippen auf Touchgeräten an der Stelle hängen | Hover-Rahmen nur noch bei Maus (`hover: hover`) |
 | Bauinsel (0.12.0) | Größere Welt: Leistung | 44 × 58 Felder, gemessen bei 3-facher Pixeldichte 60 Bilder/s, Tempo-Schwankung 15 %; alte Inseln werden ohne Verlust übernommen (Test) |
 | Navigation (0.12.0) | Zurück aus Laden/Bauplatz landete am Jahrmarkt statt auf der Insel | Ziel merkt sich die Herkunft (`von: 'insel'`), e2e-Test |
+| Bauinsel (0.12.1) | Figur lag neben dem Bett (Drehung um die Füße) und stand nicht auf | Liegen längs auf der Matratze, Winkel aus Kopf- und Fußpunkt (jede Ansicht); Möbel erneut antippen oder irgendwohin tippen = aufstehen |
+| Bauinsel (0.12.1) | Drehen drehte nicht um die Figur | nach dem Drehen Kamera auf die Figur; e2e misst den Abstand zur Bildmitte |
+| Bauinsel (0.12.1) | Schild verdeckte den Bauplatz, Antippen öffnete den Auftrag | im Bauen-/Abbauen-Modus durchsichtig und nicht antippbar, Umriss kräftiger |
+| Stimme (0.12.1) | „Frau 2“ war auf dem S25+ eine Männerstimme | Google deb = Mann (angehört), deg wird „Mann 1“ und Standard, „de-DE-language“ (nur Verweis auf Gerätestandard) ausgeblendet; Tests |
 
 ## Offen
 
@@ -171,7 +175,7 @@ Geprüft nach der Checkliste im Konzept (Mathematik, Zustand, Speicher, Kaufgren
 
 ## Prüfstand
 
-- 184 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
+- 185 Unit-Tests, darunter Eigenschaftstests über je 10 000 Aufgaben pro Stufe
 - Typprüfung ohne Fehler und Warnungen (`svelte-check --fail-on-warnings`)
 - 54 Store-Regel-Prüfungen
 - Ablauftest in Chrome im Hoch- und Querformat: Profil, Intro, Gasse, Probewurf, Fehler mit Hilfe, Nochmal-Aufgabe, Doppeltippen, Bronze geschafft, Katze, Elternsperre, Wochenbericht, Kaufknopf, Figuren-Baukasten, Neustart mit Fortschritt und Figur, keine Konsolenfehler; zweiter Durchgang mit Zusatzpaket: Feiern, Sammelalbum, Blitzrechnen, Knobelzelt, Rätsel, Rang, Bauplatz, Bauinsel, Check, Weiterspielen, acht Spiel-Buden, Eltern-PDF

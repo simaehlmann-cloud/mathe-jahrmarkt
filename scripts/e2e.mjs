@@ -880,6 +880,19 @@ try {
       await page.getByRole('button', { name: 'Bauauftrag schließen' }).click();
       await page.getByRole('region', { name: 'Bauauftrag' }).waitFor({ state: 'detached' });
       pruefe(true, `${name}: Bauauftrag lässt sich mit ✕ schließen`);
+      // Drehen: Die Ansicht dreht sich um die Figur (sie bleibt in der Bildmitte)
+      for (let d = 0; d < 2; d++) {
+        await page.getByRole('button', { name: 'Ansicht drehen' }).click();
+        await page.waitForTimeout(300);
+        const abstand = await page.evaluate(() => {
+          const f = document.querySelector('.figur')?.getBoundingClientRect();
+          const v = document.querySelector('.feld')?.getBoundingClientRect();
+          return f && v ? Math.hypot(f.x + f.width / 2 - (v.x + v.width / 2), f.y + f.height - (v.y + v.height / 2)) : 999;
+        });
+        pruefe(abstand < 40, `${name}: nach dem Drehen steht die Figur in der Mitte (Abstand ${Math.round(abstand)} px)`);
+      }
+      await page.getByRole('button', { name: 'Ansicht drehen' }).click();
+      await page.getByRole('button', { name: 'Ansicht drehen' }).click();
       // Einrichtung kaufen und mit „Zurück“ wieder auf der Insel landen
       await page.getByRole('radio', { name: 'Bauen', exact: true }).click().catch(() => {});
       await page.getByRole('button', { name: '+ Einrichtung' }).click();

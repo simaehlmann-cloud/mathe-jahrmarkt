@@ -113,6 +113,12 @@
     feld.scrollTop = y - feld.clientHeight / 2;
   }
 
+  /** Ansicht um die Figur drehen: nach dem Drehen steht die Figur wieder in der Bildmitte. */
+  function drehen() {
+    drehung = (drehung + 1) % 4;
+    void tick().then(() => kamera(false));
+  }
+
   /** Richtung der angetippten Seitenfläche im Bauplan (hängt von der Drehung ab). */
   function nachbar(seite: Seite): [number, number] {
     const r = ((drehung % 4) + 4) % 4;
@@ -130,7 +136,14 @@
     markiert = { x, y };
     setTimeout(() => (markiert = null), 400);
     if (modus === 'laufen') {
+      // Liegt oder sitzt die Figur, steht sie beim nächsten Antippen auf; das Möbel selbst noch einmal antippen = nur aufstehen
+      const war = pose;
       pose = null;
+      if (war && war.x === x && war.y === y) {
+        app.spieleKlang('pop');
+        void tick().then(() => kamera(true));
+        return;
+      }
       if (z >= 0 && platzNehmen(st, x, y, z)) return;
       const ziel = zielAufFeld(st, x, y, seite === 'oben' ? z + 1 : undefined);
       if (!ziel) {
@@ -361,7 +374,7 @@
     </div>
   {:else}
     <div class="feld" bind:this={feld}>
-      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} {gleitPos} {funkeln} {pose} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
+      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag ? auftrag.grundstueck : null} bauen={modus !== 'laufen'} {gleitPos} {funkeln} {pose} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
     </div>
     {#if auftragOffen}
       <div class="auftrag karte" role="region" aria-label="Bauauftrag">
@@ -387,7 +400,7 @@
     <div class="werkzeug">
       <div class="zeile">
         <div class="modus" role="radiogroup" aria-label="Was möchtest du tun?">
-          <button role="radio" aria-checked={modus === 'laufen'} class:an={modus === 'laufen'} onclick={() => (modus = 'laufen')}>Laufen</button>
+          <button role="radio" aria-checked={modus === 'laufen'} class:an={modus === 'laufen'} onclick={() => { if (modus === 'laufen') pose = null; modus = 'laufen'; }}>Laufen</button>
           <button role="radio" aria-checked={modus === 'bauen'} class:an={modus === 'bauen'} onclick={() => (modus = 'bauen')}>Bauen</button>
           <button role="radio" aria-checked={modus === 'abbauen'} class:an={modus === 'abbauen'} onclick={() => (modus = 'abbauen')}>Abbauen</button>
         </div>
@@ -408,7 +421,7 @@
         <p class="hinweis">{modus === 'laufen' ? 'Tippe auf ein Feld, dann läufst du hin. Hinauf geht es über Treppen.' : 'Tippe auf einen Block: Er kommt zurück ins Lager.'}</p>
       {/if}
       <div class="zeile klein">
-        <button class="rund" onclick={() => (drehung = (drehung + 1) % 4)} aria-label="Ansicht drehen">↻</button>
+        <button class="rund" onclick={drehen} aria-label="Ansicht drehen">↻</button>
         <button class="rund" onclick={() => { massstab = Math.max(0.6, massstab - 0.2); void tick().then(() => kamera()); }} aria-label="Kleiner">−</button>
         <button class="rund" onclick={() => { massstab = Math.min(1.8, massstab + 0.2); void tick().then(() => kamera()); }} aria-label="Größer">+</button>
         <button class="rund" onclick={() => kamera(true)} aria-label="Wo bin ich?">◎</button>

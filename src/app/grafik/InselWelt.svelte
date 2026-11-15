@@ -27,6 +27,7 @@
     laeuft = false,
     markiert = null,
     grundstueck = null,
+    bauen = false,
     gleitPos = null,
     funkeln = false,
     pose = null,
@@ -43,6 +44,8 @@
     markiert?: { x: number; y: number } | null;
     /** Hervorgehobenes Grundstück (Bauauftrag). */
     grundstueck?: string | null;
+    /** Bauen/Abbauen: Schild durchsichtig und nicht antippbar, damit man am Bauplatz bauen kann. */
+    bauen?: boolean;
     /** Stetige Position der Figur beim Laufen (Plan-Koordinaten); null = sie steht auf ihrem Feld. */
     gleitPos?: { x: number; y: number; z: number } | null;
     /** Kurzes Glitzern um die Figur (Ankunft mit dem Teleporter). */
@@ -182,8 +185,25 @@
    * Beim Laufen kommt die Position Bild für Bild von außen (gleitPos), sonst steht die Figur auf ihrem Feld.
    * Gezeichnet wird sie in der Reihe des Feldes, dem sie gerade am nächsten ist.
    */
+  /**
+   * Liegen: Die Figur liegt längs auf der Matratze, Kopf am Kissen (kleines y im Plan), Füße am Fußende.
+   * Drehwinkel und Größe folgen aus den beiden Bildpunkten, damit es in jeder Ansicht passt.
+   */
+  const liegen = $derived.by(() => {
+    if (pose?.typ !== 'liegen') return null;
+    const kopf = punktVon(pose.x, pose.y - 0.32, pose.z + pose.hoehe);
+    const fuss = punktVon(pose.x, pose.y + 0.4, pose.z + pose.hoehe);
+    const dx = kopf[0] - fuss[0];
+    const dy = kopf[1] - fuss[1];
+    const laenge = Math.hypot(dx, dy);
+    // Figur zeigt nach oben (0, −1): so drehen, dass sie zum Kissen zeigt; Länge 56 auf die Bettlänge bringen
+    const winkel = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+    return { fuss, kopf: [dx, dy] as const, winkel, skala: Math.max(0.45, Math.min(1, laenge / 50)) };
+  });
   const figurPunkt = $derived(
-    pose
+    liegen
+      ? liegen.fuss
+      : pose
       ? punktVon(pose.x, pose.y, pose.z + pose.hoehe)
       : gleitPos
         ? punktVon(gleitPos.x, gleitPos.y, gleitPos.z)
@@ -321,15 +341,15 @@
       {/each}
       {#if rr === fReihe}
         <g class="figur" transform="translate({figurPunkt[0]} {figurPunkt[1]})" pointer-events="none">
-          <g class:laeuft class:sitzt={pose?.typ === 'sitzen'} class:liegt={pose?.typ === 'liegen'}>
+          <g class:laeuft class:sitzt={pose?.typ === 'sitzen'} transform={liegen ? `rotate(${liegen.winkel.toFixed(1)}) scale(${liegen.skala.toFixed(2)})` : undefined}>
             {#if !pose}<ellipse cx="0" cy="0" rx="9" ry="4" fill="#1f2a6b" opacity="0.25" />{/if}
             <rect x="-4.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein l" />
             <rect x="0.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein r" />
             <path d="M-7 -28 Q0 -31 7 -28 L7 -12 Q0 -10 -7 -12 Z" fill="#3c78d8" stroke="#1f2a6b" stroke-width="1" />
             <svg x="-14" y="-56" width="28" height="28" viewBox="-4 -6 72 74" overflow="visible"><Figur {figur} {aussehen} groesse={64} /></svg>
           </g>
-          {#if pose?.typ === 'liegen'}
-            <g class="zzz" aria-hidden="true"><text x="10" y="-30">z</text><text x="18" y="-40">z</text><text x="27" y="-52">Z</text></g>
+          {#if liegen}
+            <g class="zzz" aria-hidden="true" transform="translate({liegen.kopf[0].toFixed(1)} {(liegen.kopf[1] + 24).toFixed(1)})"><text x="10" y="-30">z</text><text x="18" y="-40">z</text><text x="27" y="-52">Z</text></g>
           {/if}
           {#if funkeln}
             <g class="funkeln" aria-hidden="true">
@@ -344,9 +364,9 @@
   {/each}
   <!-- Bauplatz des offenen Auftrags (über allem, nur als Markierung) mit Holzschild -->
   {#each umrisse as u (u.id)}
-    <polygon points={u.punkte} fill="rgb(255 198 43 / 0.25)" stroke="#e23a4e" stroke-width="2" stroke-dasharray="6 4" pointer-events="none" class="umriss" />
+    <polygon points={u.punkte} fill={bauen ? 'rgb(255 198 43 / 0.12)' : 'rgb(255 198 43 / 0.25)'} stroke="#e23a4e" stroke-width={bauen ? 3 : 2} stroke-dasharray="6 4" pointer-events="none" class="umriss" />
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <g class="schild" transform="translate({u.schild[0]} {u.schild[1] + 6})" onclick={() => onschild?.()} data-schild={u.id}>
+    <g class="schild" class:leise={bauen} transform="translate({u.schild[0]} {u.schild[1] + 6})" onclick={() => onschild?.()} data-schild={u.id} pointer-events={bauen ? 'none' : undefined}>
       <rect x="-3" y="-40" width="6" height="40" fill="#87521f" />
       <rect x="-58" y="-74" width="116" height="36" rx="5" fill="#d9a066" stroke="#1f2a6b" stroke-width="2.5" />
       <text x="0" y="-50" text-anchor="middle" font-size="18" font-weight="900" fill="#1f2a6b">{u.name}</text>
@@ -403,10 +423,6 @@
   .sitzt {
     translate: 0 6px;
   }
-  .liegt {
-    rotate: -78deg;
-    translate: -14px -2px;
-  }
   .zzz text {
     font: 900 11px Nunito, sans-serif;
     fill: #fffdf7;
@@ -432,6 +448,9 @@
   .boot,
   .schild {
     cursor: pointer;
+  }
+  .schild.leise {
+    opacity: 0.3;
   }
   .schaukeln {
     animation: schaukeln 3s ease-in-out infinite;

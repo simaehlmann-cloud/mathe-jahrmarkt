@@ -68,8 +68,11 @@ export function stimmenWert(s: RohStimme): number {
 
 export type Geschlecht = 'w' | 'm' | '?';
 
-/** Bekannte Stimmen-Kennungen: Google (de-de-x-…), Samsung (SMTf…/SMTm…), Apple (Vornamen). */
-const GOOGLE: Readonly<Record<string, Geschlecht>> = { dea: 'w', deb: 'w', nfh: 'w', dec: 'w', deg: 'm', def: 'm', ded: 'm' };
+/**
+ * Bekannte Stimmen-Kennungen: Google (de-de-x-…), Samsung (SMTf…/SMTm…), Apple (Vornamen).
+ * Auf dem Samsung S25+ angehört (11/2026): dea Frau, deb Mann, deg Mann.
+ */
+const GOOGLE: Readonly<Record<string, Geschlecht>> = { dea: 'w', deb: 'm', nfh: 'w', dec: 'w', deg: 'm', def: 'm', ded: 'm' };
 const WEIBLICH = /anna|helena|petra|marlene|vicki|katja|hedda|sabine|julia|frau|female|weiblich/;
 const MAENNLICH = /markus|yannick|martin|stefan|hans|conrad|tom|male|männlich|maennlich|mann/;
 
@@ -107,8 +110,16 @@ export function waehleStimmen(roh: readonly RohStimme[]): Stimme[] {
     .sort((a, b) => b.wert - a.wert);
   const einzeln: typeof gut = [];
   for (const x of gut) if (!einzeln.some((y) => y.kennung === x.kennung)) einzeln.push(x);
+  // „de-DE-language“ ist nur ein Verweis auf die Gerätestandardstimme (Klang je Gerät verschieden): weglassen,
+  // sobald es echte Stimmen mit Kennung gibt
+  const allgemein = (x: (typeof gut)[number]) => /^[a-z]{2}-[a-z]{2}-language$/i.test(x.s.voiceURI || x.s.name);
+  if (einzeln.some((x) => !allgemein(x))) for (let i = einzeln.length - 1; i >= 0; i--) if (allgemein(einzeln[i]!)) einzeln.splice(i, 1);
   const frauen = einzeln.filter((x) => x.g === 'w').slice(0, 2);
-  const maenner = einzeln.filter((x) => x.g === 'm').slice(0, 2);
+  // deg klingt am besten (Test auf dem S25+): zuerst, damit sie „Mann 1“ und Standard wird
+  const maenner = einzeln
+    .filter((x) => x.g === 'm')
+    .sort((a, b) => Number(b.kennung === 'g-deg') - Number(a.kennung === 'g-deg'))
+    .slice(0, 2);
   const rest = einzeln.filter((x) => !frauen.includes(x) && !maenner.includes(x));
   const auswahl = [...frauen, ...maenner, ...rest].slice(0, 4);
   let unbekannt = 0;
@@ -119,9 +130,9 @@ export function waehleStimmen(roh: readonly RohStimme[]): Stimme[] {
   });
 }
 
-/** Standard, wenn nichts gewählt ist: die zweite Frauenstimme (Wunsch aus dem Test), sonst die erste Stimme. */
+/** Standard, wenn nichts gewählt ist: die erste Männerstimme (Wunsch aus dem Test), sonst die erste Frauenstimme, sonst die erste. */
 export function standardStimme(liste: readonly Stimme[]): Stimme | undefined {
-  return liste.find((s) => s.name === 'Frau 2') ?? liste.find((s) => s.name === 'Frau 1') ?? liste[0];
+  return liste.find((s) => s.name === 'Mann 1') ?? liste.find((s) => s.name === 'Frau 1') ?? liste[0];
 }
 
 export function erstelleSprache(): Sprache {
