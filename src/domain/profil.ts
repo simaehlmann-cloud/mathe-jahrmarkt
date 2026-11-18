@@ -1,3 +1,4 @@
+import { leereSpielzeit, type Spielzeit } from './spielzeit';
 import type { Stufe } from './buden';
 import { standardAussehen, type Aussehen } from './aussehen';
 import type { Ereignis, Wochenwert } from './lernprofil/lernprofil';
@@ -86,6 +87,8 @@ export interface Profil {
   verlauf: Record<string, Verlauf>;
   /** Falsch gelöste Aufgaben, die nach 1, 3 und 7 Tagen wiederkommen. */
   fundbuero: Fundsache[];
+  /** Heutige Spielzeit für die Pausen-Erinnerung. */
+  spielzeit: Spielzeit;
 }
 
 export const MAX_PROFILE = 4;
@@ -117,6 +120,7 @@ export function neuesProfil(id: string, name: string, figur: FigurId, jetzt: num
     insel: leereInsel(),
     verlauf: {},
     fundbuero: [],
+    spielzeit: leereSpielzeit(),
   };
 }
 
@@ -131,6 +135,8 @@ export function fortschrittZurueckgesetzt(p: Profil): Profil {
     ...neu,
     aussehen: { ...p.aussehen, extra: p.aussehen.extra === 'strohhut' ? 'keins' : p.aussehen.extra },
     gesehen: { ...neu.gesehen, intro: p.gesehen.intro, hinweise: p.gesehen.hinweise },
+    // Die heutige Spielzeit zählt weiter – Zurücksetzen ist kein Weg um die Pause herum
+    spielzeit: p.spielzeit,
   };
 }
 

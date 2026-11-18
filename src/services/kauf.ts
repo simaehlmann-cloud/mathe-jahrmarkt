@@ -18,7 +18,12 @@ export interface KaufService {
   /** Lokalisierter Preis aus dem Store, sonst der geplante Preis. */
   preis(): Promise<string>;
   kaufen(): Promise<KaufErgebnis>;
-  /** Fragt den Store nach früheren Käufen. True, wenn das Paket gekauft ist. */
+  /**
+   * Stille Prüfung beim Start: liest nur die vorhandenen Berechtigungen, ohne Anmeldung.
+   * (Auf iOS öffnet `restorePurchases` = AppStore.sync() ein Apple-ID-Fenster – das darf nur auf Knopfdruck passieren.)
+   */
+  pruefen(): Promise<boolean>;
+  /** Fragt den Store nach früheren Käufen (nur auf Knopfdruck im Elternbereich). True, wenn das Paket gekauft ist. */
   wiederherstellen(): Promise<boolean>;
 }
 
@@ -28,6 +33,7 @@ export function testKauf(): KaufService {
     art: 'test',
     preis: async () => `${PREIS_ANZEIGE} (Testkauf)`,
     kaufen: async () => 'gekauft',
+    pruefen: async () => false,
     wiederherstellen: async () => false,
   };
 }
@@ -37,6 +43,7 @@ export function keinKauf(): KaufService {
     art: 'keiner',
     preis: async () => PREIS_ANZEIGE,
     kaufen: async () => 'nichtVerfuegbar',
+    pruefen: async () => false,
     wiederherstellen: async () => false,
   };
 }
@@ -86,8 +93,17 @@ export function storeKauf(plugin: StorePlugin, android: boolean): KaufService {
         const text = e instanceof Error ? e.message : String(e);
         if (/cancel/i.test(text)) return 'abgebrochen';
         // Schon gekauft (z. B. auf einem anderen Gerät): dann gilt es als Kauf.
-        if (/already|owned/i.test(text)) return (await this.wiederherstellen()) ? 'gekauft' : 'fehler';
+        if (/already|owned/i.test(text)) return (await this.pruefen()) || (await this.wiederherstellen()) ? 'gekauft' : 'fehler';
         return 'fehler';
+      }
+    },
+    async pruefen() {
+      if (!(await bereit())) return false;
+      try {
+        const { purchases } = await plugin.getPurchases({ onlyCurrentEntitlements: true });
+        return purchases.some((t) => istPaket(t, android));
+      } catch {
+        return false;
       }
     },
     async wiederherstellen() {

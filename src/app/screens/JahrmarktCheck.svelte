@@ -82,7 +82,7 @@
         <div class="inhalt">
           <h2><Icon name="check" /> Jahrmarkt-Check</h2>
           <p>Zwölf Aufgaben aus allen Bereichen zeigen, was schon sicher sitzt und wo sich Üben lohnt. Danach gibt es passende Buden als Tagesaufträge.</p>
-          <p class="schloss"><Icon name="schloss" groesse={20} /> Der Check gehört zum Zusatzpaket. Frag deine Eltern!</p>
+          <p class="schloss"><Icon name="schloss" groesse={20} /> Der Check gehört zum Zusatzpaket.</p>
           <button class="ticket hell" onclick={() => app.zeige({ name: 'jahrmarkt' })}>Zurück zum Jahrmarkt</button>
         </div>
       </div>

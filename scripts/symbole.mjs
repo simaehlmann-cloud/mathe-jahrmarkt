@@ -19,10 +19,16 @@ const ANDROID = 'android/app/src/main/res';
 const DICHTEN = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 
 /** Seite mit Bild-Ebenen; jede Ebene füllt die ganze Fläche. */
-const ebenen = (bilder, { rund = false } = {}) => `
+const ebenen = (bilder, { rund = false, vorne = 1 } = {}) => `
   <html><body style="margin:0;background:transparent">
   <div style="position:relative;width:100vw;height:100vh;overflow:hidden;${rund ? 'border-radius:50%;' : ''}">
-    ${bilder.map((b) => `<img src="${datenUrl(b)}" style="position:absolute;inset:0;width:100%;height:100%">`).join('')}
+    ${bilder
+      .map((b, i) => {
+        // `vorne`: oberste Ebene vergrößern und etwas absenken (iOS hat keine Maske, Flinka darf das Symbol füllen)
+        const z = i === bilder.length - 1 && vorne !== 1 ? `transform:scale(${vorne}) translateY(${((vorne - 1) * 12).toFixed(1)}%);` : '';
+        return `<img src="${datenUrl(b)}" style="position:absolute;inset:0;width:100%;height:100%;${z}">`;
+      })
+      .join('')}
   </div></body></html>`;
 
 /** Altes Symbol: Ausschnitt 72/108 der Mitte, wie ein Launcher das adaptive Symbol zeigt. */
@@ -85,7 +91,7 @@ for (const [datei, [b, h]] of Object.entries(START)) await bild(startbild(b, h),
 
 // iOS: Symbol ohne Transparenz (Apple lehnt Alpha ab), Ecken rundet das System selbst
 const IOS = 'ios/App/App/Assets.xcassets';
-await bild(ebenen([HINTERGRUND, KOPF]).replace('background:transparent', `background:${HIMMEL}`), 1024, 1024, `${IOS}/AppIcon.appiconset/AppIcon-512@2x.png`);
+await bild(ebenen([HINTERGRUND, KOPF], { vorne: 1.08 }).replace('background:transparent', 'background:#2b2470'), 1024, 1024, `${IOS}/AppIcon.appiconset/AppIcon-512@2x.png`);
 for (const n of ['', '-1', '-2']) await bild(startbild(2732, 2732), 2732, 2732, `${IOS}/Splash.imageset/splash-2732x2732${n}.png`);
 
 await browser.close();

@@ -23,11 +23,14 @@ await new Promise((ok, fehler) => {
   setTimeout(() => fehler(new Error('Vorschau-Server startet nicht')), 20000);
 });
 
-const WOERTER = {
-  zwölf: 12, dreizehn: 13, vierzehn: 14, fünfzehn: 15, sechzehn: 16, siebzehn: 17, achtzehn: 18, neunzehn: 19,
-  zwanzig: 20, einundzwanzig: 21, zweiundzwanzig: 22, dreiundzwanzig: 23, vierundzwanzig: 24,
-  fünfundzwanzig: 25, sechsundzwanzig: 26, siebenundzwanzig: 27, achtundzwanzig: 28, neunundzwanzig: 29,
-};
+// Zahlwörter 10–99 wie in der App (für die Elternsperre)
+const WOERTER = (() => {
+  const e = ['', 'ein', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun'];
+  const z = ['', '', 'zwanzig', 'dreißig', 'vierzig', 'fünfzig', 'sechzig', 'siebzig', 'achtzig', 'neunzig'];
+  const w = { zehn: 10, elf: 11, zwölf: 12, dreizehn: 13, vierzehn: 14, fünfzehn: 15, sechzehn: 16, siebzehn: 17, achtzehn: 18, neunzehn: 19 };
+  for (let n = 20; n < 100; n++) w[n % 10 ? `${e[n % 10]}und${z[Math.floor(n / 10)]}` : z[n / 10]] = n;
+  return w;
+})();
 
 let fehler = 0;
 /** Für ein Bildschirmfoto, falls der Ablauf abbricht. */
@@ -49,6 +52,10 @@ try {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true });
     const page = await ctx.newPage();
     letzteSeite = page;
+    // Lange Testläufe: Die Pausen-Erinnerung (Standard 20 Minuten) darf den Ablauf nicht aufhalten
+    await page.addLocatorHandler(page.getByRole('alertdialog', { name: 'Pausenzeit!' }), async () => {
+      await page.getByRole('button', { name: 'Noch 5 Minuten' }).click();
+    });
     // Großzügige Zeiten: CI-Rechner haben keine Grafikkarte und sind langsamer.
     page.setDefaultTimeout(20000);
     if (process.env.DROSSEL) {
@@ -461,6 +468,10 @@ try {
       const ctx2 = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true });
       const page = await ctx2.newPage();
       letzteSeite = page;
+      // Lange Testläufe: Die Pausen-Erinnerung (Standard 20 Minuten) darf den Ablauf nicht aufhalten
+      await page.addLocatorHandler(page.getByRole('alertdialog', { name: 'Pausenzeit!' }), async () => {
+        await page.getByRole('button', { name: 'Noch 5 Minuten' }).click();
+      });
       page.setDefaultTimeout(20000);
       const konsole2 = (globalThis.konsole = []);
       page.on('console', (m) => m.type() === 'error' && konsole2.push(m.text()));
@@ -770,6 +781,8 @@ try {
       pruefe(await page.getByText(/später zurück, die nächste morgen/).isVisible(), `${name}: Fundbüro merkt sich Fehler für morgen`);
       await foto('74-fundbuero');
       // Einen Tag später (Uhr vorstellen): abholen
+      // Erst warten, bis die App ihren Stand gesichert hat (Speichern nach 400 ms), sonst überschreibt sie die Änderung
+      await page.waitForTimeout(1000);
       await page.evaluate(() => {
         const k = 'CapacitorStorage.mathe-jahrmarkt.daten';
         const d = JSON.parse(localStorage.getItem(k));

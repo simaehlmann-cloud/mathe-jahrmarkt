@@ -25,8 +25,8 @@ export const RECHENTRICKS: readonly string[] = [
   'Überschlagen: 398 + 207 ist ungefähr 400 + 200 = 600. So merkst du Tippfehler.',
   '1 m sind 100 cm, 1 km sind 1 000 m, 1 kg sind 1 000 g, 1 l sind 1 000 ml.',
   'Eine Viertelstunde sind 15 Minuten, eine halbe Stunde 30, eine Dreiviertelstunde 45.',
-  'Gerade Zahlen enden auf 0, 2, 4, 6 oder 8. Dann kannst du sie halbieren.',
-  'Mal 11 bei zweistelligen Zahlen: 11 · 23 → 2, 2+3, 3 → 253.',
+  'Gerade Zahlen enden auf 0, 2, 4, 6 oder 8. Sie lassen sich ohne Rest halbieren.',
+  'Mal 11 bei zweistelligen Zahlen: 11 · 23 → 2, 2+3, 3 → 253. Ist die Mitte 10 oder mehr, wandert die Eins nach vorn: 11 · 78 → 7, 15, 8 → 858.',
   'Doppelt so viel und halb so viel: 4 · 25 = 2 · 50 = 1 · 100 = 100.',
   'Beim Quadrat sind alle vier Seiten gleich lang. Umfang = 4 · Seite.',
   'Der Zähler zählt, der Nenner nennt: 3/4 heißt drei Stücke von vier gleich großen.',
@@ -72,8 +72,15 @@ export function flinkaTipp(p: Profil, auftraege: AuftragsTag | null, paket: bool
     saetze.push(
       `Hallo ${p.name}! ${offen.length === 1 ? 'Ein Auftrag wartet' : `${offen.length} Aufträge warten`} noch auf dich – zum Beispiel ${budeInfo(a?.bude ?? '').name}. Die Fähnchen zeigen dir den Weg.`,
     );
+  } else if (auftraege?.liste.length) {
+    // Fertig für heute: kein „noch eine Runde“, Flinka verabschiedet sich
+    return [
+      `Hallo ${p.name}! Deine Aufträge für heute sind erledigt. Stark!`,
+      'Für heute hast du genug geschafft. Du kannst noch ein bisschen bauen – oder einfach Pause machen. Morgen gibt es neue Aufträge.',
+      `Mein Rechentrick zum Mitnehmen: ${rng.pick(RECHENTRICKS)}`,
+    ];
   } else {
-    saetze.push(`Hallo ${p.name}! Deine Aufträge für heute sind erledigt. Stark!`);
+    saetze.push(`Hallo ${p.name}! Schön, dass du da bist.`);
   }
   // Höchstens drei Blasen: Begrüßung, der wichtigste Hinweis, dann Rechentrick oder (ohne Hinweis) eine Knobelfrage mit Lösung
   const fund = faellige(p.fundbuero, jetzt.getTime()).length;

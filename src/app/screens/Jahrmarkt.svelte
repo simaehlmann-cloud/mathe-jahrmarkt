@@ -101,11 +101,15 @@
     massstab = Math.max(0.56, Math.min(1, w / 1000, h / 760));
   }
 
+  /** Platz, den die Leiste unten belegt – so lange lässt sich die Karte über das Ende hinaus schieben. */
+  const LEISTE_PX = 72;
+
   /** Figur in die Mitte holen; `weich` folgt der Figur beim Laufen. */
   function kamera(weich: boolean) {
     if (!karte) return;
     const zx = pos.x * massstab - karte.clientWidth / 2;
-    const zy = (pos.y - 80) * massstab - karte.clientHeight / 2;
+    // Die Leiste unten deckt etwa 70 px ab: Figur in die Mitte der sichtbaren Fläche
+    const zy = (pos.y - 80) * massstab - (karte.clientHeight - LEISTE_PX) / 2;
     if (!weich) {
       karte.scrollTo({ left: zx, top: zy });
       return;
@@ -318,7 +322,7 @@
   <div class="kartenrahmen">
   <div class="karte" bind:this={karte}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab}px">
+    <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab + LEISTE_PX}px">
       <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; transform: scale({massstab})" onclick={aufKarteGetippt}>
         <!-- Boden: Wiese, Wege, Festplatz, Zaun des Sternenmarkts -->
         <svg class="boden" viewBox="0 0 {WELT_BREITE} {WELT_HOEHE}" width={WELT_BREITE} height={WELT_HOEHE} aria-hidden="true">
@@ -738,11 +742,12 @@
     inset: 0;
     z-index: 9000;
     pointer-events: none;
-    background: rgb(40 45 120 / 0.5);
+    /* Dämmerung statt grauer Schleier: Farben bleiben kräftig, die Lichter tragen die Stimmung */
+    background: rgb(80 70 170 / 0.26);
     mix-blend-mode: multiply;
   }
   .dunkel.nacht {
-    background: rgb(20 22 80 / 0.68);
+    background: rgb(40 40 125 / 0.42);
   }
   .lichter {
     position: absolute;
@@ -828,6 +833,7 @@
   }
   .huelle {
     position: relative;
+    background: #9fd88f; /* Wiese unter der Leiste */
   }
   .welt {
     position: absolute;

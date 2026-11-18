@@ -140,8 +140,11 @@ export function wochenSchluessel(t: number): string {
 
 /** Ereignisse älter als dieses Alter werden zu Wochenwerten verdichtet. */
 export const VERDICHTEN_AB_MS = 8 * 7 * 24 * 3600 * 1000;
-/** Höchstzahl gespeicherter Einzelereignisse pro Profil. */
-export const MAX_EREIGNISSE = 3000;
+/**
+ * Höchstzahl gespeicherter Einzelereignisse pro Profil. Ältere werden zu Wochenwerten verdichtet.
+ * 1 500 reichen für jede Einschätzung und halten den Spielstand klein (er wird nach jeder Antwort ganz geschrieben).
+ */
+export const MAX_EREIGNISSE = 1500;
 
 export function verdichten(
   ereignisse: readonly Ereignis[],

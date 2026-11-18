@@ -3,8 +3,22 @@ import type { Rng } from './rng';
 /**
  * Elternsperre (Apple-Richtlinie 1.3, Google Families): Vor Kauf, Elternbereich und allem,
  * was die App verlässt. Die Aufgabe steht in Worten, damit sie Lesen und Rechnen auf
- * Erwachsenen-Niveau verlangt: zweistellig mal zweistellig. Sie lässt sich nicht abschalten.
+ * Erwachsenen-Niveau verlangt: zweistellig mal zweistellig, ohne glatte Zehner – im Kopf kaum zu schaffen,
+ * auch nicht für ein Kind, das hier gerade das Einmaleins übt. Nach drei Fehlversuchen kurze Wartezeit,
+ * damit sich die Sperre nicht durch Raten öffnen lässt. Sie lässt sich nicht abschalten.
  */
+
+/** Fehlversuche bis zur Wartezeit und Länge der Wartezeit. */
+export const SPERRE_VERSUCHE = 3;
+export const SPERRE_WARTEN_MS = 60_000;
+
+/** Zweistellige Zahl ohne glatten Zehner und ohne 11er-Schnapszahl. */
+function krumm(rng: Rng, von: number, bis: number): number {
+  for (;;) {
+    const n = rng.int(von, bis);
+    if (n % 10 !== 0 && n % 11 !== 0) return n;
+  }
+}
 
 const EINER = ['null', 'eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun'];
 const EINER_VOR_UND = ['', 'ein', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun'];
@@ -39,8 +53,8 @@ export interface Sperrfrage {
 }
 
 export function erzeugeSperrfrage(rng: Rng): Sperrfrage {
-  const a = rng.int(12, 19);
-  const b = rng.int(13, 29);
+  const a = krumm(rng, 23, 49);
+  const b = krumm(rng, 13, 39);
   return { frage: `Was ist ${zahlInWorten(a)} mal ${zahlInWorten(b)}?`, loesung: a * b };
 }
 

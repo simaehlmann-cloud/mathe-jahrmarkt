@@ -253,7 +253,9 @@ describe('Elternsperre', () => {
     const rng = createRng(1);
     for (let i = 0; i < 200; i++) {
       const f = erzeugeSperrfrage(rng);
-      expect(f.loesung).toBeGreaterThanOrEqual(12 * 13);
+      expect(f.loesung).toBeGreaterThanOrEqual(23 * 13);
+      // keine glatten Zehner
+      expect(f.frage).not.toMatch(/ (zwanzig|dreißig|vierzig) mal | mal (zehn|zwanzig|dreißig)\?/);
       expect(pruefeSperre(f, String(f.loesung))).toBe(true);
       expect(pruefeSperre(f, ` ${f.loesung} `)).toBe(true);
       expect(pruefeSperre(f, String(f.loesung + 1))).toBe(false);

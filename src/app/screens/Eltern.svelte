@@ -14,6 +14,10 @@
   import Elternsperre from '../components/Elternsperre.svelte';
   import Icon from '../components/Icon.svelte';
   import { app } from '../zustand.svelte';
+  import { minutenHeute, SPIELZEIT_OPTIONEN, STANDARD_SPIELZEIT } from '../../domain/spielzeit';
+  import { tagKennung } from '../../domain/auftraege';
+
+  const heute = tagKennung(new Date());
 
   type Reiter = 'bericht' | 'lernprofil' | 'paket' | 'einstellungen' | 'profile' | 'ueber';
   const REITER: { id: Reiter; name: string }[] = [
@@ -255,10 +259,33 @@
             <button class="ticket rot" disabled={kaufLaeuft} onclick={kaufen}>Für {preis} freischalten</button>
           {/if}
           <button class="ticket hell" onclick={wiederherstellen}>Käufe wiederherstellen</button>
+          <div class="versprechen">
+            <strong>Unser Versprechen</strong>
+            <ul>
+              <li>Ein Kauf, kein Abo, keine Werbung</li>
+              <li>Keine Daten verlassen das Gerät</li>
+              <li>Kein Drängeln: keine Tagesserien, die reißen, keine Lockangebote, keine Kaufaufforderungen an Kinder</li>
+              <li>Kurz und regelmäßig statt lange: {app.einstellungen.spielzeitMin ? `Pausen-Erinnerung nach ${app.einstellungen.spielzeitMin} Minuten` : `Pausen-Erinnerung (zurzeit ausgeschaltet, empfohlen: ${STANDARD_SPIELZEIT} Minuten)`}</li>
+            </ul>
+          </div>
           <p class="hinweis">Die App enthält keine Werbung und sendet keine Daten. Alles bleibt auf diesem Gerät. Der Kauf selbst läuft über den App Store bzw. Google Play.</p>
         </section>
       {:else if reiter === 'einstellungen'}
         <section class="einstellungen">
+          <h2>Spielzeit</h2>
+          <label class="wahl">
+            Pause vorschlagen nach
+            <select value={String(app.einstellungen.spielzeitMin)} onchange={(e) => app.aendereEinstellungen({ spielzeitMin: Number((e.target as HTMLSelectElement).value) })}>
+              {#each SPIELZEIT_OPTIONEN as m (m)}<option value={String(m)}>{m === 0 ? 'nie (aus)' : `${m} Minuten am Tag`}</option>{/each}
+            </select>
+          </label>
+          <p class="hinweis">Flinka schlägt nach der eingestellten Zeit freundlich eine Pause vor – nie mitten in einer Runde. Rechnen, Bauen und Insel zählen zusammen, für jedes Kind getrennt.</p>
+          {#if app.bestand.profile.length}
+            <ul class="heute">
+              {#each app.bestand.profile as kind (kind.id)}<li>{kind.name}: heute {minutenHeute(kind.spielzeit, heute)} Minuten</li>{/each}
+            </ul>
+          {/if}
+
           <h2>Musik und Klänge</h2>
           {#each [['lautMusik', 'Musik'], ['lautEffekte', 'Klänge']] as [schluessel, name] (schluessel)}
             {@const s = schluessel as 'lautMusik' | 'lautEffekte'}
@@ -598,5 +625,19 @@
   .frage {
     color: var(--markise-dunkel);
     font-weight: 800;
+  }
+  .heute {
+    margin: 4px 0 8px 1.2em;
+    font-weight: 700;
+  }
+  .versprechen {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border: 3px solid var(--tinte);
+    border-radius: 12px;
+    background: #e6f6ea;
+  }
+  .versprechen ul {
+    margin: 6px 0 0 1.2em;
   }
 </style>

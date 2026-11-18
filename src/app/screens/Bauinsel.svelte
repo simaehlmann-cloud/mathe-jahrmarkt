@@ -367,7 +367,7 @@
         <div class="inhalt">
           <h2>Die Bauinsel</h2>
           <p>Eine eigene Insel mit See, Hügel und Bäumen: Häuser bauen, einrichten und mit deiner Figur durch die Türen gehen. Die Blöcke verdienst du beim Rechnen.</p>
-          <p class="schloss"><Icon name="schloss" groesse={20} /> Die Bauinsel gehört zum Zusatzpaket. Frag deine Eltern!</p>
+          <p class="schloss"><Icon name="schloss" groesse={20} /> Die Bauinsel gehört zum Zusatzpaket.</p>
           <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz', von: 'insel' })}>Zum Bauplatz</button>
         </div>
       </div>

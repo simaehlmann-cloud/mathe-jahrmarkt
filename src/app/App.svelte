@@ -18,7 +18,8 @@
   import Duell from './screens/Duell.svelte';
   import UeberSeite from './screens/UeberSeite.svelte';
   import { erstelleMusik } from '../services/musik';
-  import { app } from './zustand.svelte';
+  import Pausenvorschlag from './components/Pausenvorschlag.svelte';
+  import { app, OHNE_SPIELZEIT, RUNDE_LAEUFT } from './zustand.svelte';
 
   const musik = erstelleMusik();
 
@@ -101,6 +102,10 @@
     <Duell />
   {:else if b.name === 'ueber'}
     <UeberSeite abschnitt={b.abschnitt} von={b.von} />
+  {/if}
+
+  {#if app.pauseVorschlag && !RUNDE_LAEUFT.has(b.name) && !OHNE_SPIELZEIT.has(b.name) && app.profil}
+    <Pausenvorschlag />
   {/if}
 
   {#if app.ladefehler && b.name !== 'laden'}

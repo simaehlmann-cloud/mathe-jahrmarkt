@@ -57,7 +57,7 @@
       <button class="menue-knopf" onclick={() => (offen = !offen)} aria-label={neu ? `Menü, ${neu} neue Sammelkarten` : 'Menü'} aria-expanded={offen} aria-haspopup="true">
         <Figur figur={p.figur} groesse={38} aussehen={p.aussehen} />
         <Icon name="menue" groesse={18} />
-        {#if neu}<span class="marke" aria-hidden="true">{neu}</span>{/if}
+        {#if neu}<span class="marke" aria-hidden="true"></span>{/if}
       </button>
     {:else}
       <button class="rund schloss" onclick={() => app.zeige({ name: 'eltern' })} aria-label="Elternbereich"><Icon name="schloss" groesse={20} /></button>
@@ -135,28 +135,23 @@
   .menue-knopf {
     position: relative;
   }
+  /* Bewusst ruhig: kleiner goldener Punkt statt roter Zahl – nichts soll drängeln */
   .marke {
     position: absolute;
-    top: -6px;
-    right: -6px;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 5px;
-    border-radius: 11px;
-    background: var(--markise);
-    color: #fff;
-    font-size: 0.8rem;
-    font-weight: 900;
-    display: grid;
-    place-items: center;
-    border: 2px solid #fff;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffc62b;
+    border: 2px solid var(--tinte);
   }
   .punkt {
     margin-left: auto;
     padding: 1px 8px;
     border-radius: 10px;
-    background: var(--markise);
-    color: #fff;
+    background: #ffe7a0;
+    color: var(--tinte);
     font-size: 0.8rem;
   }
   .menue-schleier {

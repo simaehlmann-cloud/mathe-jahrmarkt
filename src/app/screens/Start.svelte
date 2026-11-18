@@ -195,7 +195,8 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-top: 8px;
+    /* unter der Wimpelkette, nicht durch sie hindurch */
+    margin-top: 44px;
   }
   h1 {
     font-size: clamp(2rem, 7vw, 3.2rem);
@@ -392,7 +393,7 @@
   /* Wenig Höhe (Handy quer): kleinerer Kopf, Kulisse flacher und blasser, damit nichts kollidiert */
   @media (max-height: 32rem) {
     .kopf {
-      margin-top: 14px;
+      margin-top: 24px;
     }
     .wimpel {
       height: 30px;

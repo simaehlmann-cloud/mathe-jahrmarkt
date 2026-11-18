@@ -17,6 +17,7 @@ function pruefeVerlaeufe(x: unknown): Record<string, Verlauf> {
 }
 import { pruefeInsel } from '../domain/insel';
 import { pruefeFundbuero } from '../domain/fundbuero';
+import { pruefeSpielzeit, STANDARD_SPIELZEIT, SPIELZEIT_OPTIONEN } from '../domain/spielzeit';
 import { STUFEN } from '../domain/buden';
 import { FIGUREN, MAX_PROFILE, bereinigeName, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
 import type { Ereignis, Wochenwert } from '../domain/lernprofil/lernprofil';
@@ -56,6 +57,8 @@ export interface Einstellungen {
   /** Schalter oben in der Kopfzeile. Die App startet still, bis das Kind sie einschaltet. */
   musikAn: boolean;
   stimmeAn: boolean;
+  /** Pausen-Erinnerung nach so vielen Minuten am Tag (0 = aus). */
+  spielzeitMin: number;
 }
 
 export interface Datenbestand {
@@ -82,6 +85,7 @@ export const standardEinstellungen = (): Einstellungen => ({
   musikImSpiel: false,
   musikAn: false,
   stimmeAn: false,
+  spielzeitMin: STANDARD_SPIELZEIT,
 });
 
 export const leererBestand = (): Datenbestand => ({
@@ -192,6 +196,7 @@ export function pruefeProfil(x: unknown): Profil | undefined {
     blitz: pruefeBlitz(x.blitz),
     verlauf: pruefeVerlaeufe(x.verlauf),
     fundbuero: pruefeFundbuero(x.fundbuero),
+    spielzeit: pruefeSpielzeit(x.spielzeit),
     insel: pruefeInsel(x.insel),
   };
 }
@@ -213,6 +218,7 @@ export function pruefeEinstellungen(x: unknown): Einstellungen {
     musikImSpiel: bool(x.musikImSpiel, s.musikImSpiel),
     musikAn: bool(x.musikAn, s.musikAn),
     stimmeAn: bool(x.stimmeAn, s.stimmeAn),
+    spielzeitMin: (SPIELZEIT_OPTIONEN as readonly number[]).includes(x.spielzeitMin as number) ? (x.spielzeitMin as number) : s.spielzeitMin,
   };
 }
 

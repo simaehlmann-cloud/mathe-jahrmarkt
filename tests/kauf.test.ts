@@ -13,6 +13,12 @@ function plugin(teil: Partial<StorePlugin> = {}, kaeufe: StoreTransaktion[] = []
 }
 
 describe('Store-Kauf', () => {
+  it('prüft beim Start still, ohne restorePurchases (kein Apple-ID-Fenster)', async () => {
+    const wieder = vi.fn(async () => undefined);
+    expect(await storeKauf(plugin({ restorePurchases: wieder }, [{ productIdentifier: PRODUKT_ID, purchaseState: '1' }]), false).pruefen()).toBe(true);
+    expect(await storeKauf(plugin({ restorePurchases: wieder }, []), false).pruefen()).toBe(false);
+    expect(wieder).not.toHaveBeenCalled();
+  });
   it('zeigt den Preis aus dem Store, sonst den geplanten', async () => {
     expect(await storeKauf(plugin(), true).preis()).toBe('4,49 €');
     expect(await storeKauf(plugin({ getProducts: async () => { throw new Error('offline'); } }), true).preis()).toBe(PREIS_ANZEIGE);

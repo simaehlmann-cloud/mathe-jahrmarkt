@@ -1,5 +1,12 @@
+<script lang="ts" module>
+  // Über das Schließen hinaus merken: sonst ließe sich die Wartezeit durch Abbrechen umgehen.
+  let fehlversuche = 0;
+  let gesperrtBis = 0;
+</script>
+
 <script lang="ts">
-  import { erzeugeSperrfrage, pruefeSperre } from '../../domain/elternsperre';
+  import { onDestroy } from 'svelte';
+  import { erzeugeSperrfrage, pruefeSperre, SPERRE_VERSUCHE, SPERRE_WARTEN_MS } from '../../domain/elternsperre';
   import { createRng, randomSeed } from '../../domain/rng';
 
   /** Elternsperre: Frage in Worten, Antwort als Zahl. Lässt sich nicht abschalten. */
@@ -9,15 +16,27 @@
   let frage = $state(erzeugeSperrfrage(rng));
   let eingabe = $state('');
   let falsch = $state(false);
+  let jetzt = $state(Date.now());
+  const uhr = setInterval(() => (jetzt = Date.now()), 1000);
+  onDestroy(() => clearInterval(uhr));
+  let warten = $derived(Math.max(0, Math.ceil((gesperrtBis - jetzt) / 1000)));
 
   function pruefen(e: SubmitEvent) {
     e.preventDefault();
+    if (warten > 0) return;
     if (pruefeSperre(frage, eingabe)) {
+      fehlversuche = 0;
       onoffen();
     } else {
       falsch = true;
       eingabe = '';
       frage = erzeugeSperrfrage(rng);
+      fehlversuche++;
+      if (fehlversuche >= SPERRE_VERSUCHE) {
+        fehlversuche = 0;
+        gesperrtBis = Date.now() + SPERRE_WARTEN_MS;
+        jetzt = Date.now();
+      }
     }
   }
 </script>
@@ -36,14 +55,16 @@
         autocomplete="off"
         pattern="[0-9]*"
         maxlength="5"
-        aria-describedby={falsch ? 'sperre-fehler' : undefined}
+        aria-describedby={falsch || warten > 0 ? 'sperre-fehler' : undefined}
       />
-      {#if falsch}
+      {#if warten > 0}
+        <p id="sperre-fehler" class="fehler" role="status">Mehrmals falsch. Bitte {warten} Sekunden warten.</p>
+      {:else if falsch}
         <p id="sperre-fehler" class="fehler">Das stimmt nicht. Hier ist eine neue Aufgabe.</p>
       {/if}
       <div class="knoepfe">
         <button type="button" class="ticket hell" onclick={onabbrechen}>Abbrechen</button>
-        <button type="submit" class="ticket">Öffnen</button>
+        <button type="submit" class="ticket" disabled={warten > 0}>Öffnen</button>
       </div>
     </div>
   </form>

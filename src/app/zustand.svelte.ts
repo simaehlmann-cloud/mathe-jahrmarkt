@@ -11,6 +11,13 @@ import { erstelleKlang, type Klangart } from '../services/klang';
 import { erstelleSprache } from '../services/sprache';
 import { Speicherplan, laden, preferencesKV, type KeyValue } from '../services/speicher';
 import { DOPPELDRUCK_MS, zurueckZiel } from './navigation';
+import { leereSpielzeit, mitNachschlag, pauseFaellig, zaehleSpielzeit } from '../domain/spielzeit';
+
+/** Hier zählt keine Spielzeit (kein Kind spielt gerade). */
+export const OHNE_SPIELZEIT = new Set<Bildschirm['name']>(['laden', 'start', 'eltern', 'ueber']);
+/** Laufende Runden: der Pausenvorschlag wartet, bis die Runde vorbei ist. */
+export const RUNDE_LAEUFT = new Set<Bildschirm['name']>(['spiel', 'duell', 'blitz', 'check']);
+const SPIELZEIT_TAKT_MS = 30_000;
 
 export type Bildschirm =
   | { name: 'laden' }
@@ -44,6 +51,10 @@ class AppZustand {
   /** Sätze, die Flinka beim nächsten Bildschirm sagen soll (z. B. nach einer neuen Stufe). */
   flinka = $state<string[] | null>(null);
 
+  /** Flinka schlägt eine Pause vor (Spielzeit-Erinnerung). */
+  pauseVorschlag = $state(false);
+  private letzterTakt = Date.now();
+
   kauf: KaufService = keinKauf();
   readonly sprache = erstelleSprache();
   readonly klang = erstelleKlang();
@@ -72,17 +83,22 @@ class AppZustand {
     this.ladefehler = wiederhergestellt;
     this.plan = new Speicherplan(speicher, 400, () => this.melde('Speichern hat nicht geklappt. Der Fortschritt wird beim nächsten Mal erneut gesichert.'));
     this.kauf = await erstelleKauf();
-    // Still im Hintergrund: ein Kauf von einem anderen Gerät oder ein inzwischen bezahlter, ausstehender Kauf.
+    // Still im Hintergrund (ohne Anmeldefenster): ein inzwischen bezahlter, ausstehender Kauf oder ein Kauf mit derselben Apple-ID/Google-Konto.
     if (this.kauf.art === 'store' && !this.bestand.paket.gekauft) {
-      void this.kauf.wiederherstellen().then((ja) => {
+      void this.kauf.pruefen().then((ja) => {
         if (ja) this.aendere((b) => ({ ...b, paket: { gekauft: true, seit: b.paket.seit ?? Date.now() } }));
       });
     }
     this.bildschirm = this.profil ? { name: 'jahrmarkt' } : { name: 'start' };
     // Beim Wechsel in den Hintergrund sofort sichern.
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') void this.plan?.sofort();
+      if (document.visibilityState === 'hidden') {
+        this.spielzeitTakt();
+        void this.plan?.sofort();
+      } else this.letzterTakt = Date.now();
     });
+    this.letzterTakt = Date.now();
+    setInterval(() => this.spielzeitTakt(), SPIELZEIT_TAKT_MS);
   }
 
   /** Zurück-Taste von Android. Die App schließt nie ungefragt. */
@@ -112,7 +128,34 @@ class AppZustand {
 
   zeige(b: Bildschirm): void {
     void this.sprache.stopp();
+    this.spielzeitTakt();
     this.bildschirm = b;
+  }
+
+  /** Spielzeit des aktiven Kindes weiterzählen und ggf. die Pause vorschlagen. */
+  spielzeitTakt(jetzt = Date.now()): void {
+    const plus = jetzt - this.letzterTakt;
+    this.letzterTakt = jetzt;
+    const p = this.profil;
+    if (!p || OHNE_SPIELZEIT.has(this.bildschirm.name) || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    const tag = tagKennung(new Date(jetzt));
+    const sz = zaehleSpielzeit(p.spielzeit ?? leereSpielzeit(), tag, plus);
+    if (plus >= 1000) this.aendereProfil((q) => ({ ...q, spielzeit: sz }));
+    if (pauseFaellig(sz, tag, this.einstellungen.spielzeitMin)) this.pauseVorschlag = true;
+  }
+
+  /** „Noch 5 Minuten“ */
+  pauseVerschieben(): void {
+    const tag = tagKennung(new Date());
+    this.aendereProfil((q) => ({ ...q, spielzeit: mitNachschlag(q.spielzeit, tag) }));
+    this.pauseVorschlag = false;
+  }
+
+  /** „Pause machen“: alles sichern, zurück zum Startbildschirm. */
+  async pauseMachen(): Promise<void> {
+    this.zeige({ name: 'start' });
+    this.pauseVorschlag = false;
+    await this.speichereSofort();
   }
 
   aendere(fn: (b: Datenbestand) => Datenbestand): void {
@@ -171,6 +214,8 @@ class AppZustand {
 
   profilWaehlen(id: string, ziel: Bildschirm = { name: 'jahrmarkt' }): void {
     this.aendere((b) => ({ ...b, aktiv: id }));
+    // Der Pausenvorschlag gilt für das Kind, das gerade gespielt hat – der nächste Takt prüft neu
+    this.pauseVorschlag = false;
     this.zeige(ziel);
   }
 

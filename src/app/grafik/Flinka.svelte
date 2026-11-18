@@ -1,49 +1,77 @@
 <script lang="ts">
-  /** Flinka, das Eichhörnchen mit Schiebermütze, leitet den Jahrmarkt. Eigene Figur. */
+  /**
+   * Flinka, das Eichhörnchen: Kapuzenpulli mit Blitz (Flinka ist flink), Kappe verkehrt herum, Turnschuhe.
+   * Gezeichnet für Kinder Ende Klasse 4 / Anfang Klasse 5 – frech statt niedlich. Eigene Figur.
+   * Dieselbe Zeichnung liegt als grafik-quellen/flinka.svg für App-Symbol und Startbild.
+   */
   let { groesse = 120, winkt = true }: { groesse?: number; winkt?: boolean } = $props();
 </script>
 
 <svg viewBox="0 0 120 140" width={groesse} height={groesse * (140 / 120)} role="img" aria-label="Flinka, das Eichhörnchen">
-  <!-- Schwanz -->
-  <path
-    d="M66 124 C110 122 122 74 104 46 C92 27 66 30 70 50 C73 64 96 60 96 78 C96 96 76 96 64 108 Z"
-    fill="#d9672a"
-  />
-  <path d="M84 52 C96 56 102 66 99 78" fill="none" stroke="#f0a060" stroke-width="5" stroke-linecap="round" />
-  <!-- Körper -->
-  <ellipse cx="50" cy="102" rx="27" ry="30" fill="#e8833a" />
-  <ellipse cx="50" cy="108" rx="16" ry="20" fill="#fce3c2" />
-  <!-- Füße -->
-  <ellipse cx="36" cy="131" rx="10" ry="5" fill="#b9531f" />
-  <ellipse cx="64" cy="131" rx="10" ry="5" fill="#b9531f" />
-  <!-- linker Arm hält die Seite -->
-  <ellipse cx="27" cy="102" rx="7" ry="13" fill="#d9672a" transform="rotate(20 27 102)" />
-  <!-- rechter Arm winkt -->
-  <g class:winkt>
-    <ellipse cx="78" cy="78" rx="7" ry="15" fill="#d9672a" transform="rotate(-35 78 78)" />
-    <circle cx="86" cy="66" r="7" fill="#e8833a" />
+  <g stroke="#1f2a6b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Schwanz: groß, buschig, mit Bogen -->
+    <path d="M60 118 C70 122 84 121 94 114 Q101 113 103 106 Q111 101 111 92 Q118 84 115 74 Q118 63 112 55 Q113 44 105 37 Q102 27 91 25 Q82 19 74 26 Q66 30 68 40 Q66 48 74 52 Q81 56 86 54 Q92 60 90 70 Q93 80 86 88 Q84 98 72 102 Q64 106 58 104 Z" fill="#e0702c"/>
+    <path d="M78 32 C92 30 103 44 104 62 C105 80 98 96 86 104" fill="none" stroke="#f6a560" stroke-width="6" stroke-linecap="round"/>
+    <!-- Beine und Turnschuhe -->
+    <path d="M42 116 L41 128" fill="none" stroke-width="9" stroke="#1f2a6b"/>
+    <path d="M42 116 L41 128" fill="none" stroke-width="5" stroke="#c85a22"/>
+    <path d="M60 116 L62 128" fill="none" stroke-width="9" stroke="#1f2a6b"/>
+    <path d="M60 116 L62 128" fill="none" stroke-width="5" stroke="#c85a22"/>
+    <path d="M30 133 C30 126 38 125 44 127 C47 128 48 131 47 134 L31 134 Z" fill="#fffdf7"/>
+    <path d="M34 130 L42 129" fill="none" stroke="#e23a4e" stroke-width="2.4"/>
+    <path d="M56 134 C55 130 57 127 62 127 C68 126 74 128 74 134 Z" fill="#fffdf7"/>
+    <path d="M60 130 L69 130" fill="none" stroke="#e23a4e" stroke-width="2.4"/>
+    <!-- Hoodie -->
+    <path d="M33 86 C36 80 44 78 51 78 C58 78 66 80 69 86 L72 112 C72 118 64 121 51 121 C38 121 30 118 30 112 Z" fill="#3c78d8"/>
+    <path d="M38 112 L64 112 L64 118 C58 120 44 120 38 118 Z" fill="#2f63bd" stroke="none"/>
+    <path d="M44 80 L51 90 L58 80" fill="none" stroke="#fffdf7" stroke-width="2.4"/>
+    <!-- Blitz auf der Brust: Flinka ist flink -->
+    <path d="M53 92 L45 102 L50.5 102 L47 111 L57 99 L51.5 99 L55 92 Z" fill="#ffc62b" stroke-width="1.8"/>
+    <!-- linker Arm locker in der Tasche -->
+    <path d="M34 88 C26 94 25 104 30 110" fill="none" stroke="#1f2a6b" stroke-width="10"/>
+    <path d="M34 88 C26 94 25 104 30 110" fill="none" stroke="#3c78d8" stroke-width="5.6"/>
   </g>
-  <!-- Kopf -->
-  <circle cx="50" cy="56" r="25" fill="#e8833a" />
-  <!-- Ohren mit Pinseln -->
-  <path d="M30 40 L25 16 L42 33 Z" fill="#d9672a" />
-  <path d="M25 16 L22 9 L29 15 Z" fill="#9b4318" />
-  <path d="M70 40 L75 16 L58 33 Z" fill="#d9672a" />
-  <path d="M75 16 L78 9 L71 15 Z" fill="#9b4318" />
-  <!-- Schiebermütze -->
-  <path d="M26 46 C25 27 73 25 75 44 C64 40 38 40 26 46 Z" fill="#1f2a6b" />
-  <path d="M60 41 Q82 38 88 45 Q74 49 58 46 Z" fill="#2c3a8c" />
-  <circle cx="50" cy="29" r="3" fill="#2c3a8c" />
+  <!-- rechter Arm winkt (Gruppe für die Animation) -->
+  <g class="arm" class:winkt stroke="#1f2a6b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M67 88 C76 84 82 76 84 66" fill="none" stroke="#1f2a6b" stroke-width="10"/>
+    <path d="M67 88 C76 84 82 76 84 66" fill="none" stroke="#3c78d8" stroke-width="5.6"/>
+    <path d="M79 66 C76 60 77 52 81 50 C82 46 86 45 88 48 C90 45 94 46 94 50 C97 50 98 54 96 58 C96 64 92 69 86 69 C83 69 80 68 79 66 Z" fill="#e8833a"/>
+    <path d="M84 50 L85 56 M89 49 L89 56" fill="none" stroke-width="1.8"/>
+  </g>
+  <g stroke="#1f2a6b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Ohren mit Pinseln, fest am Kopf -->
+    <path d="M31 44 C27 34 26 22 30 12 C34 18 40 26 44 36 Z" fill="#e0702c"/>
+    <path d="M30 12 C27 7 29 3 32 2 C33 6 35 10 34 17 Z" fill="#8c3b16"/>
+    <path d="M69 42 C74 32 76 20 73 10 C69 16 62 24 58 34 Z" fill="#e0702c"/>
+    <path d="M73 10 C76 5 75 1 72 0 C70 4 69 9 69 15 Z" fill="#8c3b16"/>
+    <!-- Kopf mit Wangenfell -->
+    <path d="M27 58 C25 42 36 32 50 32 C65 32 76 42 74 58 L79 63 L72 65 C69 74 60 79 50 79 C40 79 31 74 28 65 L21 63 Z" fill="#e8833a"/>
+    <!-- Kappe, verkehrt herum -->
+    <path d="M28 44 C28 30 40 24 51 24 C63 24 73 31 73 43 C62 39 39 39 28 44 Z" fill="#e23a4e"/>
+    <path d="M30 42 C24 42 17 40 13 36 C17 33 25 33 31 36 Z" fill="#c42a3d"/>
+    <path d="M51 24 L51 40" fill="none" stroke-width="1.8" stroke="#a52234"/>
+    <circle cx="51" cy="24" r="2.4" fill="#ffc62b"/>
+    <!-- Schnauze -->
+    <path d="M38 66 C38 58 44 56 50 56 C56 56 62 58 62 66 C62 72 56 76 50 76 C44 76 38 72 38 66 Z" fill="#fce3c2"/>
+  </g>
   <!-- Gesicht -->
-  <ellipse cx="50" cy="67" rx="11" ry="8" fill="#fce3c2" />
-  <circle cx="41" cy="56" r="4" fill="#1f2a6b" />
-  <circle cx="59" cy="56" r="4" fill="#1f2a6b" />
-  <circle cx="42.4" cy="54.6" r="1.4" fill="#fff" />
-  <circle cx="60.4" cy="54.6" r="1.4" fill="#fff" />
-  <ellipse cx="50" cy="63.5" rx="3.2" ry="2.4" fill="#3b2314" />
-  <path d="M45 68 Q50 73 55 68" fill="none" stroke="#3b2314" stroke-width="2" stroke-linecap="round" />
-  <circle cx="34" cy="65" r="4" fill="#f48c8c" opacity="0.55" />
-  <circle cx="66" cy="65" r="4" fill="#f48c8c" opacity="0.55" />
+  <g stroke-linecap="round">
+    <!-- Augen: groß, wach, Blick leicht zur Seite -->
+    <ellipse cx="41" cy="54" rx="5.6" ry="6.4" fill="#fffdf7" stroke="#1f2a6b" stroke-width="2"/>
+    <ellipse cx="60" cy="54" rx="5.6" ry="6.4" fill="#fffdf7" stroke="#1f2a6b" stroke-width="2"/>
+    <circle cx="43" cy="55" r="3.3" fill="#1f2a6b"/>
+    <circle cx="62" cy="55" r="3.3" fill="#1f2a6b"/>
+    <circle cx="44.2" cy="53.6" r="1.1" fill="#fff"/>
+    <circle cx="63.2" cy="53.6" r="1.1" fill="#fff"/>
+    <!-- Augenbrauen: frech, eine hochgezogen -->
+    <path d="M35 46 Q40 43.5 46 45.5" fill="none" stroke="#1f2a6b" stroke-width="2.6"/>
+    <path d="M55 44.5 Q61 41 67 43.5" fill="none" stroke="#1f2a6b" stroke-width="2.6"/>
+    <!-- Nase -->
+    <path d="M47.5 61 Q50 59.5 52.5 61 Q51 64 50 64 Q49 64 47.5 61 Z" fill="#1f2a6b"/>
+    <!-- schiefes Grinsen -->
+    <path d="M43 68 Q50 72 58 66" fill="none" stroke="#1f2a6b" stroke-width="2.4"/>
+    <path d="M58 66 L59.5 64.5" fill="none" stroke="#1f2a6b" stroke-width="2"/>
+  </g>
 </svg>
 
 <style>
@@ -52,7 +80,7 @@
     overflow: visible;
   }
   .winkt {
-    transform-origin: 72px 90px;
+    transform-origin: 68px 88px;
     animation: winken 1.6s ease-in-out infinite;
   }
   @keyframes winken {
@@ -63,7 +91,7 @@
     }
     15%,
     45% {
-      transform: rotate(-14deg);
+      transform: rotate(-12deg);
     }
     30% {
       transform: rotate(8deg);

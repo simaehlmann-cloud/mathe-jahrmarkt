@@ -32,7 +32,7 @@
   let verlauf = $derived(p ? (stufenStand(p, bude, gewaehlt)?.verlauf ?? []) : []);
 
   const SPERRTEXT = {
-    paket: 'Gehört zum Zusatzpaket. Frag deine Eltern.',
+    paket: 'Gehört zum Zusatzpaket.',
     vorstufe: 'Schaffe erst die Stufe davor.',
     nichtSpielbar: 'Diese Bude öffnet bald.',
     abendmarkt: 'Öffnet am Abend.',
