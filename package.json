@@ -16,6 +16,7 @@
     "verify": "npm run check && npm test && npm run build && npm run store-check",
     "cap:sync": "npm run build && cap sync",
     "store-bilder": "node scripts/store-bilder.mjs",
+    "store-videos": "node scripts/store-videos.mjs",
     "rechtliches": "node scripts/rechtliches-seiten.mjs"
   },
   "dependencies": {
