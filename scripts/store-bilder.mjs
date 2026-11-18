@@ -3,7 +3,7 @@
 //
 // 1. Rohaufnahmen aus der echten App (Telefon 440×956 @3x, iPad 1032×1376 @2x), gespielte Beispielsitzung „Lea“
 // 2. Daraus gerahmte Bilder mit Bildtext in allen Formaten, die die Stores verlangen:
-//    Apple iPhone 6,9" 1320×2868 · Apple iPad 13" 2064×2752 · Google Telefon 1080×1920 · Google Tablet 1440×2560
+//    Apple iPhone mittleres Display 1206×2622 (Pflicht), großes Display 1320×2868 · Apple iPad 13" 2064×2752 · Google Telefon 1080×1920 · Google Tablet 1440×2560
 //    dazu Google-Vorstellungsgrafik 1024×500 und Google-Symbol 512×512. Alles PNG ohne Transparenz.
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
@@ -202,14 +202,19 @@ async function vorstellungsgrafik(ziel) {
   await p.close();
 }
 
-for (const [geraet, viewport, dsf] of [
-  ['telefon', { width: 440, height: 956 }, 3],
-  ['ipad', { width: 1032, height: 1376 }, 2],
-]) await rohaufnahmen(geraet, viewport, dsf);
+// NUR_RAHMEN=1: vorhandene Rohaufnahmen wiederverwenden, nur die Rahmen neu bauen
+if (!process.env.NUR_RAHMEN) {
+  for (const [geraet, viewport, dsf] of [
+    ['telefon', { width: 440, height: 956 }, 3],
+    ['ipad', { width: 1032, height: 1376 }, 2],
+  ]) await rohaufnahmen(geraet, viewport, dsf);
+}
 
 for (const [i, [name, text]] of BILDER.entries()) {
   const n = i + 1;
-  await rahmen(`${ROH}/telefon-${name}.png`, text, 1320, 2868, `${AUS}/iphone-${n}.png`);
+  // Apple verlangt seit Herbst 2026 „iPhone mit Dynamic Island (mittleres Display)“; das große Display ist freiwillig
+  await rahmen(`${ROH}/telefon-${name}.png`, text, 1206, 2622, `${AUS}/iphone-${n}.png`);
+  await rahmen(`${ROH}/telefon-${name}.png`, text, 1320, 2868, `${AUS}/iphone-gross-${n}.png`);
   await rahmen(`${ROH}/ipad-${name}.png`, text, 2064, 2752, `${AUS}/ipad-${n}.png`);
   await rahmen(`${ROH}/telefon-${name}.png`, text, 1080, 1920, `${AUS}/play-telefon-${n}.png`);
   await rahmen(`${ROH}/ipad-${name}.png`, text, 1440, 2560, `${AUS}/play-tablet-${n}.png`);
