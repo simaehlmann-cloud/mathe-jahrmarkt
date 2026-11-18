@@ -29,7 +29,11 @@ describe('Store-Kauf', () => {
     expect(await storeKauf(plugin({ purchaseProduct: async () => { throw new Error('User cancelled the purchase'); } }), true).kaufen()).toBe('abgebrochen');
     expect(await storeKauf(plugin({ purchaseProduct: async () => ({ productIdentifier: PRODUKT_ID, purchaseState: '2' }) }), true).kaufen()).toBe('ausstehend');
     expect(await storeKauf(plugin({ isBillingSupported: async () => ({ isBillingSupported: false }) }), true).kaufen()).toBe('nichtVerfuegbar');
-    expect(await storeKauf(plugin({ purchaseProduct: async () => { throw new Error('Netzwerk'); } }), true).kaufen()).toBe('fehler');
+    const netz = storeKauf(plugin({ purchaseProduct: async () => { throw new Error('Netzwerk'); } }), true);
+    expect(await netz.kaufen()).toBe('fehler');
+    expect(netz.letzterFehler).toBe('Netzwerk');
+    expect(await storeKauf(plugin({ purchaseProduct: async () => { throw new Error('Product not found'); } }), false).kaufen()).toBe('nichtGefunden');
+    expect(await storeKauf(plugin({ purchaseProduct: async () => { throw new Error('Cannot find product for id x'); } }), false).kaufen()).toBe('nichtGefunden');
   });
   it('„schon gekauft“ wird über die Wiederherstellung freigeschaltet', async () => {
     const p = plugin({ purchaseProduct: async () => { throw new Error('Item already owned'); } }, [{ productIdentifier: PRODUKT_ID, purchaseState: '1' }]);

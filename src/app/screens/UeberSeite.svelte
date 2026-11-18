@@ -35,19 +35,22 @@
     font-size: 1.3rem;
     margin: 0;
   }
+  /* Einfacher Block-Scroller (kein Grid): Safari auf dem iPad scrollte die aufgeklappten Texte nicht */
   .seite {
-    flex: 1;
+    flex: 1 1 0;
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     padding: 0 var(--rand-r) var(--unten) var(--rand);
-    display: grid;
-    justify-items: center;
-    align-content: start;
     position: relative;
     z-index: 1;
   }
   .karte {
     width: min(100%, 44rem);
+    margin: 0 auto;
   }
   .inhalt {
     padding: 8px 18px 18px;

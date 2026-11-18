@@ -84,8 +84,10 @@
         app.melde('Der Kauf wartet noch auf die Zahlung. Sobald sie da ist, wird das Paket freigeschaltet.');
       } else if (e === 'nichtVerfuegbar') {
         app.melde('Der Kauf ist gerade nicht möglich. Bitte prüfen Sie die Internetverbindung und das Store-Konto.');
+      } else if (e === 'nichtGefunden') {
+        app.melde('Das Zusatzpaket ist im Store noch nicht freigegeben. Bitte später erneut versuchen.');
       } else if (e === 'fehler') {
-        app.melde('Der Kauf hat nicht geklappt. Bitte später erneut versuchen.');
+        app.melde(`Der Kauf hat nicht geklappt. Bitte später erneut versuchen.${app.kauf.letzterFehler ? ` (Store: ${app.kauf.letzterFehler})` : ''}`);
       }
     } finally {
       kaufLaeuft = false;

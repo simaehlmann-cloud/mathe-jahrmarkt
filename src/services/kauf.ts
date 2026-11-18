@@ -11,7 +11,7 @@ import { Capacitor } from '@capacitor/core';
 export const PRODUKT_ID = 'de.maehlmann.mathejahrmarkt.zusatzpaket';
 export const PREIS_ANZEIGE = '3,99 €';
 
-export type KaufErgebnis = 'gekauft' | 'ausstehend' | 'abgebrochen' | 'nichtVerfuegbar' | 'fehler';
+export type KaufErgebnis = 'gekauft' | 'ausstehend' | 'abgebrochen' | 'nichtVerfuegbar' | 'nichtGefunden' | 'fehler';
 
 export interface KaufService {
   readonly art: 'store' | 'test' | 'keiner';
@@ -25,6 +25,8 @@ export interface KaufService {
   pruefen(): Promise<boolean>;
   /** Fragt den Store nach früheren Käufen (nur auf Knopfdruck im Elternbereich). True, wenn das Paket gekauft ist. */
   wiederherstellen(): Promise<boolean>;
+  /** Meldung des Stores beim letzten fehlgeschlagenen Kauf (für den Elternbereich, hilft bei der Fehlersuche). */
+  letzterFehler?: string;
 }
 
 /** Testkauf für die Entwicklung im Browser. Darf nie in einer Store-Version aktiv sein. */
@@ -73,7 +75,7 @@ export function storeKauf(plugin: StorePlugin, android: boolean): KaufService {
       return false;
     }
   };
-  return {
+  const dienst: KaufService = {
     art: 'store',
     async preis() {
       try {
@@ -85,6 +87,7 @@ export function storeKauf(plugin: StorePlugin, android: boolean): KaufService {
     },
     async kaufen() {
       if (!(await bereit())) return 'nichtVerfuegbar';
+      dienst.letzterFehler = undefined;
       try {
         const t = await plugin.purchaseProduct({ productIdentifier: PRODUKT_ID });
         if (android && (t.purchaseState === '2' || t.purchaseState === 'PENDING')) return 'ausstehend';
@@ -92,6 +95,9 @@ export function storeKauf(plugin: StorePlugin, android: boolean): KaufService {
       } catch (e) {
         const text = e instanceof Error ? e.message : String(e);
         if (/cancel/i.test(text)) return 'abgebrochen';
+        dienst.letzterFehler = text.slice(0, 200);
+        // Produkt im Store (noch) nicht angelegt oder nicht freigegeben
+        if (/not.?found|cannot find product|no product|invalid product|unavailable|nicht gefunden/i.test(text)) return 'nichtGefunden';
         // Schon gekauft (z. B. auf einem anderen Gerät): dann gilt es als Kauf.
         if (/already|owned/i.test(text)) return (await this.pruefen()) || (await this.wiederherstellen()) ? 'gekauft' : 'fehler';
         return 'fehler';
@@ -117,6 +123,7 @@ export function storeKauf(plugin: StorePlugin, android: boolean): KaufService {
       }
     },
   };
+  return dienst;
 }
 
 export async function erstelleKauf(): Promise<KaufService> {
