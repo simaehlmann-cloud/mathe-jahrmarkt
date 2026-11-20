@@ -2,7 +2,9 @@
 // aus src/app/rechtliches.ts – dieselben Texte wie in der App. Aufruf: npm run rechtliches
 // GitHub Pages: im Repository unter Settings → Pages die Quelle „main“, Ordner „/docs“ wählen.
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { ANBIETER, DATENSCHUTZ, IMPRESSUM, STAND } from '../src/app/rechtliches.ts';
+// Die öffentlichen Seiten gelten für beide Stores (in der App setzt Vite __PLATTFORM__ beim Bauen).
+globalThis.__PLATTFORM__ = 'alle';
+const { ANBIETER, DATENSCHUTZ, IMPRESSUM, STAND } = await import('../src/app/rechtliches.ts');
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const absatz = (p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`;

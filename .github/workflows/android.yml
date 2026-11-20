@@ -39,6 +39,7 @@ jobs:
         run: npm run build
         env:
           VITE_TESTKAUF: '1'
+          VITE_PLATTFORM: android
       - name: In das Android-Projekt kopieren
         run: npx cap sync android
 

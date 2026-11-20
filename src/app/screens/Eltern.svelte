@@ -270,7 +270,7 @@
               <li>Kurz und regelmäßig statt lange: {app.einstellungen.spielzeitMin ? `Pausen-Erinnerung nach ${app.einstellungen.spielzeitMin} Minuten` : `Pausen-Erinnerung (zurzeit ausgeschaltet, empfohlen: ${STANDARD_SPIELZEIT} Minuten)`}</li>
             </ul>
           </div>
-          <p class="hinweis">Die App enthält keine Werbung und sendet keine Daten. Alles bleibt auf diesem Gerät. Der Kauf selbst läuft über den App Store bzw. Google Play.</p>
+          <p class="hinweis">Die App enthält keine Werbung und sendet keine Daten. Alles bleibt auf diesem Gerät. Der Kauf selbst läuft über {__PLATTFORM__ === 'ios' ? 'den App Store' : __PLATTFORM__ === 'android' ? 'Google Play' : 'den App Store bzw. Google Play'}.</p>
         </section>
       {:else if reiter === 'einstellungen'}
         <section class="einstellungen">
@@ -346,7 +346,7 @@
             {#if aktiv}<p class="kennung">Gerätekennung: {stimmenKennung({ name: aktiv.uri, voiceURI: aktiv.uri })} ({aktiv.uri})</p>{/if}
           {/if}
           {#if stimmen.length === 0}
-            <p class="hinweis">Auf diesem Gerät wurde keine deutsche Stimme ohne Internet gefunden. In den Android-Einstellungen unter „Sprachausgabe“ lässt sich eine deutsche Stimme herunterladen.</p>
+            <p class="hinweis">Auf diesem Gerät wurde keine deutsche Stimme ohne Internet gefunden. {__PLATTFORM__ === 'ios' ? 'In den iPhone- bzw. iPad-Einstellungen unter „Bedienungshilfen → Gesprochene Inhalte → Stimmen“ lässt sich eine deutsche Stimme laden.' : 'In den Android-Einstellungen unter „Sprachausgabe“ lässt sich eine deutsche Stimme herunterladen.'}</p>
           {:else}
             <p class="hinweis">Es werden nur Stimmen angeboten, die ohne Internet sprechen. So verlassen keine Texte das Gerät.</p>
           {/if}
@@ -408,7 +408,7 @@
         <section>
           <h2>Sicherung für ein neues Gerät</h2>
           <p>
-            Fortschritte sind Teil der normalen Gerätesicherung (iCloud oder Android-Sicherung). Zusätzlich lässt sich hier eine Sicherung als Text kopieren und auf
+            Fortschritte sind Teil der normalen Gerätesicherung ({__PLATTFORM__ === 'ios' ? 'iCloud-Backup' : __PLATTFORM__ === 'android' ? 'Android-Sicherung' : 'iCloud oder Android-Sicherung'}). Zusätzlich lässt sich hier eine Sicherung als Text kopieren und auf
             einem anderen Gerät einfügen.
           </p>
           <button class="ticket" onclick={sicherungZeigen}>Sicherung erstellen</button>

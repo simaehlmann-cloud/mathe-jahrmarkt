@@ -65,6 +65,8 @@ jobs:
       - run: npm ci
       - name: Web-App bauen und prüfen (Store-Version, ohne Testkauf)
         run: npm run verify
+        env:
+          VITE_PLATTFORM: ios
       - name: In das iOS-Projekt kopieren
         run: npx cap sync ios
 

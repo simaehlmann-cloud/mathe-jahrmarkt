@@ -12,9 +12,16 @@ describe('Impressum und Datenschutz', () => {
   });
   it('Datenschutz nennt Verantwortlichen, Speicherung, Kauf, Rechte', () => {
     const t = JSON.stringify(DATENSCHUTZ);
-    for (const w of ['Art. 4 Nr. 7 DSGVO', 'lokalen Speicher', 'StoreKit', 'Art. 15 bis 21 DSGVO', 'keine Analyse']) expect(t).toContain(w);
+    const kauf = __PLATTFORM__ === 'android' ? 'Google Play Billing' : 'StoreKit';
+    for (const w of ['Art. 4 Nr. 7 DSGVO', 'lokalen Speicher', kauf, 'Art. 15 bis 21 DSGVO', 'keine Analyse']) expect(t).toContain(w);
   });
-  it('die öffentlichen Seiten in docs/ sind auf dem Stand der App (sonst: npm run rechtliches)', () => {
+  it('die iOS-Version nennt nur Apple, die Android-Version nur Google', () => {
+    const t = JSON.stringify(DATENSCHUTZ);
+    if (__PLATTFORM__ === 'ios') for (const w of ['Google', 'Android']) expect(t).not.toContain(w);
+    if (__PLATTFORM__ === 'android') for (const w of ['StoreKit', 'App Store']) expect(t).not.toContain(w);
+  });
+  // Die Seiten in docs/ gelten für beide Stores; verglichen wird nur im Build ohne VITE_PLATTFORM (Workflow „Prüfen“).
+  it.skipIf(__PLATTFORM__ !== 'alle')('die öffentlichen Seiten in docs/ sind auf dem Stand der App (sonst: npm run rechtliches)', () => {
     for (const [datei, liste] of [['impressum.html', IMPRESSUM], ['datenschutz.html', DATENSCHUTZ]] as const) {
       const h = html(datei);
       for (const a of liste) {

@@ -13,6 +13,20 @@ export interface Abschnitt {
 
 export const STAND = 'November 2026';
 
+/* Store-Angaben je nach Plattform (siehe __PLATTFORM__ in globale.d.ts). Die iOS-App nennt nur Apple, die Android-App nur Google. */
+const STORE =
+  __PLATTFORM__ === 'ios' ? 'den App Store von Apple' : __PLATTFORM__ === 'android' ? 'Google Play' : 'den App Store von Apple bzw. über Google Play';
+const STORE_ZUM =
+  __PLATTFORM__ === 'ios' ? 'zum App Store' : __PLATTFORM__ === 'android' ? 'zu Google Play' : 'zum App Store bzw. zu Google Play';
+const SCHNITTSTELLE =
+  __PLATTFORM__ === 'ios' ? 'dessen Schnittstelle (StoreKit)' : __PLATTFORM__ === 'android' ? 'dessen Schnittstelle (Google Play Billing)' : 'dessen Schnittstelle (StoreKit bzw. Google Play Billing)';
+const BETREIBER = __PLATTFORM__ === 'alle' ? 'der jeweilige Store-Betreiber' : 'der Store-Betreiber';
+const BETREIBER_DATIV = __PLATTFORM__ === 'alle' ? 'des jeweiligen Betreibers' : 'des Betreibers';
+const BERECHTIGUNGEN =
+  __PLATTFORM__ === 'ios'
+    ? 'Die App verwendet weder Kamera noch Mikrofon, Standort, Kontakte oder Fotos.'
+    : 'Android-Berechtigungen: Internet (nur für den Kauf) und Abrechnung über Google Play. Kamera, Mikrofon, Standort, Kontakte und Fotos werden nicht verwendet.';
+
 export const ANBIETER = {
   firma: 'Wisdompeak Apps',
   inhaber: 'Simon Mählmann',
@@ -102,15 +116,15 @@ export const DATENSCHUTZ: Abschnitt[] = [
   {
     titel: '7. Kauf des Zusatzpakets',
     absaetze: [
-      'Das Zusatzpaket wird als einmaliger In-App-Kauf über den App Store von Apple bzw. über Google Play abgewickelt. Zahlungs- und Kontodaten verarbeitet ausschließlich der jeweilige Store-Betreiber; der Anbieter erhält davon keine Kenntnis. Die App erfährt über dessen Schnittstelle (StoreKit bzw. Google Play Billing) nur, ob der Kauf besteht, und merkt sich das im lokalen Speicher. Es gelten die Datenschutzbestimmungen des jeweiligen Betreibers.',
+      `Das Zusatzpaket wird als einmaliger In-App-Kauf über ${STORE} abgewickelt. Zahlungs- und Kontodaten verarbeitet ausschließlich ${BETREIBER}; der Anbieter erhält davon keine Kenntnis. Die App erfährt über ${SCHNITTSTELLE} nur, ob der Kauf besteht, und merkt sich das im lokalen Speicher. Es gelten die Datenschutzbestimmungen ${BETREIBER_DATIV}.`,
       'Kauf und Wiederherstellung sind nur im Elternbereich möglich, der durch eine Rechenaufgabe für Erwachsene geschützt ist.',
     ],
   },
   {
     titel: '8. Verbindungen ins Internet und Berechtigungen',
     absaetze: [
-      'Die App baut von sich aus keine Netzwerkverbindungen auf – mit Ausnahme der Verbindung zum App Store bzw. zu Google Play, die das Betriebssystem für Kauf und Wiederherstellung des Zusatzpakets herstellt. Sie lädt keine Schriftarten oder Bibliotheken von fremden Servern und bettet keine fremden Inhalte ein.',
-      'Android-Berechtigungen: Internet (nur für den Kauf) und Abrechnung über Google Play. Kamera, Mikrofon, Standort, Kontakte und Fotos werden nicht verwendet.',
+      `Die App baut von sich aus keine Netzwerkverbindungen auf – mit Ausnahme der Verbindung ${STORE_ZUM}, die das Betriebssystem für Kauf und Wiederherstellung des Zusatzpakets herstellt. Sie lädt keine Schriftarten oder Bibliotheken von fremden Servern und bettet keine fremden Inhalte ein.`,
+      BERECHTIGUNGEN,
     ],
   },
   {

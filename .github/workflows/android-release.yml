@@ -2,7 +2,7 @@ name: Android Release (Play Store)
 
 # Baut das signierte App-Bundle (.aab) für Google Play. Start von Hand:
 # GitHub → Actions → „Android Release (Play Store)“ → „Run workflow“.
-# Version und versionCode kommen aus android/app/build.gradle (0.13.1 → 1301).
+# Version und versionCode kommen aus android/app/build.gradle (0.13.2 → 1302).
 # Jeder Upload in die Play Console braucht einen höheren versionCode als der letzte.
 #
 # Einmalig nötig (Settings → Secrets and variables → Actions):
@@ -50,6 +50,8 @@ jobs:
       - run: npm ci
       - name: Store-Version bauen und prüfen (ohne Testkauf)
         run: npm run verify
+        env:
+          VITE_PLATTFORM: android
       - name: In das Android-Projekt kopieren
         run: npx cap sync android
 
