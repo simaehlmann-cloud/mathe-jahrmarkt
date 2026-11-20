@@ -95,13 +95,26 @@
     <path d="M78 194 Q100 150 122 194 Z" fill="#2b2f5e" />
     <path d="M100 10 V-14" stroke={T} stroke-width="3" /><path class="flagge" d="M100 -14 L124 -8 L100 -2 Z" fill="#ffc62b" stroke={T} stroke-width="2" />
   {:else if art === 'achterbahn'}
-    {#each [20, 60, 100, 140, 180] as x (x)}<line x1={x} y1="196" x2={x} y2={x === 60 ? 46 : x === 140 ? 96 : 140} stroke="#b7bccb" stroke-width="5" />{/each}
-    <path id="bahn-weg" d="M0 150 C30 140 40 40 70 40 C100 40 100 130 130 120 C150 112 160 90 200 100" fill="none" stroke="#e23a4e" stroke-width="8" stroke-linecap="round" />
-    <path d="M0 150 C30 140 40 40 70 40 C100 40 100 130 130 120 C150 112 160 90 200 100" fill="none" stroke="#fffdf7" stroke-width="2" stroke-dasharray="6 6" />
-    <g>
-      <rect x="-12" y="-14" width="24" height="12" rx="4" fill="#ffc62b" stroke={T} stroke-width="2" />
-      <animateMotion dur={aktiv ? '2s' : '5s'} repeatCount="indefinite" rotate="auto" path="M0 150 C30 140 40 40 70 40 C100 40 100 130 130 120 C150 112 160 90 200 100" />
+    <ellipse cx="100" cy="190" rx="98" ry="9" fill="rgba(42,47,99,0.18)" />
+    <!-- Stützen bis zum Boden, mit Querstreben -->
+    <g stroke="#9aa0b5" stroke-width="5" stroke-linecap="round">
+      <line x1="86" y1="34" x2="86" y2="188" /><line x1="66" y1="96" x2="66" y2="188" /><line x1="106" y1="70" x2="106" y2="188" />
+      <line x1="134" y1="140" x2="134" y2="188" /><line x1="168" y1="96" x2="168" y2="188" /><line x1="152" y1="112" x2="152" y2="188" />
     </g>
+    <g stroke="#b7bccb" stroke-width="3"><line x1="66" y1="130" x2="106" y2="100" /><line x1="66" y1="100" x2="106" y2="140" /><line x1="152" y1="140" x2="168" y2="120" /></g>
+    <path d="M24 168 H44 C58 168 62 30 86 30 C110 30 112 142 134 136 C150 132 152 92 168 92 C186 92 190 168 176 168 Z" fill="none" stroke="#e23a4e" stroke-width="8" stroke-linejoin="round" />
+    <path d="M24 168 H44 C58 168 62 30 86 30 C110 30 112 142 134 136 C150 132 152 92 168 92 C186 92 190 168 176 168 Z" fill="none" stroke="#fffdf7" stroke-width="2" stroke-dasharray="6 6" />
+    <!-- Bahnhof -->
+    <rect x="4" y="150" width="44" height="38" fill="#fffdf7" stroke={T} stroke-width="3" />
+    <path d="M0 152 L26 132 L52 152 Z" fill="#3c78d8" stroke={T} stroke-width="3" stroke-linejoin="round" />
+    <rect x="16" y="164" width="20" height="24" fill="#4a5394" />
+    <rect x="0" y="186" width="200" height="6" rx="3" fill="#87521f" />
+    {#each [0, 0.35] as v (v)}
+      <g>
+        <rect x="-11" y="-14" width="22" height="12" rx="4" fill={v ? '#3c78d8' : '#ffc62b'} stroke={T} stroke-width="2" />
+        <animateMotion dur={aktiv ? '2.4s' : '6s'} begin="{-v}s" repeatCount="indefinite" rotate="auto" path="M24 168 H44 C58 168 62 30 86 30 C110 30 112 142 134 136 C150 132 152 92 168 92 C186 92 190 168 176 168 Z" />
+      </g>
+    {/each}
   {:else if art === 'brunnen'}
     <ellipse cx="100" cy="170" rx="80" ry="22" fill="#b7bccb" stroke={T} stroke-width="3" />
     <ellipse cx="100" cy="164" rx="66" ry="14" fill="#6cc3ec" />

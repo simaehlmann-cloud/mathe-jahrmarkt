@@ -35,7 +35,7 @@ export interface Platz {
 export type Budenform = 'huette' | 'markt' | 'zelt' | 'wagen' | 'pavillon' | 'stern';
 
 export const WELT_BREITE = 1640;
-export const WELT_HOEHE = 3408;
+export const WELT_HOEHE = 4408;
 export const BUDE_BREITE = 172;
 export const BUDE_HOEHE = Math.round((BUDE_BREITE * 250) / 216);
 /** Breite der Wege (für die Darstellung). */
@@ -43,7 +43,7 @@ export const WEG_BREITE = 64;
 /** Mittelachse (Eingang, Treppe zum Sternenmarkt). */
 export const ALLEE_X = WELT_BREITE / 2;
 /** Weg über den Festplatz (Eingang, Riesenrad, Andenkenstand). */
-export const FESTPLATZ_Y = 3180;
+export const FESTPLATZ_Y = 4180;
 /** Eingang: hier beginnt die Figur. */
 export const EINGANG: Punkt = { x: ALLEE_X, y: FESTPLATZ_Y };
 export const ANDENKEN_X = ALLEE_X + 360;
@@ -55,7 +55,7 @@ export const FAEHRE_X = ALLEE_X - 650;
 /** Tor am Fuß der Treppe zum Sternenmarkt. */
 export const TOR: Punkt = { x: ALLEE_X, y: 800 };
 /** Der Hügel des Sternenmarkts (für die Darstellung). */
-export const HUEGEL = { c: { x: ALLEE_X, y: 470 }, rx: 640, ry: 360, oben: 300 } as const;
+export const HUEGEL = { c: { x: ALLEE_X, y: 470 }, rx: 560, ry: 360, oben: 300 } as const;
 
 const gasse = (id: GasseId) => GASSEN.find((g) => g.id === id) ?? { name: id, farbe: '#888' };
 const platz = (id: PlatzId, c: Punkt, rx: number, ry: number, mitte: Punkt, form: Budenform): Platz => ({
@@ -75,11 +75,11 @@ const platz = (id: PlatzId, c: Punkt, rx: number, ry: number, mitte: Punkt, form
  */
 export const PLAETZE: readonly Platz[] = [
   platz('abendmarkt', { x: ALLEE_X, y: 450 }, 470, 150, { x: ALLEE_X, y: 540 }, 'stern'),
-  platz('musterbahn', { x: 400, y: 1170 }, 370, 115, { x: 400, y: 1220 }, 'wagen'),
-  platz('forschergasse', { x: 1240, y: 1170 }, 370, 115, { x: 1240, y: 1220 }, 'pavillon'),
-  platz('spiegelzelt', { x: 640, y: 1640 }, 660, 120, { x: ALLEE_X, y: 1680 }, 'zelt'),
-  platz('groessenmarkt', { x: 1000, y: 2120 }, 650, 120, { x: ALLEE_X, y: 2160 }, 'markt'),
-  platz('zahlengasse', { x: ALLEE_X, y: 2620 }, 790, 170, { x: ALLEE_X, y: 2660 }, 'huette'),
+  platz('musterbahn', { x: 400, y: 1370 }, 370, 115, { x: 400, y: 1420 }, 'wagen'),
+  platz('forschergasse', { x: 1240, y: 1370 }, 370, 115, { x: 1240, y: 1420 }, 'pavillon'),
+  platz('spiegelzelt', { x: 640, y: 2040 }, 660, 120, { x: ALLEE_X, y: 2080 }, 'zelt'),
+  platz('groessenmarkt', { x: 1000, y: 2720 }, 650, 120, { x: ALLEE_X, y: 2760 }, 'markt'),
+  platz('zahlengasse', { x: ALLEE_X, y: 3420 }, 790, 170, { x: ALLEE_X, y: 3460 }, 'huette'),
   platz('festplatz', { x: ALLEE_X, y: FESTPLATZ_Y - 40 }, 770, 300, EINGANG, 'huette'),
 ];
 export const platzVon = (id: PlatzId): Platz => PLAETZE.find((p) => p.id === id) as Platz;
@@ -87,11 +87,11 @@ export const platzVon = (id: PlatzId): Platz => PLAETZE.find((p) => p.id === id)
 /** Budenplätze je Platz (Mitte unten der Bude), in der Reihenfolge der Buden der Gasse. Hinten im Bogen, Front zum Platz. */
 const STELLEN: Readonly<Record<GasseId, readonly [number, number][]>> = {
   abendmarkt: [[470, 440], [ALLEE_X, 370], [1170, 440]],
-  musterbahn: [[200, 1090], [400, 1060], [600, 1090]],
-  forschergasse: [[1040, 1090], [1240, 1060], [1440, 1090]],
-  spiegelzelt: [[110, 1550], [290, 1520], [470, 1510], [650, 1530], [1000, 1530], [1180, 1550]],
-  groessenmarkt: [[460, 2030], [650, 2000], [990, 2000], [1170, 1990], [1350, 1990], [1530, 2010]],
-  zahlengasse: [[110, 2500], [290, 2480], [470, 2470], [650, 2490], [990, 2490], [1170, 2470], [1350, 2480], [1530, 2500], [110, 2750]],
+  musterbahn: [[200, 1290], [400, 1260], [600, 1290]],
+  forschergasse: [[1040, 1290], [1240, 1260], [1440, 1290]],
+  spiegelzelt: [[110, 1950], [290, 1920], [470, 1910], [650, 1930], [1000, 1930], [1180, 1950]],
+  groessenmarkt: [[460, 2630], [650, 2600], [990, 2600], [1170, 2590], [1350, 2590], [1530, 2610]],
+  zahlengasse: [[110, 3300], [290, 3280], [470, 3270], [650, 3290], [990, 3290], [1170, 3270], [1350, 3280], [1530, 3300], [110, 3550]],
 };
 
 export const BUDEN_ORTE: readonly BudenOrt[] = (Object.keys(STELLEN) as GasseId[]).flatMap((g) => {
@@ -132,21 +132,31 @@ export interface Attraktion {
   breite: number;
   /** Essbude: Preis in Talern. */
   preis?: number;
+  /** Essbude: hier steht die Figur beim Kaufen (begehbar, direkt vor der Bude). */
+  stand?: Punkt;
   /** Was die Figur dazu sagt. */
   lecker?: string;
 }
 export const ATTRAKTIONEN: readonly Attraktion[] = [
-  { id: 'schiffschaukel', name: 'Schiffschaukel', x: 170, y: 780, breite: 220 },
-  { id: 'achterbahn', name: 'Achterbahn', x: 1470, y: 800, breite: 320 },
-  { id: 'eis', name: 'Eis', x: 1588, y: 1140, breite: 100, preis: 3, lecker: 'Hmm, Eis!' },
-  { id: 'fernrohr', name: 'Fernrohr', x: 1600, y: 1290, breite: 80 },
-  { id: 'kettenkarussell', name: 'Kettenkarussell', x: 1460, y: 1580, breite: 230 },
-  { id: 'autoscooter', name: 'Autoscooter', x: 230, y: 2050, breite: 300 },
-  { id: 'zuckerwatte', name: 'Zuckerwatte', x: 1580, y: 2270, breite: 110, preis: 3, lecker: 'Mmh, Zuckerwatte!' },
-  { id: 'brunnen', name: 'Brunnen', x: 1260, y: 2240, breite: 130 },
-  { id: 'kinderkarussell', name: 'Kinderkarussell', x: 1380, y: 2800, breite: 200 },
-  { id: 'crepes', name: 'Crêpes', x: 1570, y: 2760, breite: 110, preis: 4, lecker: 'Lecker, ein Crêpe!' },
-  { id: 'popcorn', name: 'Popcorn', x: 990, y: 2930, breite: 110, preis: 2, lecker: 'Knusper, Popcorn!' },
+  { id: 'schiffschaukel', name: 'Schiffschaukel', x: 160, y: 960, breite: 220 },
+  { id: 'achterbahn', name: 'Achterbahn', x: 1450, y: 980, breite: 280 },
+  { id: 'fernrohr', name: 'Fernrohr', x: 1000, y: 960, breite: 80 },
+  { id: 'eis', name: 'Eis', x: 690, y: 960, breite: 100, preis: 3, lecker: 'Hmm, Eis!', stand: { x: 836, y: 972 } },
+  { id: 'kettenkarussell', name: 'Kettenkarussell', x: 1500, y: 1900, breite: 230 },
+  { id: 'zuckerwatte', name: 'Zuckerwatte', x: 1368, y: 2090, breite: 110, preis: 3, lecker: 'Mmh, Zuckerwatte!', stand: { x: 1220, y: 2057 } },
+  { id: 'brunnen', name: 'Brunnen', x: 1150, y: 2290, breite: 130 },
+  { id: 'autoscooter', name: 'Autoscooter', x: 190, y: 2560, breite: 300 },
+  { id: 'popcorn', name: 'Popcorn', x: 1000, y: 3790, breite: 110, preis: 2, lecker: 'Knusper, Popcorn!', stand: { x: 846, y: 3801 } },
+  { id: 'kinderkarussell', name: 'Kinderkarussell', x: 1350, y: 3860, breite: 200 },
+  { id: 'crepes', name: 'Crêpes', x: 130, y: 3900, breite: 110, preis: 4, lecker: 'Lecker, ein Crêpe!', stand: { x: 259, y: 3997 } },
+];
+
+/** Bäume und Büsche auf der Wiese (Mitte unten). */
+export const BAEUME: readonly Punkt[] = [
+  { x: 100, y: 520 }, { x: 1560, y: 520 }, { x: 1580, y: 1620 }, { x: 60, y: 2200 }, { x: 1580, y: 2960 }, { x: 90, y: WELT_HOEHE - 120 },
+];
+export const BUESCHE: readonly Punkt[] = [
+  { x: 40, y: 1600 }, { x: 1040, y: 2960 }, { x: 1600, y: 2240 }, { x: 960, y: 2250 }, { x: 640, y: 2950 }, { x: 440, y: 1580 },
 ];
 export const attraktion = (id: AttraktionsArt): Attraktion | undefined => ATTRAKTIONEN.find((a) => a.id === id);
 
@@ -158,7 +168,7 @@ const KNOTEN: Readonly<Record<Knoten, Punkt>> = {
   zahl: platzVon('zahlengasse').mitte,
   groesse: platzVon('groessenmarkt').mitte,
   spiegel: platzVon('spiegelzelt').mitte,
-  band: { x: ALLEE_X, y: 1220 },
+  band: { x: ALLEE_X, y: 1420 },
   forscher: platzVon('forschergasse').mitte,
   muster: platzVon('musterbahn').mitte,
   tor: TOR,
@@ -203,13 +213,13 @@ export interface Wegstueck {
 }
 const stueck = (a: Knoten, b: Knoten, zwischen: Punkt[] = [], treppe = false): Wegstueck => ({ a, b, punkte: kurve([KNOTEN[a], ...zwischen, KNOTEN[b]]), treppe });
 export const WEGE: readonly Wegstueck[] = [
-  stueck('fest', 'zahl', [{ x: 850, y: 2920 }]),
-  stueck('zahl', 'groesse', [{ x: 790, y: 2430 }]),
-  stueck('groesse', 'spiegel', [{ x: 852, y: 1950 }]),
-  stueck('spiegel', 'band', [{ x: 790, y: 1470 }]),
-  stueck('band', 'muster', [{ x: 610, y: 1250 }]),
-  stueck('band', 'forscher', [{ x: 1030, y: 1250 }]),
-  stueck('band', 'tor', [{ x: 850, y: 1000 }]),
+  stueck('fest', 'zahl', [{ x: 850, y: 3920 }]),
+  stueck('zahl', 'groesse', [{ x: 790, y: 3230 }]),
+  stueck('groesse', 'spiegel', [{ x: 852, y: 2550 }]),
+  stueck('spiegel', 'band', [{ x: 790, y: 1870 }]),
+  stueck('band', 'muster', [{ x: 610, y: 1450 }]),
+  stueck('band', 'forscher', [{ x: 1030, y: 1450 }]),
+  stueck('band', 'tor', [{ x: 850, y: 1200 }]),
   stueck('tor', 'stern', [], true),
 ];
 
@@ -333,7 +343,13 @@ function zuKnoten(p: Punkt, a: Anker): { k: Knoten; weg: Punkt[] }[] {
 }
 
 /** Doppelte und fast gleiche Punkte entfernen. */
-const glatt = (w: Punkt[]): Punkt[] => w.filter((q, i) => i === 0 || Math.hypot(q.x - (w[i - 1] as Punkt).x, q.y - (w[i - 1] as Punkt).y) > 0.5);
+const glatt = (w: Punkt[]): Punkt[] => {
+  const aus = w.filter((q, i) => i === 0 || Math.hypot(q.x - (w[i - 1] as Punkt).x, q.y - (w[i - 1] as Punkt).y) > 0.5);
+  // Das Ziel bleibt immer der letzte Punkt (auch wenn es fast auf dem vorletzten liegt)
+  const ziel = w[w.length - 1] as Punkt;
+  if (aus.length > 1) aus[aus.length - 1] = ziel;
+  return aus;
+};
 
 /**
  * Weg von a nach b (beide begehbar). Auf demselben Platz: geradeaus. Sonst über die Wege, kürzeste Möglichkeit.

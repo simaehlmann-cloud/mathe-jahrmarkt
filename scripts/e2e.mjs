@@ -600,6 +600,22 @@ try {
       await page.waitForTimeout(4300);
       for (let i = 0; i < 3 && (await page.getByRole('button', { name: 'Zurück' }).count()); i++) await page.getByRole('button', { name: 'Zurück' }).first().click();
       await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      // Tippen auf die Wiese (0.15.1): die Figur läuft genau zur angetippten Stelle
+      {
+        const fig = page.locator('.figur').first();
+        const vorher = await fig.getAttribute('style');
+        const k = await page.locator('.karte').boundingBox();
+        const ziel = await page.evaluate(([x, y]) => {
+          const e = document.elementFromPoint(x, y);
+          return !e?.closest('button') && !!e?.closest('.welt');
+        }, [k.x + k.width * 0.5, k.y + k.height * 0.3]);
+        if (ziel) {
+          await page.mouse.click(k.x + k.width * 0.5, k.y + k.height * 0.3);
+          await page.locator('.tipp-marke').waitFor({ state: 'attached' });
+          await page.waitForTimeout(4300);
+          pruefe((await fig.getAttribute('style')) !== vorher, `${name}: Tippen auf die Wiese – Figur läuft hin, Zielkreis erscheint`);
+        }
+      }
       // Essbude (0.15): Popcorn kostet 2 Taler, die Figur freut sich
       const talerVorher = Number((await page.locator('.taler').first().textContent()).match(/(\d+)/)?.[1] ?? 0);
       await page.getByRole('button', { name: /^Popcorn: für 2 Taler/ }).dispatchEvent('click');

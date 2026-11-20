@@ -26,6 +26,8 @@
     aufWeg,
     budenOrt,
     hinterDemTor,
+    BAEUME,
+    BUESCHE,
     laufdauerMs,
     platzVon,
     weg,
@@ -234,12 +236,18 @@
   /** Tippen auf freie Fläche: zum nächsten Punkt auf dem Weg laufen. */
   function aufKarteGetippt(e: MouseEvent) {
     if ((e.target as HTMLElement).closest('button')) return;
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const punkt = { x: (e.clientX - r.left) / massstab, y: (e.clientY - r.top) / massstab };
+    if (!karte) return;
+    // Aus Bildschirm- in Weltkoordinaten: über die Karte (Scrollposition) statt über die skalierte Welt –
+    // die Welt ragt mit Bäumen und Schildern über ihren Rand hinaus und liefert sonst ein verschobenes Rechteck.
+    const r = karte.getBoundingClientRect();
+    const punkt = { x: (e.clientX - r.left + karte.scrollLeft) / massstab, y: (e.clientY - r.top + karte.scrollTop) / massstab };
     let z = aufWeg(punkt);
     if (!abendOffen && hinterDemTor(z)) z = TOR;
+    tippMarke = { x: z.x, y: z.y, n: (tippMarke?.n ?? 0) + 1 };
     laufeZu(z);
   }
+  /** Kleiner Kreis, wo die Figur hinläuft. */
+  let tippMarke = $state<{ x: number; y: number; n: number } | null>(null);
 
   /* ---------- Attraktionen und Essstände (seit 0.15) ---------- */
   const SPRUECHE: Partial<Record<AttraktionsDaten['id'], string>> = {
@@ -250,7 +258,7 @@
     kinderkarussell: '12 Pferdchen, jedes dritte ist ein Einhorn. Wie viele Einhörner sind es?',
     zirkuszelt: 'Ins Zirkuszelt passen 300 Leute – 100 auf jeder der drei Tribünen.',
     achterbahn: 'Die Achterbahn ist 25 Meter hoch. Das sind 2 500 Zentimeter!',
-    brunnen: 'Plätscher! Der Brunnen hat 3 Wasserstrahlen.',
+    brunnen: 'Plätscher! Das Wasser fliegt in einem Bogen. So eine Kurve heißt Parabel – die lernst du in ein paar Jahren im Matheunterricht kennen.',
     fernrohr: 'Durchs Fernrohr siehst du bis zur Bauinsel.',
   };
   let aktiv = $state<string | null>(null);
@@ -262,7 +270,7 @@
   function attraktionGetippt(a: AttraktionsDaten) {
     app.spieleKlang('tipp');
     if (a.preis) {
-      laufeZu(aufWeg({ x: a.x, y: a.y + 60 }), () => (essen = a));
+      laufeZu(a.stand ?? aufWeg({ x: a.x, y: a.y + 60 }), () => (essen = a));
       return;
     }
     clearTimeout(aktivUhr);
@@ -375,23 +383,8 @@
   });
   const lampen = Array.from({ length: 14 }, (_, i) => i);
   const wimpelFarben = ['#e23a4e', '#ffc62b', '#3c78d8', '#3fae6a', '#7b5ea7'];
-  const baeume = [
-    { x: 90, y: 380 },
-    { x: 1560, y: 330 },
-    { x: 1590, y: 1180 },
-    { x: 60, y: 1950 },
-    { x: 1590, y: 2060 },
-    { x: 90, y: WELT_HOEHE - 120 },
-    { x: 1550, y: WELT_HOEHE - 120 },
-  ];
-  const bueschee = [
-    { x: 40, y: 1400 },
-    { x: 860, y: 1980 },
-    { x: 1600, y: 1560 },
-    { x: 990, y: 2420 },
-    { x: 650, y: 2420 },
-    { x: 260, y: 1500 },
-  ];
+  const baeume = [...BAEUME, { x: 1550, y: WELT_HOEHE - 120 }];
+  const bueschee = BUESCHE;
   const linie = (pts: readonly Punkt[]): string => pts.map((q, i) => `${i ? 'L' : 'M'}${q.x} ${q.y}`).join(' ');
   /** Treppe hinauf: Stufen quer zur Treppe. */
   const treppe = WEGE.find((w) => w.treppe);
@@ -626,6 +619,11 @@
         </button>
 
         <!-- Die Figur -->
+        {#if tippMarke}
+          {#key tippMarke.n}
+            <div class="tipp-marke" style="left: {tippMarke.x}px; top: {tippMarke.y}px; z-index: {Math.round(tippMarke.y) + 5}" aria-hidden="true"></div>
+          {/key}
+        {/if}
         <div class="figur" class:teleport class:freude={!!freude} style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
           <Laeufer figur={p.figur} aussehen={p.aussehen} {laeuft} {richtung} groesse={104} />
           {#if freude}<span class="lecker">{freude}</span>{/if}
@@ -1052,6 +1050,27 @@
   @keyframes auftauchen {
     from {
       transform: translateX(-50%) scale(0.4);
+      opacity: 0;
+    }
+  }
+  .tipp-marke {
+    position: absolute;
+    width: 46px;
+    height: 22px;
+    margin: -11px 0 0 -23px;
+    border: 4px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(42, 47, 99, 0.35);
+    pointer-events: none;
+    animation: tipp-marke 0.9s ease-out forwards;
+  }
+  @keyframes tipp-marke {
+    from {
+      transform: scale(0.4);
+      opacity: 1;
+    }
+    to {
+      transform: scale(1.3);
       opacity: 0;
     }
   }

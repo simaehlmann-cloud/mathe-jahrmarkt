@@ -124,7 +124,7 @@ describe('Einmaleins-Turbo', () => {
 });
 
 import { BUDEN } from '../src/domain/buden';
-import { ATTRAKTIONEN, BUDEN_ORTE, BUDE_BREITE, BUDE_HOEHE, EINGANG, PLAETZE, TOR, WEGE, WELT_BREITE, WELT_HOEHE, aufStrecke, aufWeg, budenOrt, hinterDemTor, laufdauerMs, platzAn, weg, weglaenge } from '../src/domain/karte';
+import { ANDENKEN_X, ATTRAKTIONEN, BAEUME, BUDEN_ORTE, BUDE_BREITE, BUDE_HOEHE, BUESCHE, EINGANG, FESTPLATZ_Y, HUEGEL, KNOBEL_X, PLAETZE, RIESENRAD_X, TOR, WEGE, WEG_BREITE, WELT_BREITE, WELT_HOEHE, aufStrecke, aufWeg, budenOrt, hinterDemTor, laufdauerMs, platzAn, weg, weglaenge } from '../src/domain/karte';
 
 describe('Begehbarer Jahrmarkt (Plätze und Wege, seit 0.15)', () => {
   it('jede Bude steht auf der Karte, vor ihr ist Platz auf dem eigenen Platz, keine Bude verdeckt eine andere', () => {
@@ -166,7 +166,7 @@ describe('Begehbarer Jahrmarkt (Plätze und Wege, seit 0.15)', () => {
         const aufNetz = Math.hypot(aufWeg(m).x - m.x, aufWeg(m).y - m.y);
         expect(aufNetz, `${o.id} Stück ${i}`).toBeLessThan(40);
       }
-      expect(weglaenge(w)).toBeLessThan(5200);
+      expect(weglaenge(w)).toBeLessThan(6400);
     }
   });
 
@@ -206,6 +206,63 @@ describe('Begehbarer Jahrmarkt (Plätze und Wege, seit 0.15)', () => {
       expect(a.y).toBeLessThan(WELT_HOEHE);
     }
     expect(ATTRAKTIONEN.filter((a) => a.preis).map((a) => a.id).sort()).toEqual(['crepes', 'eis', 'popcorn', 'zuckerwatte']);
+  });
+
+  /* Flächen als Rechtecke [links, oben, rechts, unten] */
+  type Rechteck = [number, number, number, number];
+  const flaeche = (a: (typeof ATTRAKTIONEN)[number]): Rechteck => [a.x - a.breite / 2, a.y - a.breite, a.x + a.breite / 2, a.y];
+  const schneiden = (a: Rechteck, b: Rechteck): boolean => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  const punkteIn = (r: Rechteck): { x: number; y: number }[] => {
+    const aus = [];
+    for (let y = r[1]; y <= r[3]; y += 10) for (let x = r[0]; x <= r[2]; x += 10) aus.push({ x, y });
+    return aus;
+  };
+  const inEllipse = (p: { x: number; y: number }, c: { x: number; y: number }, rx: number, ry: number): boolean => ((p.x - c.x) / rx) ** 2 + ((p.y - c.y) / ry) ** 2 < 1;
+  const abstandZumWeg = (p: { x: number; y: number }): number =>
+    Math.min(...WEGE.flatMap((w) => w.punkte.slice(1).map((b, i) => {
+      const a = w.punkte[i]!;
+      const lx = b.x - a.x, ly = b.y - a.y, l2 = lx * lx + ly * ly || 1;
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * lx + (p.y - a.y) * ly) / l2));
+      return Math.hypot(a.x + lx * t - p.x, a.y + ly * t - p.y);
+    })));
+  const hindernisse = (): { name: string; r: Rechteck }[] => [
+    ...BUDEN_ORTE.map((o) => ({ name: `Bude ${o.id}`, r: [o.x - BUDE_BREITE / 2, o.boden - BUDE_HOEHE - 50, o.x + BUDE_BREITE / 2, o.boden + 10] as Rechteck })),
+    { name: 'Riesenrad', r: [RIESENRAD_X - 170, FESTPLATZ_Y - 470, RIESENRAD_X + 170, FESTPLATZ_Y - 40] },
+    { name: 'Andenkenstand', r: [ANDENKEN_X - 100, FESTPLATZ_Y - 240, ANDENKEN_X + 100, FESTPLATZ_Y - 30] },
+    { name: 'Knobelzelt', r: [KNOBEL_X - 100, FESTPLATZ_Y - 240, KNOBEL_X + 100, FESTPLATZ_Y - 30] },
+    ...BAEUME.map((b, i) => ({ name: `Baum ${i}`, r: [b.x - 50, b.y - 130, b.x + 50, b.y] as Rechteck })),
+    ...BUESCHE.map((b, i) => ({ name: `Busch ${i}`, r: [b.x - 30, b.y - 36, b.x + 30, b.y] as Rechteck })),
+  ];
+
+  it('Attraktionen stehen frei auf der Wiese: nicht auf Plätzen, Wegen, dem Hügel, Buden oder einander', () => {
+    for (const a of ATTRAKTIONEN) {
+      const r = flaeche(a);
+      expect(r[1], `${a.id} oben`).toBeGreaterThanOrEqual(0);
+      const pts = punkteIn(r);
+      for (const pl of PLAETZE) expect(pts.some((q) => inEllipse(q, pl.c, pl.rx, pl.ry)), `${a.id} auf ${pl.id}`).toBe(false);
+      expect(pts.some((q) => inEllipse(q, HUEGEL.c, HUEGEL.rx, HUEGEL.ry)), `${a.id} am Hügel`).toBe(false);
+      expect(Math.min(...pts.map(abstandZumWeg)), `${a.id} am Weg`).toBeGreaterThan(WEG_BREITE / 2);
+      for (const h of hindernisse()) expect(schneiden(r, h.r), `${a.id} trifft ${h.name}`).toBe(false);
+      for (const b of ATTRAKTIONEN) if (b !== a) expect(schneiden(r, flaeche(b)), `${a.id} trifft ${b.id}`).toBe(false);
+    }
+    // Bäume und Büsche stehen auch nicht auf Plätzen oder Wegen
+    for (const b of [...BAEUME, ...BUESCHE]) {
+      for (const pl of PLAETZE) expect(inEllipse(b, pl.c, pl.rx, pl.ry), `Baum/Busch ${b.x},${b.y} auf ${pl.id}`).toBe(false);
+      expect(abstandZumWeg(b), `Baum/Busch ${b.x},${b.y} am Weg`).toBeGreaterThan(WEG_BREITE / 2);
+    }
+  });
+
+  it('An jeder Essbude steht die Figur begehbar direkt davor, nicht in einer anderen Attraktion', () => {
+    for (const a of ATTRAKTIONEN.filter((x) => x.preis)) {
+      const s = a.stand!;
+      expect(s, a.id).toBeDefined();
+      const q = aufWeg(s);
+      expect(Math.hypot(q.x - s.x, q.y - s.y), `${a.id}: Stand ist begehbar`).toBeLessThan(2);
+      expect(Math.hypot(s.x - a.x, s.y - a.y), `${a.id}: Stand nah an der Bude`).toBeLessThan(170);
+      for (const b of ATTRAKTIONEN) expect(schneiden([s.x - 20, s.y - 10, s.x + 20, s.y], flaeche(b)), `${a.id}: Stand in ${b.id}`).toBe(false);
+      const w = weg(EINGANG, s);
+      expect(w[w.length - 1]).toEqual(s);
+    }
   });
 });
 
