@@ -13,18 +13,22 @@
     zustand,
     besitzer = false,
     katze = false,
+    form,
   }: {
     bude: string;
     zustand: BudenZustand | 'zu';
     besitzer?: boolean;
     /** Entdeckung auf dem Dach. Nur Grafik; der Knopf dafür liegt außerhalb (kein Knopf im Knopf). */
     katze?: boolean;
+    /** Budenform des Platzes (seit 0.15): Hütte, Marktstand, Zelt, Wagen, Pavillon; Sternenmarkt behält den eigenen Stil. */
+    form?: 'huette' | 'markt' | 'zelt' | 'wagen' | 'pavillon' | 'stern';
   } = $props();
 
   const uid = $props.id();
   let stil = $derived(stilFuer(bude));
+  let dach = $derived(form === 'markt' ? 'markise' : form === 'zelt' ? 'zelt' : form === 'pavillon' ? 'kuppel' : form === 'huette' || form === 'wagen' ? 'giebel' : stil.dach);
   let an = $derived(zustand === 'licht' || zustand === 'farbe' || zustand === 'fest');
-  let spitze = $derived(stil.dach === 'zelt' ? -14 : stil.dach === 'kuppel' ? -14 : stil.dach === 'giebel' ? 6 : 20);
+  let spitze = $derived(dach === 'zelt' ? -14 : dach === 'kuppel' ? -14 : dach === 'giebel' ? 6 : 20);
   const acht = Array.from({ length: 8 }, (_, i) => i);
   const lampen = Array.from({ length: 8 }, (_, i) => 30 + i * 20);
   const wimpel = ['#e23a4e', '#ffc62b', '#3c78d8', '#3fae6a', '#7b5ea7', '#ffc62b', '#e23a4e', '#3c78d8', '#3fae6a'];
@@ -86,20 +90,29 @@
     <rect x={22 + i * 41} y="168" width="33" height="34" rx="3" fill={i % 2 === 0 ? stil.farbe : stil.zweit} opacity="0.92" />
   {/each}
 
+  {#if form === 'wagen'}
+    <!-- Schaustellerwagen: Räder unter der Theke -->
+    {#each [48, 152] as rx (rx)}<circle cx={rx} cy="206" r="15" fill="#3a3d4f" stroke="#1f2a6b" stroke-width="3" /><circle cx={rx} cy="206" r="5" fill="#ffc62b" />{/each}
+  {:else if form === 'huette'}
+    <!-- Holzhütte: Bretter an den Seiten -->
+    <rect x="12" y="60" width="20" height="96" fill="#a8693a" /><rect x="168" y="60" width="20" height="96" fill="#a8693a" />
+    {#each [76, 100, 124] as y (y)}<line x1="12" x2="32" y1={y} y2={y} stroke="#87521f" stroke-width="2" /><line x1="168" x2="188" y1={y} y2={y} stroke="#87521f" stroke-width="2" />{/each}
+  {/if}
+
   <!-- Dach -->
-  {#if stil.dach === 'markise'}
+  {#if dach === 'markise'}
     <g clip-path="url(#markise-{uid})">
       {#each acht as i (i)}<rect x={12 + i * 22} y="26" width="22" height="40" fill={i % 2 === 0 ? stil.farbe : stil.zweit} />{/each}
     </g>
     {#each acht as i (i)}<path d="M{13 + i * 22} 66 a11 11 0 0 0 22 0 Z" fill={i % 2 === 0 ? stil.farbe : stil.zweit} />{/each}
     <rect x="28" y="20" width="144" height="8" rx="3" fill="#87521f" />
-  {:else if stil.dach === 'zelt'}
+  {:else if dach === 'zelt'}
     {#each acht as i (i)}
       <path d="M100 -14 L{8 + i * 23} 66 L{8 + (i + 1) * 23} 66 Z" fill={i % 2 === 0 ? stil.farbe : stil.zweit} />
     {/each}
     {#each acht as i (i)}<path d="M{8 + i * 23} 66 a11.5 11.5 0 0 0 23 0 Z" fill={i % 2 === 0 ? stil.farbe : stil.zweit} />{/each}
     <circle cx="100" cy="-14" r="4" fill="#ffc62b" stroke="#87521f" stroke-width="2" />
-  {:else if stil.dach === 'kuppel'}
+  {:else if dach === 'kuppel'}
     <g clip-path="url(#kuppel-{uid})">
       {#each acht as i (i)}<rect x={12 + i * 22} y="0" width="22" height="66" fill={i % 2 === 0 ? stil.farbe : stil.zweit} />{/each}
     </g>

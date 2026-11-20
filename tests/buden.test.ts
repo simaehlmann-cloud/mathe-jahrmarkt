@@ -124,37 +124,60 @@ describe('Einmaleins-Turbo', () => {
 });
 
 import { BUDEN } from '../src/domain/buden';
-import { BUDEN_ORTE, BUDE_BREITE, EINGANG, REIHEN, WELT_BREITE, aufStrecke, aufWeg, budenOrt, laufdauerMs, weg, weglaenge } from '../src/domain/karte';
+import { ATTRAKTIONEN, BUDEN_ORTE, BUDE_BREITE, BUDE_HOEHE, EINGANG, PLAETZE, TOR, WEGE, WELT_BREITE, WELT_HOEHE, aufStrecke, aufWeg, budenOrt, hinterDemTor, laufdauerMs, platzAn, weg, weglaenge } from '../src/domain/karte';
 
-describe('Begehbarer Jahrmarkt', () => {
-  it('jede Bude hat genau einen Platz auf der Karte, ohne Überlappung', () => {
+describe('Begehbarer Jahrmarkt (Plätze und Wege, seit 0.15)', () => {
+  it('jede Bude steht auf der Karte, vor ihr ist Platz auf dem eigenen Platz, keine Bude verdeckt eine andere', () => {
     expect(BUDEN_ORTE.map((o) => o.id).sort()).toEqual(BUDEN.map((b) => b.id).sort());
-    for (const r of REIHEN) {
-      const xs = BUDEN_ORTE.filter((o) => o.reihe === r.index).map((o) => o.x).sort((a, b) => a - b);
-      for (let i = 1; i < xs.length; i++) expect((xs[i] as number) - (xs[i - 1] as number)).toBeGreaterThan(BUDE_BREITE);
-      expect(Math.min(...xs) - BUDE_BREITE / 2).toBeGreaterThan(0);
-      expect(Math.max(...xs) + BUDE_BREITE / 2).toBeLessThan(WELT_BREITE);
+    for (const o of BUDEN_ORTE) {
+      expect(o.x - BUDE_BREITE / 2, o.id).toBeGreaterThanOrEqual(0);
+      expect(o.x + BUDE_BREITE / 2, o.id).toBeLessThanOrEqual(WELT_BREITE);
+      expect(o.boden - BUDE_HOEHE, o.id).toBeGreaterThan(0);
+      expect(platzAn(o.vorne)?.id, o.id).toBe(o.gasse);
+      expect(o.vorne.y, o.id).toBeGreaterThan(o.boden);
     }
+    // Zwei Buden nebeneinander brauchen Abstand, übereinander genug Höhenversatz
+    for (const a of BUDEN_ORTE)
+      for (const b of BUDEN_ORTE) {
+        if (a.id >= b.id) continue;
+        const nah = Math.abs(a.x - b.x) < BUDE_BREITE - 4;
+        if (nah) expect(Math.abs(a.boden - b.boden), `${a.id} / ${b.id}`).toBeGreaterThanOrEqual(150);
+      }
   });
 
-  it('Weg vom Eingang zur Bude führt über die Allee und endet vor der Bude', () => {
+  it('Plätze überschneiden sich nicht; Wege verbinden alle Plätze', () => {
+    for (const p of PLAETZE) expect(platzAn(p.mitte)?.id, p.id).toBe(p.id);
+    for (const a of PLAETZE)
+      for (const b of PLAETZE) if (a.id !== b.id) expect(platzAn(a.mitte)?.id).not.toBe(b.id);
+    for (const p of PLAETZE) if (p.id !== 'festplatz') expect(weg(EINGANG, p.mitte).length, p.id).toBeGreaterThan(1);
+    for (const w of WEGE) for (const q of w.punkte) expect(q.x >= 0 && q.x <= WELT_BREITE && q.y >= 0 && q.y <= WELT_HOEHE).toBe(true);
+  });
+
+  it('Weg vom Eingang zu jeder Bude: zusammenhängend, ohne Sprünge, endet vor der Bude', () => {
     for (const o of BUDEN_ORTE) {
       const w = weg(EINGANG, o.vorne);
       expect(w[0]).toEqual(EINGANG);
       expect(w[w.length - 1]).toEqual(o.vorne);
-      // Nur waagerechte und senkrechte Stücke
+      // Jedes Stück liegt in einem Platz oder auf einem Weg (kein Abkürzen über die Wiese)
       for (let i = 1; i < w.length; i++) {
         const a = w[i - 1]!;
         const b = w[i]!;
-        expect(a.x === b.x || a.y === b.y).toBe(true);
+        const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const aufNetz = Math.hypot(aufWeg(m).x - m.x, aufWeg(m).y - m.y);
+        expect(aufNetz, `${o.id} Stück ${i}`).toBeLessThan(40);
       }
+      expect(weglaenge(w)).toBeLessThan(5200);
     }
   });
 
-  it('in derselben Reihe geht es geradeaus', () => {
+  it('auf demselben Platz geht es geradeaus; der Sternenmarkt liegt hinter dem Tor', () => {
     const a = budenOrt('dartbude')!.vorne;
     const b = budenOrt('dosenwerfen')!.vorne;
     expect(weg(a, b)).toEqual([a, b]);
+    expect(hinterDemTor(budenOrt('geisterbahn')!.vorne)).toBe(true);
+    expect(hinterDemTor(budenOrt('dartbude')!.vorne)).toBe(false);
+    const hinauf = weg(EINGANG, budenOrt('geisterbahn')!.vorne);
+    expect(hinauf.some((q) => Math.abs(q.x - TOR.x) < 2 && Math.abs(q.y - TOR.y) < 2)).toBe(true);
   });
 
   it('Position entlang des Weges und Blickrichtung', () => {
@@ -165,14 +188,24 @@ describe('Begehbarer Jahrmarkt', () => {
     expect(aufStrecke([{ x: 0, y: 100 }, { x: 0, y: 0 }], 10).richtung).toBe('hoch');
     expect(aufStrecke([{ x: 100, y: 0 }, { x: 0, y: 0 }], 10).richtung).toBe('links');
     expect(aufStrecke(w, 999).p).toEqual({ x: 100, y: 100 });
-    expect(laufdauerMs(100000)).toBe(3500);
+    expect(laufdauerMs(100000)).toBe(4000);
   });
 
-  it('Tippen neben den Weg landet auf dem nächsten Weg', () => {
-    const r = REIHEN[2]!;
-    expect(aufWeg({ x: 300, y: r.y + 10 })).toEqual({ x: 300, y: r.y });
-    const p = aufWeg({ x: WELT_BREITE / 2 + 5, y: (r.y + REIHEN[3]!.y) / 2 });
-    expect(p.x).toBe(WELT_BREITE / 2);
+  it('Tippen auf die Wiese landet auf dem nächsten Platz oder Weg', () => {
+    const p = aufWeg({ x: 20, y: 20 });
+    const q = aufWeg(p);
+    expect(Math.hypot(q.x - p.x, q.y - p.y)).toBeLessThan(1);
+    const z = PLAETZE.find((x) => x.id === 'zahlengasse')!;
+    expect(aufWeg(z.mitte)).toEqual(z.mitte);
+  });
+
+  it('Attraktionen liegen auf der Karte; Essbuden haben einen Preis', () => {
+    for (const a of ATTRAKTIONEN) {
+      expect(a.x - a.breite / 2, a.id).toBeGreaterThanOrEqual(-10);
+      expect(a.x + a.breite / 2, a.id).toBeLessThanOrEqual(WELT_BREITE + 10);
+      expect(a.y).toBeLessThan(WELT_HOEHE);
+    }
+    expect(ATTRAKTIONEN.filter((a) => a.preis).map((a) => a.id).sort()).toEqual(['crepes', 'eis', 'popcorn', 'zuckerwatte']);
   });
 });
 

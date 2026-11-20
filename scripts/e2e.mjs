@@ -590,6 +590,30 @@ try {
       await page.getByRole('button', { name: 'Zurück' }).first().click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
       await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      // Lageplan (0.15): Übersicht öffnen, Bude antippen → Plan schließt, Figur läuft hin
+      await page.getByRole('button', { name: 'Lageplan', exact: true }).click();
+      await page.getByRole('group', { name: 'Lageplan des Jahrmarkts' }).waitFor();
+      await foto('52p-lageplan');
+      await page.getByRole('group', { name: 'Lageplan des Jahrmarkts' }).getByRole('button', { name: /^Dosenwerfen/ }).dispatchEvent('click');
+      await page.getByRole('group', { name: 'Lageplan des Jahrmarkts' }).waitFor({ state: 'detached' });
+      pruefe(true, `${name}: Lageplan zeigt alle Plätze, Antippen einer Bude schließt ihn`);
+      await page.waitForTimeout(4300);
+      for (let i = 0; i < 3 && (await page.getByRole('button', { name: 'Zurück' }).count()); i++) await page.getByRole('button', { name: 'Zurück' }).first().click();
+      await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
+      // Essbude (0.15): Popcorn kostet 2 Taler, die Figur freut sich
+      const talerVorher = Number((await page.locator('.taler').first().textContent()).match(/(\d+)/)?.[1] ?? 0);
+      await page.getByRole('button', { name: /^Popcorn: für 2 Taler/ }).dispatchEvent('click');
+      await page.locator('.essen-frage').waitFor({ timeout: 8000 });
+      if (talerVorher >= 2) {
+        await page.getByRole('button', { name: 'Für 2 Taler kaufen' }).click();
+        await page.getByText('Knusper, Popcorn!').waitFor();
+        await foto('52q-popcorn');
+        const talerNachher = Number((await page.locator('.taler').first().textContent()).match(/(\d+)/)?.[1] ?? 0);
+        pruefe(talerNachher === talerVorher - 2, `${name}: Popcorn kostet 2 Taler (${talerVorher} → ${talerNachher})`);
+      } else {
+        await page.getByRole('button', { name: 'Lieber nicht' }).click();
+        pruefe(true, `${name}: Popcorn-Frage erscheint (zu wenig Taler)`);
+      }
       await page.getByRole('button', { name: 'Menü' }).click();
       pruefe(await page.getByText('Jahrmarkt-Manager').isVisible(), `${name}: Rang aus 48 Sternen ist Jahrmarkt-Manager`);
       await foto('52-menue');

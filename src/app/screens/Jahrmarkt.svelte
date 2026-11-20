@@ -5,6 +5,7 @@
   import {
     ALLEE_X,
     ANDENKEN_X,
+    ATTRAKTIONEN,
     KNOBEL_X,
     FAEHRE_X,
     BUDE_BREITE,
@@ -12,23 +13,29 @@
     BUDEN_ORTE,
     EINGANG,
     FESTPLATZ_Y,
-    REIHEN,
+    HUEGEL,
+    LATERNEN,
+    PLAETZE,
     RIESENRAD_X,
     TOR,
+    WEGE,
     WEG_BREITE,
     WELT_BREITE,
     WELT_HOEHE,
     aufStrecke,
     aufWeg,
     budenOrt,
+    hinterDemTor,
     laufdauerMs,
-    reihenSchilder,
-    reihenSpanne,
+    platzVon,
     weg,
     weglaenge,
+    type Attraktion as AttraktionsDaten,
     type Laufrichtung,
     type Punkt,
   } from '../../domain/karte';
+  import AttraktionsBild from '../grafik/Attraktion.svelte';
+  import JahrmarktPlan from '../components/JahrmarktPlan.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import Sprechblase from '../components/Sprechblase.svelte';
   import { AUFTRAG_ERKLAERUNG, ENTDECKUNGEN, GASSE_BEGRUESSUNG, INTRO, NOCH_IM_AUFBAU, ABENDMARKT_ZU } from '../geschichte';
@@ -230,9 +237,60 @@
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const punkt = { x: (e.clientX - r.left) / massstab, y: (e.clientY - r.top) / massstab };
     let z = aufWeg(punkt);
-    if (!abendOffen && z.y < TOR.y) z = TOR;
+    if (!abendOffen && hinterDemTor(z)) z = TOR;
     laufeZu(z);
   }
+
+  /* ---------- Attraktionen und Essstände (seit 0.15) ---------- */
+  const SPRUECHE: Partial<Record<AttraktionsDaten['id'], string>> = {
+    kettenkarussell: 'Das Kettenkarussell hat 16 Sitze. Bei 3 Fahrten sind das 48 Plätze!',
+    autoscooter: 'Im Autoscooter fahren 8 Wagen. 2 sind frei – wie viele sind besetzt?',
+    schiffschaukel: 'Hui! Die Schiffschaukel schwingt fast 4 Meter hoch.',
+    musikpavillon: 'Die Kapelle spielt im Dreivierteltakt: eins, zwei, drei!',
+    kinderkarussell: '12 Pferdchen, jedes dritte ist ein Einhorn. Wie viele Einhörner sind es?',
+    zirkuszelt: 'Ins Zirkuszelt passen 300 Leute – 100 auf jeder der drei Tribünen.',
+    achterbahn: 'Die Achterbahn ist 25 Meter hoch. Das sind 2 500 Zentimeter!',
+    brunnen: 'Plätscher! Der Brunnen hat 3 Wasserstrahlen.',
+    fernrohr: 'Durchs Fernrohr siehst du bis zur Bauinsel.',
+  };
+  let aktiv = $state<string | null>(null);
+  let aktivUhr: ReturnType<typeof setTimeout> | undefined;
+  /** Essstand: hinlaufen, dann fragen, ob es etwas sein darf. */
+  let essen = $state<AttraktionsDaten | null>(null);
+  let freude = $state<string | null>(null);
+  let freudeUhr: ReturnType<typeof setTimeout> | undefined;
+  function attraktionGetippt(a: AttraktionsDaten) {
+    app.spieleKlang('tipp');
+    if (a.preis) {
+      laufeZu(aufWeg({ x: a.x, y: a.y + 60 }), () => (essen = a));
+      return;
+    }
+    clearTimeout(aktivUhr);
+    aktiv = a.id;
+    aktivUhr = setTimeout(() => (aktiv = null), 4000);
+    const spruch = SPRUECHE[a.id];
+    if (spruch) app.melde(spruch);
+  }
+  function kaufeEssen() {
+    const a = essen;
+    const q = app.profil;
+    essen = null;
+    if (!a || !q || !a.preis) return;
+    if (q.taler < a.preis) {
+      app.melde('Dafür reichen die Taler noch nicht. Eine Runde bringt 10!');
+      return;
+    }
+    app.aendereProfil((r) => ({ ...r, taler: r.taler - (a.preis ?? 0) }));
+    app.spieleKlang('muenze');
+    clearTimeout(freudeUhr);
+    freude = a.lecker ?? 'Lecker!';
+    setTimeout(() => app.spieleKlang('jubel'), 250);
+    freudeUhr = setTimeout(() => (freude = null), 1800);
+  }
+
+  /** Lageplan: alle Buden mit Medaillen und Aufträgen; ein Tipp schickt die Figur hin. */
+  let planOffen = $state(false);
+  let medaillen = $derived(p ? Object.fromEntries(BUDEN_ORTE.map((o) => [o.id, budeInfo(o.id).spielbar ? hoechsteStufe(p, o.id) : undefined])) : {});
 
   function katzeEntdeckt() {
     const e = ENTDECKUNGEN.katze;
@@ -305,16 +363,40 @@
     app.karteOrt = pos;
   });
 
-  const schilder = reihenSchilder();
+  /** Gassenschilder vorn an jedem Platz. */
+  const schilder = PLAETZE.filter((pl) => pl.id !== 'festplatz' && pl.id !== 'abendmarkt').map((pl) => ({ id: pl.id, name: pl.name, farbe: pl.farbe, x: pl.c.x - pl.rx * 0.5, y: pl.c.y + pl.ry * 0.25 }));
+  /** Budenreihe eines Platzes von links nach rechts (für Lichterkette und Wimpel über den hinteren Buden). */
+  const ketten = PLAETZE.filter((pl) => pl.id !== 'festplatz').map((pl) => {
+    const hinten = BUDEN_ORTE.filter((o) => o.gasse === pl.id).sort((a, b) => a.boden - b.boden);
+    const oben = hinten[0]?.boden ?? pl.c.y;
+    const reihe = hinten.filter((o) => o.boden - oben < 60);
+    const xs = reihe.map((o) => o.x);
+    return { id: pl.id, l: Math.min(...xs) - BUDE_BREITE / 2, r: Math.max(...xs) + BUDE_BREITE / 2, y: oben - BUDE_HOEHE - 58 };
+  });
   const lampen = Array.from({ length: 14 }, (_, i) => i);
   const wimpelFarben = ['#e23a4e', '#ffc62b', '#3c78d8', '#3fae6a', '#7b5ea7'];
   const baeume = [
-    { x: 150, y: 200 },
-    { x: 1500, y: 210 },
-    { x: 1500, y: FESTPLATZ_Y - 400 },
+    { x: 90, y: 380 },
+    { x: 1560, y: 330 },
+    { x: 1590, y: 1180 },
+    { x: 60, y: 1950 },
+    { x: 1590, y: 2060 },
     { x: 90, y: WELT_HOEHE - 120 },
     { x: 1550, y: WELT_HOEHE - 120 },
   ];
+  const bueschee = [
+    { x: 40, y: 1400 },
+    { x: 860, y: 1980 },
+    { x: 1600, y: 1560 },
+    { x: 990, y: 2420 },
+    { x: 650, y: 2420 },
+    { x: 260, y: 1500 },
+  ];
+  const linie = (pts: readonly Punkt[]): string => pts.map((q, i) => `${i ? 'L' : 'M'}${q.x} ${q.y}`).join(' ');
+  /** Treppe hinauf: Stufen quer zur Treppe. */
+  const treppe = WEGE.find((w) => w.treppe);
+  const stufen = treppe ? Array.from({ length: 9 }, (_, i) => ({ y: TOR.y - 30 - i * ((TOR.y - 30 - (platzVon('abendmarkt').c.y + platzVon('abendmarkt').ry * 0.8)) / 9) })) : [];
+  const sterne = Array.from({ length: 46 }, (_, i) => ({ x: (i * 173 + 40) % WELT_BREITE, y: 14 + ((i * 97) % 150), r: i % 3 === 0 ? 2.6 : 1.6 }));
 </script>
 
 {#if p}
@@ -324,7 +406,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab + LEISTE_PX}px">
       <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; transform: scale({massstab})" onclick={aufKarteGetippt}>
-        <!-- Boden: Wiese, Wege, Festplatz, Zaun des Sternenmarkts -->
+        <!-- Boden: Wiese, Hügel mit Sternenmarkt, Wege, Plätze -->
         <svg class="boden" viewBox="0 0 {WELT_BREITE} {WELT_HOEHE}" width={WELT_BREITE} height={WELT_HOEHE} aria-hidden="true">
           <defs>
             <pattern id="gras" width="120" height="120" patternUnits="userSpaceOnUse">
@@ -343,32 +425,31 @@
             </pattern>
           </defs>
           <rect width={WELT_BREITE} height={WELT_HOEHE} fill="url(#gras)" />
-          <!-- Sternenmarkt: dunkler Himmel hinter dem Zaun -->
-          <rect x="0" y="0" width={WELT_BREITE} height={TOR.y - 20} fill={abendOffen ? '#2e2a4f' : '#4b4673'} opacity="0.85" />
-          {#each Array.from({ length: 40 }, (_, i) => i) as i (i)}
-            <circle cx={(i * 173) % WELT_BREITE} cy={20 + ((i * 97) % 140)} r={i % 3 === 0 ? 2.5 : 1.5} fill="#fff6c8" opacity="0.8" />
+          <!-- Abendhimmel über dem Hügel -->
+          <rect x="0" y="0" width={WELT_BREITE} height={HUEGEL.oben} fill={abendOffen ? '#2e2a4f' : '#4b4673'} opacity="0.9" />
+          {#each sterne as st, i (i)}<circle cx={st.x} cy={st.y} r={st.r} fill="#fff6c8" opacity="0.85" />{/each}
+          <!-- Der Hügel: Hang und Plateau -->
+          <ellipse cx={HUEGEL.c.x} cy={HUEGEL.c.y + 70} rx={HUEGEL.rx} ry={HUEGEL.ry} fill="#6fb35f" />
+          <ellipse cx={HUEGEL.c.x} cy={HUEGEL.c.y + 30} rx={HUEGEL.rx - 30} ry={HUEGEL.ry - 40} fill="#82c46f" />
+          <ellipse cx={HUEGEL.c.x} cy={HUEGEL.c.y - 10} rx={HUEGEL.rx - 90} ry={HUEGEL.ry - 110} fill={abendOffen ? '#5b5f97' : '#7c7fb0'} opacity="0.55" />
+          <!-- Wege: Rand, dann Pflaster -->
+          {#each WEGE as w, i (i)}<path d={linie(w.punkte)} fill="none" stroke="#c9a96f" stroke-width={WEG_BREITE + 12} stroke-linecap="round" stroke-linejoin="round" />{/each}
+          {#each WEGE as w, i (i)}<path d={linie(w.punkte)} fill="none" stroke={w.treppe ? '#d9c39b' : 'url(#pflaster)'} stroke-width={WEG_BREITE} stroke-linecap="round" stroke-linejoin="round" />{/each}
+          {#each stufen as st, i (i)}<rect x={TOR.x - WEG_BREITE / 2} y={st.y} width={WEG_BREITE} height="6" rx="2" fill="#b39463" />{/each}
+          <!-- Plätze -->
+          {#each PLAETZE as pl (pl.id)}
+            <ellipse cx={pl.c.x} cy={pl.c.y} rx={pl.rx} ry={pl.ry} fill="url(#pflaster)" stroke="#c9a96f" stroke-width="6" />
+            {#if pl.id !== 'festplatz'}<ellipse cx={pl.c.x} cy={pl.c.y} rx={pl.rx - 14} ry={pl.ry - 12} fill={pl.farbe} opacity="0.08" />{/if}
           {/each}
-          <!-- Festplatz -->
-          <ellipse cx={ALLEE_X} cy={FESTPLATZ_Y - 40} rx={WELT_BREITE * 0.47} ry="300" fill="url(#pflaster)" stroke="#c9a96f" stroke-width="6" />
-          <!-- Allee -->
-          <rect x={ALLEE_X - WEG_BREITE / 2 - 10} y={(REIHEN[0]?.y ?? 0) - WEG_BREITE / 2} width={WEG_BREITE + 20} height={FESTPLATZ_Y - (REIHEN[0]?.y ?? 0) + WEG_BREITE} fill="url(#pflaster)" stroke="#c9a96f" stroke-width="5" />
-          <!-- Querwege -->
-          {#each REIHEN as r (r.index)}
-            {@const [l, re] = reihenSpanne(r)}
-            <rect x={l - 30} y={r.y - WEG_BREITE / 2} width={re - l + 60} height={WEG_BREITE} rx={WEG_BREITE / 2} fill="url(#pflaster)" stroke="#c9a96f" stroke-width="5" />
-          {/each}
-          <!-- Zaun vor dem Sternenmarkt -->
+          <!-- Tor am Fuß der Treppe (zu, bis alle Buden Silber haben) -->
           {#if !abendOffen}
             <g>
-              {#each Array.from({ length: Math.ceil(WELT_BREITE / 36) }, (_, i) => i) as i (i)}
-                {#if Math.abs(i * 36 + 18 - ALLEE_X) > 60}
-                  <rect x={i * 36 + 12} y={TOR.y - 70} width="12" height="62" rx="4" fill="#b9763f" stroke="#87521f" stroke-width="3" />
-                {/if}
+              {#each [-1, 1] as sd (sd)}
+                {#each [0, 1, 2, 3, 4] as i (i)}<rect x={TOR.x + sd * (70 + i * 36) - 6} y={TOR.y - 70} width="12" height="62" rx="4" fill="#b9763f" stroke="#87521f" stroke-width="3" />{/each}
+                <rect x={sd < 0 ? TOR.x - 250 : TOR.x + 60} y={TOR.y - 54} width="190" height="10" fill="#87521f" />
               {/each}
-              <rect x="0" y={TOR.y - 54} width={ALLEE_X - 60} height="10" fill="#87521f" />
-              <rect x={ALLEE_X + 60} y={TOR.y - 54} width={ALLEE_X - 60} height="10" fill="#87521f" />
-              <rect x={ALLEE_X - 60} y={TOR.y - 80} width="120" height="74" fill="#87521f" stroke="#5e3714" stroke-width="4" />
-              {#each [0, 1, 2, 3] as i (i)}<rect x={ALLEE_X - 52 + i * 28} y={TOR.y - 74} width="20" height="62" fill="#b9763f" />{/each}
+              <rect x={TOR.x - 60} y={TOR.y - 80} width="120" height="74" fill="#87521f" stroke="#5e3714" stroke-width="4" />
+              {#each [0, 1, 2, 3] as i (i)}<rect x={TOR.x - 52 + i * 28} y={TOR.y - 74} width="20" height="62" fill="#b9763f" />{/each}
             </g>
           {/if}
           <!-- Bäume -->
@@ -383,60 +464,63 @@
               {#if jz === 'fruehling'}{#each [[-24, -6], [10, -16], [-4, -40], [24, 6], [-10, 12]] as [bx, by], k (k)}<circle cx={bx} cy={by} r="5" fill="#fff" /><circle cx={bx} cy={by} r="2" fill="#f17aa0" />{/each}{/if}
             </g>
           {/each}
-          <!-- Büsche an den Enden der Querwege -->
-          {#each REIHEN as r (r.index)}
-            {@const [l, re] = reihenSpanne(r)}
-            {#each [l - 70, re + 70] as bx, k (k)}
-              <g transform="translate({bx} {r.y + 10})">
-                <ellipse cx="0" cy="26" rx="34" ry="7" fill="#1f2a6b" opacity="0.1" />
-                <circle cx="-14" cy="8" r="18" fill="#3fae6a" /><circle cx="12" cy="6" r="20" fill="#4fbf78" /><circle cx="0" cy="-8" r="16" fill="#5ccc85" />
-                <circle cx="-6" cy="-6" r="3" fill="#e23a4e" /><circle cx="10" cy="4" r="3" fill="#ffc62b" />
-              </g>
-            {/each}
+          <!-- Büsche -->
+          {#each bueschee as bu, i (i)}
+            <g transform="translate({bu.x} {bu.y})">
+              <ellipse cx="0" cy="26" rx="34" ry="7" fill="#1f2a6b" opacity="0.1" />
+              <circle cx="-14" cy="8" r="18" fill="#3fae6a" /><circle cx="12" cy="6" r="20" fill="#4fbf78" /><circle cx="0" cy="-8" r="16" fill="#5ccc85" />
+              <circle cx="-6" cy="-6" r="3" fill="#e23a4e" /><circle cx="10" cy="4" r="3" fill="#ffc62b" />
+            </g>
           {/each}
-          <!-- Laternen an der Allee -->
-          {#each REIHEN as r (r.index)}
-            {#each [-1, 1] as s (s)}
-              <g transform="translate({ALLEE_X + s * 70} {r.y + 160})">
-                <rect x="-3" y="-60" width="6" height="64" fill="#1f2a6b" />
-                <circle cx="0" cy="-66" r="10" fill={laufend > 0 || tz !== 'tag' ? '#ffe57a' : '#d7dae6'} stroke="#1f2a6b" stroke-width="3" />
-              </g>
-            {/each}
+          <!-- Laternen an den Wegen -->
+          {#each LATERNEN as l, i (i)}
+            <g transform="translate({l.x} {l.y})">
+              <rect x="-3" y="-60" width="6" height="64" fill="#1f2a6b" />
+              <circle cx="0" cy="-66" r="10" fill={laufend > 0 || tz !== 'tag' ? '#ffe57a' : '#d7dae6'} stroke="#1f2a6b" stroke-width="3" />
+            </g>
           {/each}
         </svg>
 
-        <!-- Sternenmarkt-Schild -->
-        <div class="abend-schild" style="left: {ALLEE_X}px; top: {TOR.y + 14}px">
+        <!-- Sternenmarkt-Schild am Tor -->
+        <div class="abend-schild" style="left: {TOR.x}px; top: {TOR.y - 128}px">
           <strong>Sternenmarkt</strong>
           {#if !abendOffen}<span>öffnet, wenn alle Buden Silber haben</span>{/if}
         </div>
 
-        <!-- Gassenschilder -->
-        {#each schilder as s (`${s.reihe.index}-${s.name}`)}
-          <div
-            class="gassen-schild"
-            style="--f: {s.farbe}; top: {s.reihe.y}px; z-index: {s.reihe.y + 10}; {s.seite === 'links' ? `right: ${WELT_BREITE - ALLEE_X + 56}px` : `left: ${ALLEE_X + 56}px`}"
-          >
-            {s.name}
-          </div>
+        <!-- Gassenschilder vorn an den Plätzen -->
+        {#each schilder as s (s.id)}
+          <div class="gassen-schild" style="--f: {s.farbe}; left: {s.x}px; top: {s.y}px; z-index: {Math.round(s.y) + 10}">{s.name}</div>
         {/each}
 
-        <!-- Deko aus dem Andenkenstand -->
+        <!-- Deko aus dem Andenkenstand: über den hinteren Buden jedes Platzes -->
         {#if p.deko.includes('lichterkette') || p.deko.includes('wimpel')}
-          {#each REIHEN.slice(1) as r (r.index)}
-            {@const [l, re] = reihenSpanne(r)}
+          {#each ketten as k (k.id)}
             {#if p.deko.includes('lichterkette')}
-              <div class="kette licht" style="left: {l}px; width: {re - l}px; top: {r.y - BUDE_HOEHE - 30}px" aria-hidden="true">
+              <div class="kette licht" style="left: {k.l}px; width: {k.r - k.l}px; top: {k.y - 30}px" aria-hidden="true">
                 {#each lampen as i (i)}<span style="animation-delay: {(i % 6) * 0.3}s"></span>{/each}
               </div>
             {/if}
             {#if p.deko.includes('wimpel')}
-              <div class="kette wimpel" style="left: {l}px; width: {re - l}px; top: {r.y - BUDE_HOEHE - 14}px" aria-hidden="true">
+              <div class="kette wimpel" style="left: {k.l}px; width: {k.r - k.l}px; top: {k.y - 14}px" aria-hidden="true">
                 {#each lampen as i (i)}<span style="--f: {wimpelFarben[i % wimpelFarben.length]}"></span>{/each}
               </div>
             {/if}
           {/each}
         {/if}
+
+        <!-- Karussells, Essstände und Blickfänge -->
+        {#each ATTRAKTIONEN as a (a.id)}
+          <button
+            class="attraktion"
+            class:essen-stand={!!a.preis}
+            style="left: {a.x - a.breite / 2}px; top: {a.y - a.breite}px; width: {a.breite}px; z-index: {Math.round(a.y)}"
+            onclick={() => attraktionGetippt(a)}
+            aria-label={a.preis ? `${a.name}: für ${a.preis} Taler` : a.name}
+          >
+            <AttraktionsBild art={a.id} aktiv={aktiv === a.id} preis={a.preis} />
+            {#if a.preis}<span class="schild klein">{a.name}</span>{/if}
+          </button>
+        {/each}
 
         <!-- Buden -->
         {#each BUDEN_ORTE as o (o.id)}
@@ -451,7 +535,7 @@
                 onclick={() => zurBude(o.id)}
                 aria-label={info.spielbar ? `${info.name} öffnen${medaille ? `, ${STUFEN_NAME[medaille]} geschafft` : ''}` : `${info.name}, bald geöffnet`}
               >
-                <BudeStand bude={o.id} {zustand} besitzer={o.id === 'dartbude'} katze={mitKatze} />
+                <BudeStand bude={o.id} {zustand} besitzer={o.id === 'dartbude'} katze={mitKatze} form={platzVon(o.gasse).form} />
               </button>
               {#if mitKatze}
                 <button class="katze-knopf" onclick={katzeEntdeckt} aria-label="Katze auf dem Dach"></button>
@@ -542,8 +626,9 @@
         </button>
 
         <!-- Die Figur -->
-        <div class="figur" class:teleport style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
+        <div class="figur" class:teleport class:freude={!!freude} style="left: {pos.x}px; top: {pos.y}px; z-index: {Math.round(pos.y) + 40}" aria-hidden="true">
           <Laeufer figur={p.figur} aussehen={p.aussehen} {laeuft} {richtung} groesse={104} />
+          {#if freude}<span class="lecker">{freude}</span>{/if}
           {#if teleport}{#each [0, 1, 2, 3, 4, 5, 6, 7] as k (k)}<span class="funke" style="--w: {k * 45}deg; --v: {k * 40}ms"></span>{/each}{/if}
         </div>
 
@@ -561,9 +646,7 @@
         {#if tz !== 'tag'}
           <div class="dunkel" class:nacht={tz === 'nacht'} aria-hidden="true"></div>
           <div class="lichter" aria-hidden="true">
-            {#each REIHEN as r (r.index)}
-              {#each [-1, 1] as s (s)}<span class="schein" style="left: {ALLEE_X + s * 70}px; top: {r.y + 94}px"></span>{/each}
-            {/each}
+            {#each LATERNEN as l, i (i)}<span class="schein" style="left: {l.x}px; top: {l.y - 66}px"></span>{/each}
             {#each BUDEN_ORTE as o (o.id)}
               {#if budeInfo(o.id).spielbar && hoechsteStufe(p, o.id)}<span class="schein bude-schein" style="left: {o.x}px; top: {o.boden - BUDE_HOEHE * 0.45}px"></span>{/if}
             {/each}
@@ -587,6 +670,7 @@
     </button>
     <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })} aria-label="Bauplatz"><Icon name="block" groesse={22} /><span class="lang"> Bauplatz</span></button>
     <button class="ticket hell" onclick={teleportieren} aria-label="Teleporter zur Bauinsel"><Icon name="insel" groesse={22} /><span class="lang"> Insel</span></button>
+    <button class="ticket hell rund-klein" onclick={() => { app.spieleKlang('tipp'); planOffen = true; }} aria-label="Lageplan"><Icon name="karte" groesse={22} /></button>
     <button class="ticket hell rund-klein" onclick={() => kamera(false)} aria-label="Wo bin ich?">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22" /></svg>
     </button>
@@ -619,6 +703,27 @@
         </ul>
         <button class="aufwaermen" onclick={() => { auftraegeOffen = false; app.zeige({ name: 'blitz' }); }}><Icon name="blitz" groesse={22} /> Zum Aufwärmen: Blitzrechnen (1 Minute)</button>
         <button class="ticket hell" onclick={() => (auftraegeOffen = false)}>Schließen</button>
+      </div>
+    </div>
+  {/if}
+
+  {#if planOffen}
+    <JahrmarktPlan {medaillen} auftraege={auftragsBuden} figur={pos} sternOffen={abendOffen} onzu={() => (planOffen = false)} onbude={(id) => { planOffen = false; zurBude(id); }} />
+  {/if}
+
+  {#if essen}
+    {@const e = essen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="schleier" onclick={() => (essen = null)}></div>
+    <div class="tafel essen-frage" role="dialog" aria-modal="true" aria-labelledby="essen-titel">
+      <div class="markise"></div>
+      <div class="inhalt">
+        <h2 id="essen-titel">{e.name}</h2>
+        <p>Möchtest du {e.id === 'crepes' ? 'einen Crêpe' : e.id === 'eis' ? 'ein Eis' : e.name} für {e.preis} Taler? Du hast {p.taler} Taler.</p>
+        <div class="knoepfe">
+          <button class="ticket hell" onclick={() => (essen = null)}>Lieber nicht</button>
+          <button class="ticket gelb" aria-label="Für {e.preis} Taler kaufen" onclick={kaufeEssen} disabled={p.taler < (e.preis ?? 0)}><Icon name="taler" groesse={20} /> {e.preis} Taler</button>
+        </div>
       </div>
     </div>
   {/if}
@@ -882,16 +987,17 @@
     bottom: calc(100% + 4px);
     transform: translateX(-50%);
     width: max-content;
-    max-width: 196px;
+    max-width: 168px;
     text-align: center;
-    line-height: 1.1;
+    line-height: 1.05;
     background: var(--holz);
     color: #fff;
     border: 3px solid var(--holz-dunkel);
     border-radius: 8px;
-    padding: 3px 12px;
+    padding: 3px 8px;
     font-weight: 900;
-    font-size: 1.35rem;
+    font-size: 1.2rem;
+    hyphens: auto;
     pointer-events: none;
     z-index: 2;
   }
@@ -899,9 +1005,85 @@
     background: #8b8fa6;
     border-color: #6a6e86;
   }
+  .attraktion {
+    position: absolute;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .attraktion .schild.klein {
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    transform: translateX(-50%);
+    background: #fffdf7;
+    border: 3px solid var(--tinte);
+    border-radius: 8px;
+    padding: 0 8px;
+    font-weight: 900;
+    font-size: 1rem;
+    white-space: nowrap;
+    color: var(--tinte);
+  }
+  .figur.freude :global(.laeufer) {
+    animation: hopsen 0.45s ease-out 3;
+  }
+  @keyframes hopsen {
+    40% {
+      transform: translateY(-34px);
+    }
+  }
+  .lecker {
+    position: absolute;
+    left: 50%;
+    bottom: 118px;
+    transform: translateX(-50%);
+    background: #fffdf7;
+    border: 3px solid var(--tinte);
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-weight: 900;
+    font-size: 1.3rem;
+    white-space: nowrap;
+    color: var(--tinte);
+    animation: auftauchen 0.3s ease-out;
+  }
+  @keyframes auftauchen {
+    from {
+      transform: translateX(-50%) scale(0.4);
+      opacity: 0;
+    }
+  }
+  .essen-frage {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 31;
+    width: min(92vw, 26rem);
+  }
+  .essen-frage .inhalt {
+    padding: 14px 18px 18px;
+    display: grid;
+    gap: 10px;
+  }
+  .essen-frage h2,
+  .essen-frage p {
+    margin: 0;
+  }
+  .essen-frage p {
+    font-weight: 700;
+  }
+  .essen-frage .knoepfe {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
   .gassen-schild {
     position: absolute;
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
     background: var(--f);
     color: #fff;
     font-weight: 900;
