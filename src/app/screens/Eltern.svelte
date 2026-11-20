@@ -256,7 +256,7 @@
               <li>Jahrmarkt-Check mit persönlichem Rundgang</li>
               <li>Lernprofil in Sätzen, Tipps für zu Hause, Vorher-Nachher</li>
               <li>Sternenmarkt mit Bonusbuden für Klasse 5</li>
-              <li>Bauinsel zum freien Bauen mit Einrichtung</li>
+              <li>Ganze Bauinsel: vier weitere Inseln mit Strand, Bauland und Wüste, 16 Bauaufträge, alle Einrichtung und Tiere (die erste Insel ist auch so frei)</li>
             </ul>
             <button class="ticket rot" disabled={kaufLaeuft} onclick={kaufen}>Für {preis} freischalten</button>
           {/if}

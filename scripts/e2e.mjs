@@ -625,6 +625,10 @@ try {
       await page.getByRole('heading', { name: 'Jahrmarkt' }).waitFor();
       await menue(/Bauinsel/);
       await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached' });
+      // Beim ersten Besuch nach 0.14 erklärt Flinka das Neue (einmal)
+      await page.locator('.flinka-hinweis').waitFor({ timeout: 4000 }).catch(() => {});
+      pruefe((await page.locator('.flinka-hinweis').count()) === 1, `${name}: Flinka erklärt Neues auf der Insel`);
+      for (let i = 0; i < 5 && (await page.locator('.flinka-hinweis').count()); i++) await page.locator('.flinka-hinweis').getByRole('button', { name: /Weiter|Los geht/ }).click();
       const inselFeld = (x, y, z, seite = 'oben') => page.locator(`[data-feld="${x},${y},${z}"] polygon[data-seite="${seite}"]`).first().dispatchEvent('click');
       const inselLager = async () => Number((await page.locator('.lager').textContent()).match(/(\d+)/)?.[1]);
       const inselVorher = await inselLager();
@@ -646,7 +650,17 @@ try {
       await inselFeld(12, 17, -1);
       await page.waitForTimeout(1200);
       await foto('55b-bauinsel');
+      // Übersicht aller Inseln
+      await page.getByRole('button', { name: 'Übersicht aller Inseln' }).click();
+      await page.getByRole('dialog', { name: 'Übersicht' }).locator('canvas').waitFor();
+      await foto('55c-uebersicht');
+      await page.getByRole('button', { name: 'Übersicht schließen' }).click();
+      pruefe(true, `${name}: Übersicht aller Inseln öffnet und schließt`);
+      // Modus Drehen zeigt drehbare Möbel (hier: keine gesetzt) und bleibt bedienbar
+      await page.getByRole('radio', { name: 'Drehen', exact: true }).click();
+      await page.getByRole('radio', { name: 'Laufen', exact: true }).click();
       await page.getByRole('button', { name: 'Ansicht drehen' }).click();
+      await page.waitForTimeout(400);
       await page.getByRole('button', { name: 'Wo bin ich?' }).click();
       await page.getByRole('button', { name: 'Zurück' }).first().click();
 
@@ -890,6 +904,15 @@ try {
       await page.locator('[data-schild]').first().dispatchEvent('click');
       await page.getByRole('region', { name: 'Bauauftrag' }).waitFor();
       pruefe((await page.locator('[data-schild]').count()) === 1, `${name}: nur der Bauplatz des offenen Auftrags ist markiert`);
+      pruefe((await page.getByText(/So geht's/).count()) === 1, `${name}: Bauauftrag mit „So geht's“-Hinweis`);
+      {
+        // Das ✕ überdeckt keinen Text mehr
+        const zu = await page.getByRole('button', { name: 'Bauauftrag schließen' }).boundingBox();
+        const texte = await page.locator('.auftrag p').evaluateAll((l) => l.map((e) => e.getBoundingClientRect().toJSON()));
+        const ueber = texte.some((t) => zu && t.left < zu.x + zu.width && t.right > zu.x && t.top < zu.y + zu.height && t.bottom > zu.y);
+        pruefe(!ueber, `${name}: ✕ überdeckt den Auftragstext nicht`);
+      }
+      await foto('81b-bauauftrag');
       await page.getByRole('button', { name: 'Bauauftrag schließen' }).click();
       await page.getByRole('region', { name: 'Bauauftrag' }).waitFor({ state: 'detached' });
       pruefe(true, `${name}: Bauauftrag lässt sich mit ✕ schließen`);

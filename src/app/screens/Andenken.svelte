@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DEKO, dekoKaufen } from '../../domain/deko';
-  import { EINRICHTUNG, KATEGORIE_NAME, TIERE, kaufeEinrichtung, type Kategorie } from '../../domain/insel';
+  import { EINRICHTUNG, KATEGORIE_NAME, TIERE, kaufeEinrichtung, teilFrei, type Kategorie } from '../../domain/insel';
   import Icon from '../components/Icon.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import TeilVorschau from '../grafik/TeilVorschau.svelte';
@@ -45,7 +45,7 @@
 {#if p}
 
 {#snippet dekoLaden()}
-    <p class="erklaerung">Für jede gespielte Runde gibt es 10 Taler. Hier tauschst du sie gegen Deko für den Jahrmarkt.</p>
+    <p class="erklaerung">Für jede gespielte Runde gibt es 10 Taler – schaffst du eine Stufe zum ersten Mal, sogar 15 extra. Auch Aufträge und das Fundbüro bringen Taler. Hier tauschst du sie gegen Deko für den Jahrmarkt.</p>
     <ul class="regal">
       {#each DEKO as d (d.id)}
         {@const hat = p.deko.includes(d.id)}
@@ -69,10 +69,8 @@
 
 {#snippet inselLaden()}
     <h2 class="titel">Einrichtung für die Bauinsel</h2>
-    {#if !app.paket}
-      <p class="erklaerung"><Icon name="schloss" groesse={18} /> Die Bauinsel gehört zum Zusatzpaket.</p>
-    {:else}
       <p class="erklaerung">Kaufe Türen, Möbel, Blumen und Tiere. Du setzt sie auf der Bauinsel wie Blöcke. Abbauen legt sie zurück ins Inventar. Tiere laufen auf der Insel umher. Auf Stuhl, Sessel, Sofa und Bank setzt sich deine Figur, ins Bett legt sie sich: im Laufen-Modus einfach antippen.</p>
+      {#if !app.paket}<p class="erklaerung"><Icon name="schloss" groesse={18} /> Teile mit Schloss gehören zum Zusatzpaket.</p>{/if}
       <div class="kategorien" role="tablist" aria-label="Bereiche">
         {#each KATEGORIEN as k (k)}
           <button role="tab" aria-selected={kategorie === k} class:an={kategorie === k} onclick={() => (kategorie = k)}>{KATEGORIE_NAME[k]}</button>
@@ -84,11 +82,14 @@
             <span class="bild"><TeilVorschau art={e.id} /></span>
             <strong>{e.name}</strong>
             <small>hast du: {p.insel.inventar[String(e.id)] ?? 0}</small>
-            <button class="ticket" disabled={p.taler < e.preis} onclick={() => kaufeTeil(e.id, e.name)} aria-label="{e.name} für {e.preis} Taler kaufen"><Icon name="taler" groesse={20} />{e.preis}</button>
+            {#if teilFrei(e.id, app.paket)}
+              <button class="ticket" disabled={p.taler < e.preis} onclick={() => kaufeTeil(e.id, e.name)} aria-label="{e.name} für {e.preis} Taler kaufen"><Icon name="taler" groesse={20} />{e.preis}</button>
+            {:else}
+              <span class="paket" aria-label="{e.name}: Zusatzpaket"><Icon name="schloss" groesse={18} /> Zusatzpaket</span>
+            {/if}
           </li>
         {/each}
       </ul>
-    {/if}
 {/snippet}
 
   <Kopfzeile titel="Andenkenstand" zurueck={() => app.zeige(von === 'insel' ? { name: 'insel' } : { name: 'jahrmarkt' })} />
@@ -104,6 +105,14 @@
 {/if}
 
 <style>
+  .paket {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 900;
+    font-size: 0.85rem;
+    color: var(--tinte-weich);
+  }
   .titel {
     margin: 6px 0 0;
   }

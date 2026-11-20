@@ -4,13 +4,15 @@
 
 <script lang="ts">
   import { BLOCKARTEN } from '../../domain/bau';
-  import { BOOT, BREITE, GRUNDSTUECKE, HOEHE, LANDSCHAFT, LUFT, TUER_OBEN, type InselStand } from '../../domain/insel';
+  import { BOOT, BREITE, BRUECKE, GRUNDSTUECKE, HOEHE, LANDSCHAFT, LUFT, TUER_OBEN, drehbar, type InselStand } from '../../domain/insel';
+  import { dunkel, LAMPEN } from './nacht';
   import type { Aussehen } from '../../domain/aussehen';
-  import { koerperFarben } from '../../domain/aussehen';
   import type { FigurId } from '../../domain/profil';
-  import Figur from './Figur.svelte';
+  import InselFigur from './InselFigur.svelte';
+  import type { Ansicht } from './Figur.svelte';
   import TierBild from './TierBild.svelte';
-  import { A, C, zeichner, type Seite } from './inselTeile';
+  import TeilExtra from './TeilExtra.svelte';
+  import { A, C, KAKTUS, ZAUNARTIG, zeichner, type Nachbarn, type Seite } from './inselTeile';
 
   /**
    * Die Bauinsel in isometrischer Ansicht. Alles wird in Diagonalreihen (x + y) von hinten nach vorne gezeichnet,
@@ -31,6 +33,9 @@
     gleitPos = null,
     funkeln = false,
     pose = null,
+    licht = 1,
+    frei = false,
+    drehMarken = false,
     ontippe,
     onboot,
     onschild,
@@ -51,7 +56,13 @@
     /** Kurzes Glitzern um die Figur (Ankunft mit dem Teleporter). */
     funkeln?: boolean;
     /** Figur sitzt oder liegt auf einem Möbel (Feld des Möbels, Ebene, Sitz-/Liegehöhe). */
-    pose?: { x: number; y: number; z: number; typ: 'sitzen' | 'liegen'; hoehe: number } | null;
+    pose?: { x: number; y: number; z: number; typ: 'sitzen' | 'liegen' | 'schaukeln'; hoehe: number; richtung?: number } | null;
+    /** Tageslicht: 1 = Tag, 0 = tiefe Nacht (seit 0.14). Lampen und Fenster leuchten dann. */
+    licht?: number;
+    /** Freie Version (ohne Zusatzpaket): Tor mit Schild am Anfang der Brücke zur zweiten Insel. */
+    frei?: boolean;
+    /** Modus „Drehen“: über jedem drehbaren Möbel ein kleines ↻. */
+    drehMarken?: boolean;
     ontippe: (x: number, y: number, z: number, seite: Seite) => void;
     /** Boot am Steg angetippt (zurück zum Jahrmarkt). */
     onboot?: () => void;
@@ -77,7 +88,7 @@
     return Math.floor(a) + Math.floor(b);
   };
 
-  type Teil = { schluessel: string; x: number; y: number; z: number; flaechen: { punkte: string; farbe: string; seite?: Seite }[]; extra?: string; tippbar: boolean; durchsichtig: boolean };
+  type Teil = { schluessel: string; x: number; y: number; z: number; flaechen: { punkte: string; farbe: string; seite?: Seite }[]; extra?: string; tippbar: boolean; durchsichtig: boolean; marke?: boolean };
 
   const { quader, moebel } = zeichner(dreh);
 
@@ -88,6 +99,7 @@
     wasser: ['#6cc3ec', '#3c8fc2', '#4aa2d4'],
     bruecke: ['#c99a5f', '#8a5a2b', '#9c6634'],
     blumen: ['#8bd17a', '#7a5233', '#94603c'],
+    wueste: ['#f2c67e', '#c8955a', '#dba86a'],
   };
 
   // Einzelne Teile des Stands als eigene Werte: Läuft nur die Figur, wird die Landschaft nicht neu berechnet.
@@ -102,12 +114,74 @@
     for (let z = fz + 2; z < h + st.length; z++) if ((st[z - h] ?? LUFT) !== LUFT) return true;
     return false;
   });
+  const richtungen = $derived(stand.richtung);
+  /**
+   * Offene Tür: Steht oder geht die Figur durch ein Türfeld (oder direkt davor), ist diese Tür offen.
+   * Nur der Schlüssel wird verglichen – das Bild wird nur neu berechnet, wenn eine Tür auf- oder zugeht.
+   */
+  const tuerAuf = $derived.by(() => {
+    const pos = gleitPos ?? stand.figur;
+    const zf = Math.round(pos.z);
+    for (let y = Math.floor(pos.y) - 1; y <= Math.ceil(pos.y) + 1; y++)
+      for (let x = Math.floor(pos.x) - 1; x <= Math.ceil(pos.x) + 1; x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const i = y * W + x;
+        const h = LANDSCHAFT.hoehe[i] ?? 0;
+        if ((stapel[i] ?? [])[zf - h] !== 101) continue;
+        if (Math.abs(pos.x - x) <= 1.05 && Math.abs(pos.y - y) <= 1.05 && Math.abs(pos.x - x) + Math.abs(pos.y - y) <= 1.05) return `${x},${y},${zf}`;
+      }
+    return '';
+  });
+  /** Schaukelt die Figur, zeichnet sie Sitz und Ketten selbst (sie schwingen mit). */
+  const schaukelFeld = $derived(pose?.typ === 'schaukeln' ? `${pose.x},${pose.y},${pose.z}` : '');
+  /** Nacht in Stufen, damit das Bild nicht in jedem Takt neu berechnet wird. */
+  const lichtStufe = $derived(Math.round(Math.max(0, Math.min(1, licht)) * 10) / 10);
+  const nacht = $derived(lichtStufe < 0.5);
+  const d = (farbe: string): string => dunkel(farbe, lichtStufe);
+
   /** Nur im Haus hängt das Bild von der Figurposition ab (Schnittansicht). */
   const schnitt = $derived(istInnen ? `${fx},${fy},${fz}` : '');
 
+  /**
+   * Gemerkte Bilder je Drehung: Solange sich nichts anderes ändert, ist eine schon berechnete Ansicht beim
+   * nächsten Drehen sofort da (die Insel hat über 3 000 Felder).
+   */
+  let gemerkt: { stapel: unknown; richtungen: unknown; schluessel: string; jeDrehung: Map<number, Teil[][]> } | null = null;
   const reihen = $derived.by(() => {
+    const schluesselJetzt = `${schnitt}|${tuerAuf}|${schaukelFeld}|${lichtStufe}|${frei}|${drehMarken}`;
+    if (!gemerkt || gemerkt.stapel !== stapel || gemerkt.richtungen !== richtungen || gemerkt.schluessel !== schluesselJetzt)
+      gemerkt = { stapel, richtungen, schluessel: schluesselJetzt, jeDrehung: new Map() };
+    const fertig = gemerkt.jeDrehung.get(r);
+    if (fertig) return fertig;
+    const neu = berechneReihen();
+    gemerkt.jeDrehung.set(r, neu);
+    return neu;
+  });
+  function berechneReihen(): Teil[][] {
     const liste: Teil[][] = Array.from({ length: W + H + 1 }, () => []);
     const [sx = 0, sy = 0, sz = 0] = schnitt ? schnitt.split(',').map(Number) : [];
+    /** Teil in Ebene z (absolut) auf einem Nachbarfeld. */
+    const teilBei = (nx: number, ny: number, nz: number): number => {
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) return LUFT;
+      const ni = ny * W + nx;
+      return (stapel[ni] ?? [])[nz - (LANDSCHAFT.hoehe[ni] ?? 0)] ?? LUFT;
+    };
+    /** Zaun verbindet sich mit Zaun, Tor, Hecke und Mauern; Hecken nur mit Hecken und Mauern. */
+    const passt = (eigen: number, b: number): boolean =>
+      b !== LUFT && (BLOCKARTEN.some((k) => k.id === b) || (eigen === 123 ? b === 123 : ZAUNARTIG.has(b)));
+    const nachbarnVon = (nx: number, ny: number, nz: number, eigen: number): Nachbarn => ({
+      px: passt(eigen, teilBei(nx + 1, ny, nz)),
+      mx: passt(eigen, teilBei(nx - 1, ny, nz)),
+      py: passt(eigen, teilBei(nx, ny + 1, nz)),
+      my: passt(eigen, teilBei(nx, ny - 1, nz)),
+    });
+    const offen = tuerAuf;
+    const sperre = frei;
+    const schaukel = schaukelFeld;
+    const rtg = richtungen ?? {};
+    const L = lichtStufe;
+    const dd = (farbe: string): string => dunkel(farbe, L);
+    const dunkler = (fl: { punkte: string; farbe: string; seite?: Seite }[]) => (L >= 1 ? fl : fl.map((f) => ({ ...f, farbe: dd(f.farbe) })));
     const innen = schnitt !== '';
     const f = { x: sx, y: sy, z: sz };
     const fReihe = reihe(f.x, f.y);
@@ -122,7 +196,7 @@
         const rr = reihe(x, y);
         const g = GELAENDE[art] ?? GELAENDE.gras!;
         // Gelände: Würfel für Hügel, flache Kachel für Ebene
-        for (let z = 0; z < h; z++) liste[rr]!.push({ schluessel: `g${x},${y},${z}`, x, y, z, flaechen: quader(x, y, z, x + 1, y + 1, z + 1, z === h - 1 ? g[0] : '#a06b47', g[1], g[2]), tippbar: true, durchsichtig: false });
+        for (let z = 0; z < h; z++) liste[rr]!.push({ schluessel: `g${x},${y},${z}`, x, y, z, flaechen: dunkler(quader(x, y, z, x + 1, y + 1, z + 1, z === h - 1 ? g[0] : '#a06b47', g[1], g[2])), tippbar: true, durchsichtig: false });
         if (h === 0) {
           const tief = art === 'wasser' ? -0.25 : 0;
           // Uferkante: Landfelder neben Wasser bekommen eine kleine Böschung
@@ -132,11 +206,23 @@
             ? quader(x, y, -0.35, x + 1, y + 1, 0, farbe, g[1], g[2])
             : [{ punkte: `${P(x, y, tief)} ${P(x + 1, y, tief)} ${P(x + 1, y + 1, tief)} ${P(x, y + 1, tief)}`, farbe, seite: 'oben' as Seite }];
           // Ufer-Quader: angetippt wird wie ein Boden (z = −1)
-          liste[rr]!.push({ schluessel: `b${x},${y}`, x, y, z: -1, flaechen, tippbar: art !== 'wasser', durchsichtig: false, extra: art === 'blumen' ? 'blumen' : art === 'bruecke' ? 'bruecke' : undefined });
+          liste[rr]!.push({ schluessel: `b${x},${y}`, x, y, z: -1, flaechen: dunkler(flaechen), tippbar: art !== 'wasser', durchsichtig: false, extra: art === 'blumen' ? 'blumen' : art === 'bruecke' ? 'bruecke' : undefined });
         }
         if (LANDSCHAFT.baum[i]) {
-          liste[rr]!.push({ schluessel: `t${x},${y}`, x, y, z: h, flaechen: [...quader(x + 0.4, y + 0.4, h, x + 0.6, y + 0.6, h + 1.2, '#87521f', '#6b3f17', '#7a4a22')], extra: `baum`, tippbar: false, durchsichtig: false });
+          const pf = LANDSCHAFT.pflanze[i];
+          if (pf === 'kaktus') {
+            // Kaktus: grüne Säule mit zwei Armen
+            const k = (a: number, b: number, c: number, e: number, f: number, g2: number) => quader(x + a, y + b, h + c, x + e, y + f, h + g2, KAKTUS[0], KAKTUS[1], KAKTUS[2]);
+            liste[rr]!.push({ schluessel: `t${x},${y}`, x, y, z: h, flaechen: dunkler([...k(0.4, 0.4, 0, 0.6, 0.6, 1.5), ...k(0.18, 0.45, 0.55, 0.4, 0.55, 0.7), ...k(0.18, 0.45, 0.7, 0.3, 0.55, 1.1), ...k(0.6, 0.45, 0.75, 0.8, 0.55, 0.9), ...k(0.7, 0.45, 0.9, 0.8, 0.55, 1.25)]), tippbar: false, durchsichtig: false });
+          } else if (pf === 'palme') {
+            liste[rr]!.push({ schluessel: `t${x},${y}`, x, y, z: h, flaechen: dunkler(quader(x + 0.44, y + 0.44, h, x + 0.56, y + 0.56, h + 1.7, '#b5834f', '#87521f', '#9c6634')), extra: 'palme', tippbar: false, durchsichtig: false });
+          } else {
+            liste[rr]!.push({ schluessel: `t${x},${y}`, x, y, z: h, flaechen: dunkler(quader(x + 0.4, y + 0.4, h, x + 0.6, y + 0.6, h + 1.2, '#87521f', '#6b3f17', '#7a4a22')), extra: `baum`, tippbar: false, durchsichtig: false });
+          }
         }
+        // Freie Version: geschlossenes Tor am Anfang der Brücke
+        if (sperre && x === BRUECKE.x0 && (y === BRUECKE.y || y === BRUECKE.y + 1))
+          liste[rr]!.push({ schluessel: `sp${x},${y}`, x, y, z: 0, flaechen: dunkler([...moebel(105, x, y, 0, 1), ...quader(x + 0.4, y, 0.8, x + 0.6, y + 1, 0.9, '#d9a066', '#9c6634', '#b57a42')]), tippbar: true, durchsichtig: false, extra: y === BRUECKE.y + 1 ? 'sperrschild' : undefined });
         // Gebautes
         (stapel[i] ?? []).forEach((a, k) => {
           const z = h + k;
@@ -144,25 +230,31 @@
           if (innen && z >= f.z + 2) return;
           const vorne = innen && rr > fReihe && Math.abs(x - f.x) <= 3 && Math.abs(y - f.y) <= 3 && z >= f.z;
           const block = BLOCKARTEN[a];
-          const flaechen = a >= 100 ? moebel(a, x, y, z) : quader(x, y, z, x + 1, y + 1, z + 1, block?.oben ?? '#ccc', block?.links ?? '#999', block?.rechts ?? '#aaa');
-          liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen, tippbar: true, durchsichtig: vorne, extra: a === 102 ? 'fenster' : a === 101 ? 'tuer' : a === TUER_OBEN ? 'tueroben' : undefined });
+          // Offene Tür: nur das aufgeklappte Türblatt an der Seite, der Durchgang ist frei
+          const tuerUnten = a === 101 ? z : a === TUER_OBEN ? z - 1 : null;
+          if (tuerUnten !== null && offen === `${x},${y},${tuerUnten}`) {
+            const wandX = [x - 1, x + 1].some((nx) => nx >= 0 && nx < W && ((stapel[y * W + nx] ?? [])[tuerUnten - (LANDSCHAFT.hoehe[y * W + nx] ?? 0)] ?? LUFT) !== LUFT);
+            const blatt = wandX ? quader(x, y, z, x + 0.1, y + 0.85, z + 1, '#9c6634', '#7a4a22', '#8a5a2b') : quader(x, y, z, x + 0.85, y + 0.1, z + 1, '#9c6634', '#7a4a22', '#8a5a2b');
+            liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen: dunkler(blatt), tippbar: true, durchsichtig: vorne, extra: 'tuerauf' });
+            return;
+          }
+          const flaechen = a >= 100 ? moebel(a, x, y, z, rtg[`${x},${y},${z}`] ?? 0, schaukel === `${x},${y},${z}` ? 'sitz' : undefined, ZAUNARTIG.has(a) ? nachbarnVon(x, y, z, a) : undefined) : quader(x, y, z, x + 1, y + 1, z + 1, block?.oben ?? '#ccc', block?.links ?? '#999', block?.rechts ?? '#aaa');
+          const lampe = LAMPEN.has(a);
+          liste[rr]!.push({
+            schluessel: `s${x},${y},${z}`,
+            x,
+            y,
+            z,
+            flaechen: L >= 1 ? flaechen : flaechen.map((f) => (lampe && f.farbe.startsWith('#ff') ? f : { ...f, farbe: dd(f.farbe) })),
+            tippbar: true,
+            durchsichtig: vorne,
+            extra: a === 102 ? 'fenster' : a === 101 ? 'tuer' : a === TUER_OBEN ? 'tueroben' : lampe && L < 0.5 ? 'leuchte' : undefined,
+            marke: drehMarken && drehbar(a),
+          });
         });
       }
     return liste;
-  });
-
-  /** Punkt auf einer Seitenfläche (Ecken: unten-a, unten-b, oben-b, oben-a), u quer, v nach oben, beide 0 bis 1. */
-  function aufFlaeche(punkte: string, u: number, v: number): string {
-    const p = punkte.split(' ').map((e) => e.split(',').map(Number) as [number, number]);
-    const [p0, p1, p2, p3] = p as [[number, number], [number, number], [number, number], [number, number]];
-    const unten = [p0[0] + (p1[0] - p0[0]) * u, p0[1] + (p1[1] - p0[1]) * u];
-    const oben = [p3[0] + (p2[0] - p3[0]) * u, p3[1] + (p2[1] - p3[1]) * u];
-    return `${unten[0]! + (oben[0]! - unten[0]!) * v},${unten[1]! + (oben[1]! - unten[1]!) * v}`;
   }
-  /** Rechteck auf einer Seitenfläche von (u0, v0) bis (u1, v1). */
-  const feldAuf = (punkte: string, u0: number, v0: number, u1: number, v1: number): string =>
-    `${aufFlaeche(punkte, u0, v0)} ${aufFlaeche(punkte, u1, v0)} ${aufFlaeche(punkte, u1, v1)} ${aufFlaeche(punkte, u0, v1)}`;
-  const linieAuf = (punkte: string, u0: number, v0: number, u1: number, v1: number): string => `M${aufFlaeche(punkte, u0, v0)} L${aufFlaeche(punkte, u1, v1)}`;
 
   function shade(farbe: string): string {
     // leicht dunklere Variante für das Schachbrettmuster
@@ -191,8 +283,17 @@
    */
   const liegen = $derived.by(() => {
     if (pose?.typ !== 'liegen') return null;
-    const kopf = punktVon(pose.x, pose.y - 0.32, pose.z + pose.hoehe);
-    const fuss = punktVon(pose.x, pose.y + 0.4, pose.z + pose.hoehe);
+    // Gedrehtes Bett (seit 0.14): Kissen und Fußende drehen mit
+    const dreheVersatz = (du: number, dv: number): [number, number] => {
+      let a = du;
+      let b = dv;
+      for (let i = 0; i < (pose.richtung ?? 0) % 4; i++) [a, b] = [-b, a];
+      return [a, b];
+    };
+    const [kx, ky] = dreheVersatz(0, -0.32);
+    const [fx2, fy2] = dreheVersatz(0, 0.4);
+    const kopf = punktVon(pose.x + kx, pose.y + ky, pose.z + pose.hoehe);
+    const fuss = punktVon(pose.x + fx2, pose.y + fy2, pose.z + pose.hoehe);
     const dx = kopf[0] - fuss[0];
     const dy = kopf[1] - fuss[1];
     const laenge = Math.hypot(dx, dy);
@@ -210,7 +311,29 @@
         : punktVon(stand.figur.x, stand.figur.y, stand.figur.z),
   );
   const fReihe = $derived(pose ? reihe(pose.x, pose.y) : reihe(stand.figur.x, stand.figur.y));
-  const farben = $derived(koerperFarben(figur, aussehen.fell));
+  /**
+   * Blickrichtung beim Laufen wie auf dem Jahrmarkt: nach oben im Bild von hinten, nach unten seitlich
+   * (nach links gespiegelt). Im Stehen schaut die Figur nach vorne.
+   */
+  let blick = $state<{ ansicht: Ansicht; links: boolean }>({ ansicht: 'vorne', links: false });
+  let vorher: [number, number] | null = null;
+  $effect(() => {
+    const [px, py] = figurPunkt;
+    if (!laeuft || !gleitPos) {
+      vorher = null;
+      if (blick.ansicht !== 'vorne') blick = { ansicht: 'vorne', links: false };
+      return;
+    }
+    if (vorher) {
+      const dx = px - vorher[0];
+      const dy = py - vorher[1];
+      if (Math.abs(dx) + Math.abs(dy) > 0.5) {
+        const neu = { ansicht: (dy < 0 ? 'hinten' : 'seite') as Ansicht, links: dx < 0 };
+        if (neu.ansicht !== blick.ansicht || neu.links !== blick.links) blick = neu;
+      }
+    }
+    vorher = [px, py];
+  });
   const breite = N * A;
   const oben = 9 * C + 20;
   /** Nur der Bauplatz des offenen Auftrags wird markiert: Umriss auf dem Boden und ein Holzschild davor. */
@@ -243,6 +366,22 @@
   export function figurBildpunkt(): [number, number] {
     return [(figurPunkt[0] + breite + 10) * massstab, (figurPunkt[1] + oben) * massstab];
   }
+  /** Umkehrung von bildpunkt: Bildschirmpunkt → Plan-Position auf Höhe 0 (für Drehen um die Bildmitte). */
+  export function planpunkt(sx: number, sy: number): { x: number; y: number } {
+    const px = sx / massstab - breite - 10;
+    const py = sy / massstab - oben;
+    const a = (2 * py) / A / 2 + px / A / 2;
+    const b = (2 * py) / A / 2 - px / A / 2;
+    // gedrehte Koordinaten (a, b) zurück in den Plan
+    const [x, y] = r === 1 ? [b, H - a] : r === 2 ? [W - a, H - b] : r === 3 ? [W - b, a] : [a, b];
+    return { x: x - 0.5, y: y - 0.5 };
+  }
+  /** Winkel (Grad, im Uhrzeigersinn von oben), in den auf dem Bildschirm „Norden“ des Plans zeigt (für den Kompass). */
+  export function nordWinkel(): number {
+    const [x0, y0] = punktVon(W / 2, H / 2, 0);
+    const [x1, y1] = punktVon(W / 2, H / 2 - 1, 0);
+    return (Math.atan2(x1 - x0, -(y1 - y0)) * 180) / Math.PI;
+  }
   /** Bildschirmkoordinaten einer stetigen Plan-Position (Kamera folgt der Figur Bild für Bild). */
   export function bildpunkt(x: number, y: number, z: number): [number, number] {
     const [px, py] = punktVon(x, y, z);
@@ -260,7 +399,8 @@
   aria-label="Bauinsel"
 >
   <defs>
-    <radialGradient id="meer"><stop offset="0.6" stop-color="#5fb7e6" /><stop offset="1" stop-color="#3c8fc2" /></radialGradient>
+    <radialGradient id="meer"><stop offset="0.6" stop-color={d('#5fb7e6')} /><stop offset="1" stop-color={d('#3c8fc2')} /></radialGradient>
+    <radialGradient id="schein"><stop offset="0" stop-color="#ffe57a" stop-opacity="0.75" /><stop offset="1" stop-color="#ffe57a" stop-opacity="0" /></radialGradient>
   </defs>
   <!-- Meer rund um die Inseln -->
   <polygon points="{P(-3, -3, -0.6)} {P(W + 3, -3, -0.6)} {P(W + 3, H + 3, -0.6)} {P(-3, H + 3, -0.6)}" fill="url(#meer)" />
@@ -285,49 +425,59 @@
               onclick={() => t.tippbar && ontippe(t.x, t.y, t.z, f.seite ?? 'oben')}
             />{/each}
           {#if t.extra === 'fenster' || t.extra === 'tuer' || t.extra === 'tueroben'}
-            <!-- Fenster und Tür auf den sichtbaren Seiten: Glas mit Sprossen bzw. Türblatt mit Griff -->
-            <g pointer-events="none">
-              {#each t.flaechen.filter((f) => f.seite === 'links' || f.seite === 'rechts') as f, k (k)}
-                {#if t.extra === 'fenster'}
-                  <polygon points={feldAuf(f.punkte, 0.16, 0.16, 0.84, 0.84)} fill={f.seite === 'links' ? '#8fd0f2' : '#a9dcf6'} stroke="#1f2a6b" stroke-width="1" />
-                  <path d="{linieAuf(f.punkte, 0.5, 0.16, 0.5, 0.84)} {linieAuf(f.punkte, 0.16, 0.5, 0.84, 0.5)}" stroke="#fffdf7" stroke-width="2" />
-                  <path d={linieAuf(f.punkte, 0.25, 0.7, 0.4, 0.78)} stroke="#fff" stroke-width="1.5" opacity="0.8" />
-                {:else}
-                  <polygon points={feldAuf(f.punkte, 0.2, 0, 0.8, t.extra === 'tuer' ? 1 : 0.85)} fill={f.seite === 'links' ? '#6b3f17' : '#7a4a22'} stroke="#1f2a6b" stroke-width="1" />
-                  {#if t.extra === 'tuer'}
-                    <path d="{linieAuf(f.punkte, 0.3, 0.12, 0.3, 0.88)} {linieAuf(f.punkte, 0.7, 0.12, 0.7, 0.88)}" stroke="#4f2e12" stroke-width="1" />
-                    {@const [gx, gy] = aufFlaeche(f.punkte, 0.68, 0.55).split(',').map(Number)}
-                    <circle cx={gx} cy={gy} r="2.2" fill="#ffc62b" stroke="#1f2a6b" stroke-width="0.8" />
-                  {:else}
-                    <polygon points={feldAuf(f.punkte, 0.32, 0.25, 0.68, 0.65)} fill="#a9dcf6" stroke="#1f2a6b" stroke-width="0.8" />
-                  {/if}
-                {/if}
-              {/each}
-            </g>
+            <TeilExtra flaechen={t.flaechen} art={t.extra} {nacht} />
+          {/if}
+          {#if t.extra === 'leuchte'}
+            {@const [lx, ly] = krone(t.x, t.y, t.z - 0.9)}
+            <circle cx={lx} cy={ly} r="34" fill="url(#schein)" pointer-events="none" />
           {/if}
           {#if t.extra === 'blumen'}
             {@const [bx, by] = krone(t.x, t.y, -1.6)}
             <g pointer-events="none">
-              <circle cx={bx - 8} cy={by - 2} r="2.6" fill="#e23a4e" /><circle cx={bx + 7} cy={by + 1} r="2.6" fill="#ffc62b" /><circle cx={bx} cy={by + 6} r="2.6" fill="#fff" /><circle cx={bx + 2} cy={by - 6} r="2.4" fill="#3c78d8" />
+              <circle cx={bx - 8} cy={by - 2} r="2.6" fill={d('#e23a4e')} /><circle cx={bx + 7} cy={by + 1} r="2.6" fill={d('#ffc62b')} /><circle cx={bx} cy={by + 6} r="2.6" fill={d('#ffffff')} /><circle cx={bx + 2} cy={by - 6} r="2.4" fill={d('#3c78d8')} />
             </g>
           {/if}
           {#if t.extra === 'bruecke'}
             {@const [bx, by] = krone(t.x, t.y, -1.6)}
-            <g pointer-events="none" stroke="#6b3f17" stroke-width="1.4">
+            <g pointer-events="none" stroke={d('#6b3f17')} stroke-width="1.4">
               <line x1={bx - 16} y1={by - 6} x2={bx + 16} y2={by + 10} /><line x1={bx - 8} y1={by - 10} x2={bx + 12} y2={by} />
+            </g>
+          {/if}
+          {#if t.marke}
+            {@const [mx, my] = krone(t.x, t.y, t.z - 0.5)}
+            <g pointer-events="none" class="drehmarke" transform="translate({mx} {my})">
+              <circle r="11" fill="#fff6d6" stroke="#1f2a6b" stroke-width="2" />
+              <text y="5" text-anchor="middle" font-size="15" font-weight="900" fill="#1f2a6b">↻</text>
+            </g>
+          {/if}
+          {#if t.extra === 'sperrschild'}
+            {@const [sx2, sy2] = krone(t.x, t.y - 0.5, 0.3)}
+            <g pointer-events="none" transform="translate({sx2} {sy2})">
+              <rect x="-2" y="0" width="4" height="26" fill={d('#87521f')} />
+              <rect x="-58" y="-26" width="116" height="30" rx="5" fill={d('#d9a066')} stroke="#1f2a6b" stroke-width="2" />
+              <text x="0" y="-6" text-anchor="middle" font-size="13" font-weight="900" fill="#1f2a6b">Zusatzpaket</text>
+            </g>
+          {/if}
+          {#if t.extra === 'palme'}
+            {@const [kx, ky] = krone(t.x, t.y, t.z + 0.15)}
+            <g pointer-events="none" stroke="#1f2a6b" stroke-width="1.2" fill={d('#4fbf78')}>
+              <path d="M{kx} {ky} q-14 -10 -30 2 q16 -4 30 -2 Z" /><path d="M{kx} {ky} q14 -10 30 2 q-16 -4 -30 -2 Z" />
+              <path d="M{kx} {ky} q-10 4 -20 18 q12 -10 20 -18 Z" /><path d="M{kx} {ky} q10 4 20 18 q-12 -10 -20 -18 Z" />
+              <path d="M{kx} {ky} q-4 -14 4 -24 q-2 12 -4 24 Z" />
+              <circle cx={kx - 3} cy={ky + 3} r="3" fill={d('#8a5a2b')} /><circle cx={kx + 3} cy={ky + 4} r="3" fill={d('#8a5a2b')} />
             </g>
           {/if}
           {#if t.extra === 'baum'}
             {@const [kx, ky] = krone(t.x, t.y, t.z)}
-            <circle cx={kx - 9} cy={ky + 8} r="15" fill="#3fae6a" stroke="#1f2a6b" stroke-width="1.2" />
-            <circle cx={kx + 9} cy={ky + 6} r="16" fill="#4fbf78" stroke="#1f2a6b" stroke-width="1.2" />
-            <circle cx={kx} cy={ky - 6} r="15" fill="#5ccc85" stroke="#1f2a6b" stroke-width="1.2" />
+            <circle cx={kx - 9} cy={ky + 8} r="15" fill={d('#3fae6a')} stroke="#1f2a6b" stroke-width="1.2" />
+            <circle cx={kx + 9} cy={ky + 6} r="16" fill={d('#4fbf78')} stroke="#1f2a6b" stroke-width="1.2" />
+            <circle cx={kx} cy={ky - 6} r="15" fill={d('#5ccc85')} stroke="#1f2a6b" stroke-width="1.2" />
           {/if}
         </g>
       {/each}
       {#if rr === bootReihe && onboot}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <g class="boot" transform="translate({bootPunkt[0]} {bootPunkt[1]})" onclick={onboot} data-boot="1">
+        <g class="boot" transform="translate({bootPunkt[0]} {bootPunkt[1]})" onclick={onboot} data-boot="1" style={lichtStufe < 1 ? `filter: brightness(${(0.5 + 0.5 * lichtStufe).toFixed(2)})` : undefined}>
           <g class="schaukeln">
             <path d="M-26 -6 L26 -6 L18 8 L-18 8 Z" fill="#e23a4e" stroke="#1f2a6b" stroke-width="2" stroke-linejoin="round" />
             <rect x="-2" y="-40" width="3.5" height="34" fill="#1f2a6b" />
@@ -337,17 +487,23 @@
         </g>
       {/if}
       {#each tierReihen.get(rr) ?? [] as t (t.schluessel)}
-        <g class="tier" style="transform: translate({t.px}px, {t.py}px)" pointer-events="none"><TierBild art={t.art} /></g>
+        <g class="tier" style="transform: translate({t.px}px, {t.py}px){lichtStufe < 1 ? `; filter: brightness(${(0.55 + 0.45 * lichtStufe).toFixed(2)})` : ''}" pointer-events="none"><TierBild art={t.art} /></g>
       {/each}
       {#if rr === fReihe}
-        <g class="figur" transform="translate({figurPunkt[0]} {figurPunkt[1]})" pointer-events="none">
-          <g class:laeuft class:sitzt={pose?.typ === 'sitzen'} transform={liegen ? `rotate(${liegen.winkel.toFixed(1)}) scale(${liegen.skala.toFixed(2)})` : undefined}>
-            {#if !pose}<ellipse cx="0" cy="0" rx="9" ry="4" fill="#1f2a6b" opacity="0.25" />{/if}
-            <rect x="-4.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein l" />
-            <rect x="0.5" y="-14" width="4" height="12" rx="2" fill={farben.bein} class="bein r" />
-            <path d="M-7 -28 Q0 -31 7 -28 L7 -12 Q0 -10 -7 -12 Z" fill="#3c78d8" stroke="#1f2a6b" stroke-width="1" />
-            <svg x="-14" y="-56" width="28" height="28" viewBox="-4 -6 72 74" overflow="visible"><Figur {figur} {aussehen} groesse={64} /></svg>
-          </g>
+        <g class="figur" transform="translate({figurPunkt[0]} {figurPunkt[1]})" pointer-events="none" style={lichtStufe < 1 ? `filter: brightness(${(0.65 + 0.35 * lichtStufe).toFixed(2)})` : undefined}>
+          {#if pose?.typ === 'schaukeln'}
+            <!-- Schaukeln: Sitz, Ketten und Figur schwingen gemeinsam um die Stange -->
+            <g class="schaukel" style="transform-origin: 0px {(-(1.2 - pose.hoehe) * C).toFixed(1)}px">
+              <line x1="-7" y1="0" x2="-7" y2={-(1.2 - pose.hoehe) * C} stroke={d('#3a3d4f')} stroke-width="1.6" />
+              <line x1="7" y1="0" x2="7" y2={-(1.2 - pose.hoehe) * C} stroke={d('#3a3d4f')} stroke-width="1.6" />
+              <g class="sitzt"><InselFigur {figur} {aussehen} sitzt g={48} /></g>
+              <rect x="-10" y="-1" width="20" height="4" rx="1" fill={d('#d9a066')} stroke="#1f2a6b" stroke-width="1" />
+            </g>
+          {:else}
+            <g class:sitzt={pose?.typ === 'sitzen'} transform={liegen ? `rotate(${liegen.winkel.toFixed(1)}) scale(${liegen.skala.toFixed(2)})` : undefined}>
+              <InselFigur {figur} {aussehen} laeuft={laeuft && !pose} sitzt={pose?.typ === 'sitzen'} ansicht={pose ? 'vorne' : blick.ansicht} links={!pose && blick.links} />
+            </g>
+          {/if}
           {#if liegen}
             <g class="zzz" aria-hidden="true" transform="translate({liegen.kopf[0].toFixed(1)} {(liegen.kopf[1] + 24).toFixed(1)})"><text x="10" y="-30">z</text><text x="18" y="-40">z</text><text x="27" y="-52">Z</text></g>
           {/if}
@@ -394,34 +550,24 @@
       translate: 0 -4px;
     }
   }
-  .figur .laeuft {
-    animation: hops 0.22s ease-in-out infinite alternate;
-  }
-  .figur .laeuft .bein.l {
-    animation: bein 0.22s ease-in-out infinite alternate;
-  }
-  .figur .laeuft .bein.r {
-    animation: bein 0.22s ease-in-out infinite alternate-reverse;
-  }
-  @keyframes hops {
-    to {
-      translate: 0 -2px;
-    }
-  }
-  @keyframes bein {
-    from {
-      translate: 0 -2px;
-    }
-    to {
-      translate: 0 0;
-    }
-  }
-  /* Sitzen: Beine verschwinden im Sitz; Liegen: Figur kippt auf die Seite */
-  .sitzt :global(.bein) {
-    display: none;
-  }
+  /* Sitzen: etwas tiefer in den Sitz */
   .sitzt {
     translate: 0 6px;
+  }
+  /* Schaukeln: vor und zurück um die Stange (etwa eine Runde in 3,6 Sekunden) */
+  .schaukel {
+    animation: schwung 1.2s ease-in-out infinite alternate;
+  }
+  .schaukel .sitzt {
+    translate: 0 2px;
+  }
+  @keyframes schwung {
+    from {
+      rotate: -20deg;
+    }
+    to {
+      rotate: 20deg;
+    }
   }
   .zzz text {
     font: 900 11px Nunito, sans-serif;
@@ -477,7 +623,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .tier { animation: none; }
-    .schaukeln, .figur .laeuft, .figur .laeuft .bein.l, .figur .laeuft .bein.r { animation: none; }
+    .schaukeln, .schaukel { animation: none; }
     .funkeln path { animation: none; opacity: 0; }
   }
 </style>

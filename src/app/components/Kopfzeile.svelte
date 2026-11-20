@@ -54,9 +54,14 @@
       ><Icon name={app.einstellungen.stimmeAn ? 'laut' : 'stumm'} groesse={20} /></button>
     </div>
     {#if p}
+      <!-- Wer spielt gerade? Figur und Name, ein Tipp öffnet den Spielerwechsel (seit 0.14) -->
+      <button class="spieler-knopf" onclick={() => { offen = false; app.wechsel = 'knopf'; }} aria-label="Spieler wechseln, jetzt spielt {p.name}">
+        <Figur figur={p.figur} groesse={34} aussehen={p.aussehen} />
+        <span class="name">{p.name}</span>
+        <Icon name="wechseln" groesse={16} />
+      </button>
       <button class="menue-knopf" onclick={() => (offen = !offen)} aria-label={neu ? `Menü, ${neu} neue Sammelkarten` : 'Menü'} aria-expanded={offen} aria-haspopup="true">
-        <Figur figur={p.figur} groesse={38} aussehen={p.aussehen} />
-        <Icon name="menue" groesse={18} />
+        <Icon name="menue" groesse={20} />
         {#if neu}<span class="marke" aria-hidden="true"></span>{/if}
       </button>
     {:else}
@@ -84,7 +89,7 @@
       <button onclick={() => gehe({ name: 'knobel' })}><Icon name="raetsel" groesse={22} />Knobelzelt</button>
       <button onclick={() => gehe({ name: 'fundbuero' })}><Icon name="kiste" groesse={22} />Fundbüro{#if fund}<span class="punkt">{fund} zum Abholen</span>{/if}</button>
       <button onclick={() => gehe({ name: 'bauplatz' })}><Icon name="block" groesse={22} />Bauplatz</button>
-      <button onclick={() => gehe({ name: 'insel' })}><Icon name="insel" groesse={22} />Bauinsel{#if !app.paket}<Icon name="schloss" groesse={16} />{/if}</button>
+      <button onclick={() => gehe({ name: 'insel' })}><Icon name="insel" groesse={22} />Bauinsel</button>
       <button onclick={() => gehe({ name: 'check' })}><Icon name="check" groesse={22} />Jahrmarkt-Check</button>
       <button onclick={() => gehe({ name: 'start' })}><Icon name="zurueck" groesse={22} />Startbildschirm · Spieler wechseln</button>
       <button class="leise" onclick={() => gehe({ name: 'eltern' })}><Icon name="schloss" groesse={20} />Elternbereich</button>
@@ -112,6 +117,9 @@
   .links {
     flex: 1;
   }
+  .links > :global(.rund) {
+    flex: none;
+  }
   .rechts {
     flex: none;
   }
@@ -134,6 +142,29 @@
   }
   .menue-knopf {
     position: relative;
+    padding: 0 10px;
+    justify-content: center;
+    min-width: 44px;
+  }
+  .spieler-knopf {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 3px solid var(--tinte);
+    background: #fff6d6;
+    color: var(--tinte);
+    padding: 0 8px 0 2px;
+    border-radius: 24px;
+    min-height: 44px;
+    font: inherit;
+    font-weight: 900;
+    min-width: 0;
+  }
+  .spieler-knopf .name {
+    max-width: 6.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* Bewusst ruhig: kleiner goldener Punkt statt roter Zahl – nichts soll drängeln */
   .marke {
@@ -290,9 +321,29 @@
     h1 {
       font-size: 1.15rem;
     }
-    .menue-knopf :global(svg:first-child) {
-      width: 32px;
-      height: 32px;
+    .menue-knopf {
+      min-width: 40px;
+      padding: 0 8px;
+    }
+    /* Schmal: Name klein unter der Figur, damit Zurück, Taler und Ton daneben Platz haben */
+    .spieler-knopf {
+      flex-direction: column;
+      justify-content: center;
+      gap: 0;
+      padding: 1px 6px 2px;
+      border-radius: 16px;
+    }
+    .spieler-knopf :global(svg:first-child) {
+      width: 26px;
+      height: 26px;
+    }
+    .spieler-knopf .name {
+      font-size: 0.68rem;
+      line-height: 1;
+      max-width: 4.4rem;
+    }
+    .spieler-knopf :global(svg:last-child) {
+      display: none;
     }
     .rechts :global(.rund) {
       width: 40px;

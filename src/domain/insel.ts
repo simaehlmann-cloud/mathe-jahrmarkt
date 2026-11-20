@@ -15,15 +15,15 @@ export const INSEL = 24;
 export const BREITE = 44;
 /**
  * Höhe des Bauplans: oben die beiden ersten Inseln, darunter (seit 0.11.1) Steg und Strandinsel,
- * ganz unten (seit 0.12) das große, flache Bauland.
+ * darunter (seit 0.12) das große, flache Bauland und ganz unten (seit 0.14) die Wüsteninsel.
  */
-export const HOEHE = 58;
-/** Frühere Höhen (0.10/0.11.0: 24 Reihen, 0.11.1: 40 Reihen), für das Umrechnen alter Spielstände. */
-const FRUEHERE_HOEHEN = [INSEL, 40];
+export const HOEHE = 76;
+/** Frühere Höhen (0.10/0.11.0: 24 Reihen, 0.11.1: 40 Reihen, 0.12/0.13: 58 Reihen), für das Umrechnen alter Spielstände. */
+const FRUEHERE_HOEHEN = [INSEL, 40, 58];
 /** Bis zu dieser Höhe darf auf der Insel gebaut werden (höher als auf dem Bauplatz). */
 export const INSEL_MAX = Math.max(MAX_HOEHE, 12);
 
-export type Gelaende = 'gras' | 'sand' | 'wasser' | 'weg' | 'bruecke' | 'blumen';
+export type Gelaende = 'gras' | 'sand' | 'wasser' | 'weg' | 'bruecke' | 'blumen' | 'wueste';
 export type Kategorie = 'bauen' | 'wohnen' | 'garten' | 'spielen' | 'tiere';
 export const KATEGORIE_NAME: Record<Kategorie, string> = { bauen: 'Bauen', wohnen: 'Wohnen', garten: 'Garten', spielen: 'Spielplatz', tiere: 'Tiere' };
 
@@ -85,6 +85,8 @@ export const EINRICHTUNG: readonly Einrichtung[] = [
   E(154, 'Teich', 20, 'garten'),
   E(155, 'Apfelbäumchen', 15, 'garten'),
   E(156, 'Sonnenschirm', 12, 'garten'),
+  // Seit 0.14
+  E(157, 'Kaktus', 6, 'garten'),
   E(160, 'Schaukel', 25, 'spielen'),
   E(161, 'Rutsche', 25, 'spielen'),
   E(162, 'Sandkasten', 15, 'spielen', 'flach'),
@@ -93,6 +95,11 @@ export const EINRICHTUNG: readonly Einrichtung[] = [
 ];
 /** Hier kann sich die Figur hinsetzen (Sitzhöhe in Ebenen) bzw. hinlegen. */
 export const SITZEN: Readonly<Record<number, number>> = { 116: 0.36, 117: 0.4, 124: 0.42, 136: 0.36 };
+/** Auf diese Teile setzt sich die Figur und schaukelt eine Runde (Sitzhöhe in Ebenen). */
+export const SCHAUKELN: Readonly<Record<number, number>> = { 160: 0.42 };
+/** Diese Einrichtung sieht von allen Seiten gleich aus oder bestimmt den Weg (Tür, Treppe) – sie wird nicht gedreht. */
+const NICHT_DREHBAR = new Set<number>([101, 102, 103, 104, 106, 113, 114, 120, 121, 122, 125, 126, 127, 131, 150, 151, 153, 155, 156, 157, 162, 163]);
+export const drehbar = (art: number): boolean => !!einrichtung(art) && !NICHT_DREHBAR.has(art);
 export const LIEGEN: Readonly<Record<number, number>> = { 110: 0.45 };
 /** Teile, durch die man hindurchgeht oder in denen man steht (zählen beim Laufen als frei). */
 const DURCHGANG = new Set<number>([101, 105, 131, 162]);
@@ -137,6 +144,13 @@ export interface InselStand {
   tiere: Tier[];
   /** Bauaufträge auf den Grundstücken: erledigte Aufträge (Kennungen). */
   erledigt: string[];
+  /**
+   * Seit 0.14: Blickrichtung gedrehter Einrichtung (Viertelumdrehungen 1–3) je „x,y,z“ (z absolut).
+   * Fehlt ein Eintrag, steht das Teil wie bisher (0). Ältere Spielstände haben das Feld nicht.
+   */
+  richtung?: Record<string, number>;
+  /** Seit 0.14: Wie lange (ms) seit dem letzten Schlafen auf der Insel gespielt wurde – danach wird es Nacht. */
+  wach?: number;
 }
 
 /* ---------- Feste Landschaft ---------- */
@@ -145,7 +159,10 @@ export interface InselStand {
 export interface Landschaft {
   art: Gelaende[];
   hoehe: number[];
+  /** Feste Pflanzen als Hindernis (Bäume, seit 0.14 auch Kakteen und Palmen). */
   baum: boolean[];
+  /** Welche Pflanze steht dort (für das Bild); fehlt der Eintrag, ist es ein Laubbaum. */
+  pflanze: ('kaktus' | 'palme' | undefined)[];
 }
 
 export const idx = (x: number, y: number): number => y * BREITE + x;
@@ -168,6 +185,12 @@ export const BOOT = { x: 11, y: 26 } as const;
 export const BRUECKE3 = { x: 34, y0: 39, y1: 41 } as const;
 /** Bauland (seit 0.12): große, flache Wiese zum freien Bauen, Ecken abgerundet. */
 export const BAULAND = { x0: 3, x1: 40, y0: 42, y1: 56 } as const;
+/** Vierte Brücke (seit 0.14): vom Bauland nach Süden in die Wüste. */
+export const BRUECKE4 = { x: 24, y0: 57, y1: 60 } as const;
+/** Wüsteninsel (seit 0.14, Zusatzpaket): Sand, Dünen, Kakteen und eine Oase mit Palmen. */
+const WUESTE = { x: 22, y: 67.6, rx: 17.6, ry: 7.6 };
+const abstandWueste = (x: number, y: number): number => Math.hypot((x + 0.5 - WUESTE.x) / WUESTE.rx, (y + 0.5 - WUESTE.y) / WUESTE.ry);
+export const aufWueste = (x: number, y: number): boolean => abstandWueste(x, y) < 1;
 export const aufBauland = (x: number, y: number): boolean => {
   const { x0, x1, y0, y1 } = BAULAND;
   if (x < x0 || x > x1 || y < y0 || y > y1) return false;
@@ -183,6 +206,7 @@ export const LANDSCHAFT: Landschaft = (() => {
   const art: Gelaende[] = Array(n).fill('wasser');
   const hoehe: number[] = Array(n).fill(0);
   const baum: boolean[] = Array(n).fill(false);
+  const pflanze: ('kaktus' | 'palme' | undefined)[] = Array(n).fill(undefined);
   // Erste Insel: INSEL × INSEL wie bisher
   for (let y = 0; y < INSEL; y++)
     for (let x = 0; x < INSEL; x++) {
@@ -245,6 +269,31 @@ export const LANDSCHAFT: Landschaft = (() => {
       const rand = !aufBauland(x - 1, y) || !aufBauland(x + 1, y) || !aufBauland(x, y - 1) || !aufBauland(x, y + 1);
       art[idx(x, y)] = rand ? 'sand' : 'gras';
     }
+  // Vierte Brücke und Wüste: heller Sandrand, Wüstensand, zwei Dünen, Oase mit Wiese und Wasser
+  for (let y = BRUECKE4.y0; y <= BRUECKE4.y1; y++) for (const x of [BRUECKE4.x, BRUECKE4.x + 1]) if (!aufBauland(x, y)) art[idx(x, y)] = 'bruecke';
+  for (let y = 57; y < HOEHE; y++)
+    for (let x = 0; x < BREITE; x++) {
+      const d = abstandWueste(x, y);
+      if (d >= 1 || art[idx(x, y)] === 'bruecke') continue;
+      const i = idx(x, y);
+      art[i] = d > 0.86 ? 'sand' : 'wueste';
+      const dOase = Math.hypot((x - 30) / 2.2, (y - 65) / 1.5);
+      if (dOase < 1) art[i] = 'wasser';
+      else if (Math.hypot((x - 30) / 3.4, (y - 65) / 2.5) < 1) art[i] = 'gras';
+      for (const [dx, dy, rx, ry] of [[11, 66, 3.2, 2.4], [17, 71, 2.6, 1.8]] as const) {
+        const dd = Math.hypot((x - dx) / rx, (y - dy) / ry);
+        if (dd < 0.5) hoehe[i] = Math.max(hoehe[i] ?? 0, 2);
+        else if (dd < 1) hoehe[i] = Math.max(hoehe[i] ?? 0, 1);
+      }
+    }
+  for (const [x, y] of [[8, 63], [15, 63], [20, 66], [6, 69], [23, 71], [27, 69], [35, 70], [38, 66], [13, 73], [32, 72], [19, 62]] as [number, number][]) {
+    baum[idx(x, y)] = true;
+    pflanze[idx(x, y)] = 'kaktus';
+  }
+  for (const [x, y] of [[27, 64], [33, 66], [31, 62], [28, 67]] as [number, number][]) {
+    baum[idx(x, y)] = true;
+    pflanze[idx(x, y)] = 'palme';
+  }
   // Bootssteg auf der ersten Insel (unten am Strand)
   for (let y = STEG.y0; y <= STEG.y1; y++) for (const x of [STEG.x, STEG.x + 1]) art[idx(x, y)] = 'bruecke';
   // Bäume (fest), nicht auf Weg, Wasser oder Bauplätzen
@@ -254,13 +303,13 @@ export const LANDSCHAFT: Landschaft = (() => {
     [5, 45], [6, 53], [39, 46], [38, 54], [21, 55]] as [number, number][]) baum[idx(x, y)] = true;
   // Leichte Erhebung am Steg: Treppenstufen auf den Hügel bei (6..7, 4)
   hoehe[idx(7, 4)] = 1;
-  return { art, hoehe, baum };
+  return { art, hoehe, baum, pflanze };
 })();
 
 /** Ankunftsplatz der Figur. */
 export const START = { x: 12, y: 21, z: 0 };
 
-export const leereInsel = (): InselStand => ({ stapel: Array.from({ length: BREITE * HOEHE }, () => []), inventar: {}, figur: { ...START }, tiere: [], erledigt: [] });
+export const leereInsel = (): InselStand => ({ stapel: Array.from({ length: BREITE * HOEHE }, () => []), inventar: {}, figur: { ...START }, tiere: [], erledigt: [], richtung: {}, wach: 0 });
 
 export const bebaubar = (x: number, y: number): boolean =>
   imFeld(x, y) && LANDSCHAFT.art[idx(x, y)] !== 'wasser' && LANDSCHAFT.art[idx(x, y)] !== 'bruecke' && !LANDSCHAFT.baum[idx(x, y)];
@@ -407,10 +456,87 @@ export function setzeAn(s: InselStand, x: number, y: number, z: number, art: num
     if ((s.inventar[String(art)] ?? 0) <= 0) return { ok: false, grund: 'keinTeil' };
   } else if (!istBlock(art)) return { ok: false, grund: 'keinTeil' };
   else if (bloecke <= 0) return { ok: false, grund: 'keineBloecke' };
-  let neu = mitEbene(s, x, y, z, art);
+  let neu = ohneRichtung(mitEbene(s, x, y, z, art), x, y, z);
   if (e && e.hoehe === 2) neu = mitEbene(neu, x, y, z + 1, TUER_OBEN);
   const inventar = e ? { ...s.inventar, [String(art)]: (s.inventar[String(art)] ?? 0) - 1 } : s.inventar;
   return { ok: true, stand: { ...neu, inventar }, bloecke: e ? bloecke : bloecke - 1 };
+}
+
+/* ---------- Freie Version (seit 0.14) ---------- */
+
+/**
+ * Ohne Zusatzpaket gehört die erste Insel (mit Steg) zum Ausprobieren dazu: dort laufen und mit allen Blöcken bauen.
+ * Die anderen Inseln, die Bauaufträge, die übrige Einrichtung und die Tiere gehören zum Zusatzpaket.
+ */
+export const imFreienTeil = (x: number, y: number): boolean =>
+  (x >= 0 && y >= 0 && x < INSEL && y < INSEL) || (x >= STEG.x && x <= STEG.x + 1 && y >= STEG.y0 && y <= STEG.y1);
+/** Grundausstattung ohne Zusatzpaket: Tür, Fenster, Treppe, Zaun, Gartentor, Bett, Tisch, Stuhl und Blumen. */
+export const FREIE_TEILE: ReadonlySet<number> = new Set([101, 102, 103, 105, 110, 112, 115, 117, 120, 121, 122]);
+export const teilFrei = (art: number, paket: boolean): boolean => paket || FREIE_TEILE.has(art);
+
+/* ---------- Tag und Nacht (seit 0.14) ---------- */
+
+/** So lange ist auf der Insel Tag (gespielte Zeit seit dem letzten Schlafen), danach dämmert es. */
+export const INSEL_TAG_MS = 8 * 60_000;
+export const INSEL_DAEMMERUNG_MS = 2 * 60_000;
+/** Tageslicht 1 (Tag) bis 0 (Nacht) nach gespielter Wachzeit. */
+export const inselLicht = (wach: number): number =>
+  wach <= INSEL_TAG_MS ? 1 : wach >= INSEL_TAG_MS + INSEL_DAEMMERUNG_MS ? 0 : 1 - (wach - INSEL_TAG_MS) / INSEL_DAEMMERUNG_MS;
+
+/* ---------- Drehen (seit 0.14) ---------- */
+
+const richtungsSchluessel = (x: number, y: number, z: number): string => `${x},${y},${z}`;
+/** Blickrichtung (0–3 Viertelumdrehungen) des Teils in Ebene z. */
+export const richtungVon = (s: InselStand, x: number, y: number, z: number): number => s.richtung?.[richtungsSchluessel(x, y, z)] ?? 0;
+/** Eintrag für Ebene z entfernen (beim Setzen und Abbauen: ein neues Teil steht wieder gerade). */
+function ohneRichtung(s: InselStand, x: number, y: number, z: number): InselStand {
+  const k = richtungsSchluessel(x, y, z);
+  if (!s.richtung || !(k in s.richtung)) return s;
+  const richtung = { ...s.richtung };
+  delete richtung[k];
+  return { ...s, richtung };
+}
+/** Einrichtung in Ebene z eine Viertelumdrehung weiterdrehen. undefined: dort steht nichts Drehbares. */
+export function dreheAn(s: InselStand, x: number, y: number, z: number): InselStand | undefined {
+  const e = inEbene(s, x, y, z);
+  if (typeof e !== 'number' || !drehbar(e)) return undefined;
+  const k = richtungsSchluessel(x, y, z);
+  const neu = (richtungVon(s, x, y, z) + 1) % 4;
+  const richtung = { ...(s.richtung ?? {}) };
+  if (neu === 0) delete richtung[k];
+  else richtung[k] = neu;
+  return { ...s, richtung };
+}
+
+/** Blickrichtung (Viertelumdrehungen) direkt setzen; 0 entfernt den Eintrag. Nur für drehbare Teile. */
+export function mitRichtung(s: InselStand, x: number, y: number, z: number, r: number): InselStand {
+  const e = inEbene(s, x, y, z);
+  if (typeof e !== 'number' || !drehbar(e)) return s;
+  const k = richtungsSchluessel(x, y, z);
+  const richtung = { ...(s.richtung ?? {}) };
+  const neu = ((r % 4) + 4) % 4;
+  if (neu === 0) delete richtung[k];
+  else richtung[k] = neu;
+  return { ...s, richtung };
+}
+
+/** Sitzmöbel schauen von selbst zum Tisch (Lehne auf der anderen Seite). */
+const SITZMOEBEL = new Set([116, 117, 124, 136]);
+const TISCHE = new Set([112, 138]);
+/** Richtung, in die ein Teil bei Drehung r schaut: 0 = −y, 1 = +x, 2 = +y, 3 = −x (im Plan). */
+const BLICK: readonly [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+/**
+ * Richtung beim Setzen ohne eigene Wahl (seit 0.14): Stuhl, Sessel, Sofa und Bank schauen zu einem Tisch daneben,
+ * ein Bett stellt sich mit dem Kopfende an eine Wand daneben. undefined = nichts Passendes in der Nähe.
+ */
+export function autoRichtung(s: InselStand, x: number, y: number, z: number, art: number): number | undefined {
+  const passt = (r: number, test: (e: ReturnType<typeof inEbene>) => boolean): boolean => {
+    const [dx, dy] = BLICK[r] ?? [0, 0];
+    return test(inEbene(s, x + dx, y + dy, z));
+  };
+  if (SITZMOEBEL.has(art)) return [0, 1, 2, 3].find((r) => passt(r, (e) => typeof e === 'number' && TISCHE.has(e)));
+  if (art === 110) return [0, 1, 2, 3].find((r) => passt(r, (e) => typeof e === 'number' && istBlock(e)));
+  return undefined;
 }
 
 /** Oben auf den Stapel setzen (für einfache Fälle und Tests). */
@@ -426,7 +552,7 @@ export function nimmAn(s: InselStand, x: number, y: number, z: number, bloecke: 
     e = inEbene(s, x, y, zz);
   }
   if (typeof e !== 'number') return { ok: false, grund: 'leer' };
-  let stand = mitEbene(s, x, y, zz, LUFT);
+  let stand = ohneRichtung(mitEbene(s, x, y, zz, LUFT), x, y, zz);
   if (e === 101) stand = mitEbene(stand, x, y, zz + 1, LUFT);
   // Stand die Figur darauf, fällt sie auf den nächsten Boden darunter
   if (!istBoden(stand, s.figur.x, s.figur.y, s.figur.z)) {
@@ -478,7 +604,7 @@ export function nimmTier(s: InselStand, x: number, y: number): InselStand | unde
 
 /**
  * Ein Bummelschritt: Jedes Tier geht mit `zufall()` < 0.5 ein Feld in eine freie Richtung (gleiche Ebene,
- * nicht ins Wasser, nicht auf andere Tiere oder die Figur). `zufall` liefert Zahlen in [0, 1).
+ * nicht ins Wasser, nicht auf andere Tiere oder die Figur, nicht durch Türen und Tore). `zufall` liefert Zahlen in [0, 1).
  */
 export function tiereBummeln(s: InselStand, zufall: () => number): InselStand {
   if (s.tiere.length === 0) return s;
@@ -491,7 +617,9 @@ export function tiereBummeln(s: InselStand, zufall: () => number): InselStand {
     const [dx, dy] = richtungen[Math.floor(zufall() * 4)] ?? [1, 0];
     const nx = t.x + dx;
     const ny = t.y + dy;
-    if (belegt.has(`${nx},${ny}`) || !istBoden(s, nx, ny, t.z) || LANDSCHAFT.art[idx(nx, ny)] === 'bruecke') return t;
+    // Durch Türen und Gartentore gehen Tiere nicht (sonst liefen sie aus Haus und Gehege)
+    const ziel = inEbene(s, nx, ny, t.z);
+    if (belegt.has(`${nx},${ny}`) || !istBoden(s, nx, ny, t.z) || LANDSCHAFT.art[idx(nx, ny)] === 'bruecke' || ziel === 101 || ziel === 105) return t;
     belegt.delete(`${t.x},${t.y}`);
     belegt.add(`${nx},${ny}`);
     geaendert = true;
@@ -512,11 +640,16 @@ export interface Grundstueck {
   /** Wo er liegt, für die Wegbeschreibung im Auftrag. */
   wo: string;
 }
-/** Drei Bauplätze, je 4 × 4 Felder: A und B auf der zweiten Insel, C (seit 0.11.1) auf der Strandinsel. */
+/**
+ * Bauplätze: A und B (4 × 4) auf der zweiten Insel, C (4 × 4, seit 0.11.1) auf der Strandinsel,
+ * D und E (6 × 6, seit 0.14) am linken und rechten Rand des Baulands. Was dort schon frei gebaut wurde, zählt mit.
+ */
 export const GRUNDSTUECKE: readonly Grundstueck[] = [
   { id: 'a', name: 'Bauplatz A', x0: 30, y0: 5, n: 4, wo: 'auf der zweiten Insel hinter der Brücke' },
   { id: 'b', name: 'Bauplatz B', x0: 36, y0: 13, n: 4, wo: 'auf der zweiten Insel, rechts vom Weg' },
   { id: 'c', name: 'Bauplatz C', x0: 30, y0: 26, n: 4, wo: 'auf der Strandinsel, über die zweite Brücke nach unten' },
+  { id: 'd', name: 'Bauplatz D', x0: 6, y0: 46, n: 6, wo: 'auf dem Bauland ganz links, über die dritte Brücke' },
+  { id: 'e', name: 'Bauplatz E', x0: 32, y0: 49, n: 6, wo: 'auf dem Bauland rechts unten, über die dritte Brücke' },
 ];
 export const imGrundstueck = (g: Grundstueck, x: number, y: number): boolean => x >= g.x0 && y >= g.y0 && x < g.x0 + g.n && y < g.y0 + g.n;
 
@@ -544,6 +677,59 @@ const randFelder = (g: Grundstueck): [number, number][] => felder(g).filter(([x,
 const anzahlVon = (s: InselStand, g: Grundstueck, arten: readonly number[]): number =>
   felder(g).reduce((n, [x, y]) => n + (s.stapel[idx(x, y)] ?? []).filter((a) => arten.includes(a)).length, 0);
 const gesetzt = (a: number | undefined): boolean => a !== undefined && a !== LUFT && a !== TUER_OBEN;
+/** Ein Turm: nur Blöcke, vom Boden an lückenlos. Gibt die Höhe zurück, sonst 0. */
+const turmHoehe = (s: InselStand, x: number, y: number): number => {
+  const st = s.stapel[idx(x, y)] ?? [];
+  return st.length > 0 && st.every((a) => istBlock(a)) ? st.length : 0;
+};
+/** Alle Reihen und Spalten des Grundstücks, jeweils in beide Richtungen gelesen. */
+const linien = (g: Grundstueck): [number, number][][] => {
+  const l: [number, number][][] = [];
+  for (let i = 0; i < g.n; i++) {
+    const reihe: [number, number][] = [];
+    const spalte: [number, number][] = [];
+    for (let j = 0; j < g.n; j++) {
+      reihe.push([g.x0 + j, g.y0 + i]);
+      spalte.push([g.x0 + i, g.y0 + j]);
+    }
+    l.push(reihe, [...reihe].reverse(), spalte, [...spalte].reverse());
+  }
+  return l;
+};
+/** Kommen in einer Linie direkt hintereinander Türme dieser Höhen vor? */
+const hoehenFolge = (s: InselStand, g: Grundstueck, folge: readonly number[]): boolean =>
+  linien(g).some((l) => l.some((_, i) => folge.every((h, k) => { const f = l[i + k]; return !!f && turmHoehe(s, f[0], f[1]) === h; })));
+/** Unterste Ebene mit Block (Blockart) oder null. */
+const bodenBlock = (s: InselStand, x: number, y: number): number | null => {
+  const u = unten(s, x, y);
+  return u !== null && istBlock(u) ? u : null;
+};
+const NACHBARN: readonly [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+/** Ist das Feld auf dem Boden frei (nichts gebaut oder nur Teppich, Sandkasten)? Ein Tor zählt als zu. */
+const bodenFrei = (s: InselStand, x: number, y: number): boolean => {
+  const u = unten(s, x, y);
+  return u === null || u === 131 || u === 162;
+};
+/**
+ * Gehege: Freie Felder, die man von (x, y) aus erreicht, ohne das Grundstück zu verlassen.
+ * null, wenn man hinauskommt (dann ist das Gehege nicht zu).
+ */
+const gehege = (s: InselStand, g: Grundstueck, x: number, y: number): Set<string> | null => {
+  const innen = new Set<string>([`${x},${y}`]);
+  const offen: [number, number][] = [[x, y]];
+  while (offen.length) {
+    const [cx, cy] = offen.pop()!;
+    for (const [dx, dy] of NACHBARN) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (innen.has(`${nx},${ny}`) || !bodenFrei(s, nx, ny)) continue;
+      if (!imGrundstueck(g, nx, ny)) return null;
+      innen.add(`${nx},${ny}`);
+      offen.push([nx, ny]);
+    }
+  }
+  return innen;
+};
 
 export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
   {
@@ -602,6 +788,132 @@ export const INSEL_AUFTRAEGE: readonly InselAuftrag[] = [
     text: 'Pflanze auf Bauplatz C 6 Blumen. Blumen gibt es im Andenkenstand unter „Garten“.',
     tipp: 'Zum Beispiel 2 rote, 2 gelbe und 2 blaue: 2 + 2 + 2 = 6.',
     pruefe: (s, g) => anzahlVon(s, g, BLUMEN) >= 6,
+  },
+  // Seit 0.14: Bauplatz D (Formen und Muster) und E (Größen und Rechnen) auf dem Bauland
+  {
+    id: 'treppe4',
+    grundstueck: 'd',
+    titel: 'Treppe mit 4 Stufen',
+    text: 'Baue auf Bauplatz D eine Treppe aus Blöcken: 1 Block hoch, dann 2, dann 3, dann 4 – direkt nebeneinander in einer Reihe.',
+    tipp: 'Jede Stufe ist einen Block höher als die davor. Zusammen brauchst du 1 + 2 + 3 + 4 = 10 Blöcke.',
+    pruefe: (s, g) => hoehenFolge(s, g, [1, 2, 3, 4]),
+  },
+  {
+    id: 'doppelt',
+    grundstueck: 'd',
+    titel: 'Doppelt so hoch',
+    text: 'Baue auf Bauplatz D einen Turm, der 3 Blöcke hoch ist. Direkt daneben baust du einen Turm, der doppelt so hoch ist.',
+    tipp: 'Doppelt so hoch heißt: 2 · 3 Blöcke. Rechne erst, dann baue.',
+    pruefe: (s, g) => hoehenFolge(s, g, [3, 6]),
+  },
+  {
+    id: 'rechteck12',
+    grundstueck: 'd',
+    titel: 'Rechteck mit 12 Feldern',
+    text: 'Lege auf Bauplatz D ein Rechteck aus genau 12 Blöcken auf den Boden – lückenlos, aber kein Quadrat.',
+    tipp: '12 = 2 · 6 = 3 · 4. Ein Rechteck mit 3 Reihen zu je 4 Feldern hat 12 Felder.',
+    pruefe: (s, g) => {
+      const belegt = felder(g).filter(([x, y]) => bodenBlock(s, x, y) !== null);
+      if (belegt.length !== 12) return false;
+      const xs = belegt.map(([x]) => x);
+      const ys = belegt.map(([, y]) => y);
+      const b = Math.max(...xs) - Math.min(...xs) + 1;
+      const h = Math.max(...ys) - Math.min(...ys) + 1;
+      return b * h === 12 && b !== h;
+    },
+  },
+  {
+    id: 'muster',
+    grundstueck: 'd',
+    titel: 'Farbmuster: immer abwechselnd',
+    text: 'Lege auf Bauplatz D eine ganze Reihe aus 6 Blöcken auf den Boden, immer abwechselnd in zwei Farben – zum Beispiel Ziegel, Gold, Ziegel, Gold …',
+    tipp: 'Das Muster wiederholt sich nach 2 Blöcken. Bei 6 Blöcken kommt jede Farbe 3-mal vor: 6 : 2 = 3.',
+    pruefe: (s, g) =>
+      linien(g).some((l) => {
+        const f = l.map(([x, y]) => bodenBlock(s, x, y));
+        const [a, b] = f;
+        return a != null && b != null && a !== b && f.every((c, i) => c === (i % 2 === 0 ? a : b));
+      }),
+  },
+  {
+    id: 'spiegel',
+    grundstueck: 'd',
+    titel: 'Spiegelbild',
+    text: 'Baue auf Bauplatz D eine Mauer über eine ganze Reihe (6 Felder). Die linke Hälfte soll genau so aussehen wie die rechte, nur gespiegelt – mit verschiedenen Farben oder Höhen.',
+    tipp: 'Stell dir in der Mitte einen Spiegel vor: Das 1. und das 6. Feld sind gleich, das 2. und das 5., das 3. und das 4.',
+    pruefe: (s, g) =>
+      linien(g).some((l) => {
+        const t = l.map(([x, y]) => (turmHoehe(s, x, y) ? (s.stapel[idx(x, y)] ?? []).join('-') : ''));
+        return t.every((v) => v !== '') && t.every((v, i) => v === t[t.length - 1 - i]) && new Set(t).size > 1;
+      }),
+  },
+  {
+    id: 'quader12',
+    grundstueck: 'e',
+    titel: 'Quader: 3 · 2 · 2',
+    text: 'Baue auf Bauplatz E einen Quader: 3 Blöcke lang, 2 Blöcke breit und 2 Blöcke hoch.',
+    tipp: 'Unten liegen 3 · 2 = 6 Blöcke, darauf noch einmal 6. Zusammen 12 Blöcke.',
+    pruefe: (s, g) =>
+      felder(g).some(([x, y]) =>
+        [[3, 2], [2, 3]].some(([b = 0, t = 0]) => {
+          for (let dy = 0; dy < t; dy++)
+            for (let dx = 0; dx < b; dx++) {
+              const st = s.stapel[idx(x + dx, y + dy)] ?? [];
+              if (!imGrundstueck(g, x + dx, y + dy) || !istBlock(st[0] ?? LUFT) || !istBlock(st[1] ?? LUFT)) return false;
+            }
+          return true;
+        }),
+      ),
+  },
+  {
+    id: 'gehege',
+    grundstueck: 'e',
+    titel: 'Gehege für 2 Tiere',
+    text: 'Baue auf Bauplatz E ein Gehege: Zaun oder Mauer rundherum, ein Gartentor und 2 Tiere darin.',
+    tipp: 'Für ein Gehege mit 2 · 2 Feldern innen brauchst du 12 Teile rundherum: 4 + 4 + 2 + 2. Eins davon ist das Tor.',
+    pruefe: (s, g) =>
+      s.tiere.some((t) => {
+        if (!imGrundstueck(g, t.x, t.y)) return false;
+        const innen = gehege(s, g, t.x, t.y);
+        if (!innen) return false;
+        const drin = s.tiere.filter((u) => innen.has(`${u.x},${u.y}`)).length;
+        const tor = [...innen].some((k) => {
+          const [x = 0, y = 0] = k.split(',').map(Number);
+          return NACHBARN.some(([dx, dy]) => unten(s, x + dx, y + dy) === 105);
+        });
+        return drin >= 2 && tor;
+      }),
+  },
+  {
+    id: 'sitzgruppe',
+    grundstueck: 'e',
+    titel: 'Tisch mit 4 Stühlen',
+    text: 'Stelle auf Bauplatz E einen Tisch auf und an jede Seite einen Stuhl – 4 Stühle rund um den Tisch.',
+    tipp: 'Ein Tisch hat 4 Seiten, also 4 Stühle. Ein Stuhl kostet 8 Taler: 4 · 8 = 32 Taler.',
+    pruefe: (s, g) => felder(g).some(([x, y]) => unten(s, x, y) === 112 && NACHBARN.every(([dx, dy]) => unten(s, x + dx, y + dy) === 117)),
+  },
+  {
+    id: 'halbhalb',
+    grundstueck: 'e',
+    titel: 'Halb und halb',
+    text: 'Pflanze auf Bauplatz E 12 Blumen: Die Hälfte davon rot, die andere Hälfte gelb.',
+    tipp: 'Die Hälfte von 12 ist 6, denn 6 + 6 = 12. Also 6 rote und 6 gelbe Blumen.',
+    pruefe: (s, g) => anzahlVon(s, g, BLUMEN) === 12 && anzahlVon(s, g, [120]) === 6 && anzahlVon(s, g, [121]) === 6,
+  },
+  {
+    id: 'haus2',
+    grundstueck: 'e',
+    titel: 'Großes Haus: 2 Fenster mehr',
+    text: 'Baue auf Bauplatz E ein Haus mit Dach. Es soll 2 Fenster mehr haben als Türen.',
+    tipp: 'Mit 1 Tür brauchst du 1 + 2 = 3 Fenster. Mit 2 Türen sind es 4 Fenster.',
+    pruefe: (s, g) => {
+      const tueren = anzahlVon(s, g, [101]);
+      return (
+        tueren >= 1 &&
+        anzahlVon(s, g, [102]) === tueren + 2 &&
+        felder(g).some(([x, y]) => { const st = s.stapel[idx(x, y)] ?? []; return (st[0] ?? LUFT) === LUFT && st.slice(2).some(gesetzt); })
+      );
+    },
   },
 ];
 export const INSEL_AUFTRAG_TALER = 20;
@@ -662,5 +974,15 @@ export function pruefeInsel(x: unknown): InselStand {
         tiere.push({ art: q.art, x: q.x, y: q.y, z: q.z });
     }
   const erledigt = Array.isArray(o.erledigt) ? o.erledigt.filter((e): e is string => typeof e === 'string' && e.length < 40).slice(0, 200) : [];
-  return { stapel, inventar, figur, tiere, erledigt };
+  // Seit 0.14: gedrehte Einrichtung (nur Einträge, unter denen wirklich ein drehbares Teil steht) und Wachzeit
+  const richtung: Record<string, number> = {};
+  if (typeof o.richtung === 'object' && o.richtung !== null)
+    for (const [k, v] of Object.entries(o.richtung).slice(0, 4000)) {
+      const m = /^(\d+),(\d+),(\d+)$/.exec(k);
+      if (!m || typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 3) continue;
+      const e = inEbene(basis, Number(m[1]), Number(m[2]), Number(m[3]));
+      if (typeof e === 'number' && drehbar(e)) richtung[k] = v;
+    }
+  const wach = typeof o.wach === 'number' && Number.isFinite(o.wach) && o.wach > 0 ? Math.min(o.wach, 24 * 3600_000) : 0;
+  return { stapel, inventar, figur, tiere, erledigt, richtung, wach };
 }

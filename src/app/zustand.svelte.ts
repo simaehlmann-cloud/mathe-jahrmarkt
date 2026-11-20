@@ -1,5 +1,6 @@
 import type { Stufe } from '../domain/buden';
 import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
+import { wechselNachPause } from '../domain/wechsel';
 import type { Aussehen } from '../domain/aussehen';
 import { MAX_PROFILE, fortschrittZurueckgesetzt, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
 import { randomSeed } from '../domain/rng';
@@ -51,6 +52,18 @@ class AppZustand {
   /** Sätze, die Flinka beim nächsten Bildschirm sagen soll (z. B. nach einer neuen Stufe). */
   flinka = $state<string[] | null>(null);
 
+  /**
+   * Spieler wechseln (seit 0.14): 'knopf' = über den Knopf in der Kopfzeile geöffnet,
+   * 'pause' = „Wer spielt jetzt?“ nach längerer Pause (App war im Hintergrund).
+   */
+  wechsel = $state<null | 'knopf' | 'pause'>(null);
+  /**
+   * Vor einem Spielerwechsel sichert der offene Bildschirm hier noch für das bisherige Kind
+   * (Spiel: Zwischenstand merken, Bauinsel: Figur, Tiere und Wachzeit).
+   */
+  vorWechsel: (() => void) | null = null;
+  private verstecktSeit = 0;
+
   /** Flinka schlägt eine Pause vor (Spielzeit-Erinnerung). */
   pauseVorschlag = $state(false);
   private letzterTakt = Date.now();
@@ -94,8 +107,14 @@ class AppZustand {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         this.spielzeitTakt();
+        this.verstecktSeit = Date.now();
         void this.plan?.sofort();
-      } else this.letzterTakt = Date.now();
+      } else {
+        this.letzterTakt = Date.now();
+        // Nach einer längeren Pause kurz fragen, wer jetzt spielt (Geschwister an einem Gerät)
+        if (this.verstecktSeit && wechselNachPause(Date.now() - this.verstecktSeit, this.bestand.profile.length, this.bildschirm.name, !!this.profil)) this.wechsel = 'pause';
+        this.verstecktSeit = 0;
+      }
     });
     this.letzterTakt = Date.now();
     setInterval(() => this.spielzeitTakt(), SPIELZEIT_TAKT_MS);
@@ -217,6 +236,23 @@ class AppZustand {
     // Der Pausenvorschlag gilt für das Kind, das gerade gespielt hat – der nächste Takt prüft neu
     this.pauseVorschlag = false;
     this.zeige(ziel);
+  }
+
+  /**
+   * Zu einem anderen Kind wechseln, ohne Umweg über den Startbildschirm. Eine laufende Runde wird vorher
+   * gesichert (im Spiel: zum Weiterspielen gemerkt); danach geht es auf den Jahrmarkt.
+   */
+  wechsleZu(id: string): void {
+    const ziel = this.bestand.profile.find((p) => p.id === id);
+    this.wechsel = null;
+    if (!ziel || id === this.bestand.aktiv) return;
+    this.vorWechsel?.();
+    this.vorWechsel = null;
+    // Die bisherige Spielzeit gehört noch zum Kind, das gerade gespielt hat
+    this.spielzeitTakt();
+    this.karteOrt = null;
+    this.profilWaehlen(id, { name: 'jahrmarkt' });
+    this.melde(`Jetzt spielt ${ziel.name}.`);
   }
 
   fortschrittZuruecksetzen(id: string): void {

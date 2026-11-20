@@ -19,6 +19,7 @@
   import UeberSeite from './screens/UeberSeite.svelte';
   import { erstelleMusik } from '../services/musik';
   import Pausenvorschlag from './components/Pausenvorschlag.svelte';
+  import SpielerWechsel from './components/SpielerWechsel.svelte';
   import { app, OHNE_SPIELZEIT, RUNDE_LAEUFT } from './zustand.svelte';
 
   const musik = erstelleMusik();
@@ -106,6 +107,10 @@
 
   {#if app.pauseVorschlag && !RUNDE_LAEUFT.has(b.name) && !OHNE_SPIELZEIT.has(b.name) && app.profil}
     <Pausenvorschlag />
+  {/if}
+
+  {#if app.wechsel && app.profil && b.name !== 'start' && b.name !== 'laden'}
+    <SpielerWechsel />
   {/if}
 
   {#if app.ladefehler && b.name !== 'laden'}

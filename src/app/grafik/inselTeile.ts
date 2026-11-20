@@ -27,6 +27,7 @@ const GRUEN: [string, string, string] = ['#4fbf78', '#2b8550', '#3fae6a'];
 const ROT: [string, string, string] = ['#e23a4e', '#a82838', '#c22f42'];
 const BLAU: [string, string, string] = ['#3c78d8', '#2a5aa8', '#3368bf'];
 const GELB: [string, string, string] = ['#ffc62b', '#c99a0e', '#e3b222'];
+export const KAKTUS: [string, string, string] = ['#6fbf73', '#3f8a4a', '#57a85f'];
 
 export function zeichner(dreh: Dreh) {
   /** Quader von (x0, y0, z0) bis (x1, y1, z1) in Plan-Koordinaten: sichtbare Seiten nach der Drehung + Deckel. */
@@ -45,9 +46,29 @@ export function zeichner(dreh: Dreh) {
     ];
   }
 
-  /** Teile einer Einrichtung (Kennung ab 100) als Quader. */
-  function moebel(art: number, x: number, y: number, z: number): Flaeche[] {
-    const q = (a: number, b: number, c: number, d: number, e: number, f: number, o: string, l: string, rr: string) => quader(x + a, y + b, z + c, x + d, y + e, z + f, o, l, rr);
+  /**
+   * Teile einer Einrichtung (Kennung ab 100) als Quader. `richtung`: Viertelumdrehungen im Feld (seit 0.14).
+   * `ohne`: Teile weglassen (Schaukel: Sitz und Ketten, wenn die Figur darauf schaukelt).
+   */
+  function moebel(art: number, x: number, y: number, z: number, richtung = 0, ohne?: 'sitz', nachbarn?: Nachbarn): Flaeche[] {
+    // Zaun und Hecke verbinden sich mit Nachbarn (seit 0.14): Ecken und Kreuzungen entstehen von selbst
+    const verbunden = nachbarn && (nachbarn.px || nachbarn.mx || nachbarn.py || nachbarn.my);
+    if (verbunden && (art === 115 || art === 123)) return verbindend(art, x, y, z, nachbarn);
+    // Gartentor stellt sich zwischen seine Nachbarn
+    if (art === 105 && nachbarn && !(nachbarn.px || nachbarn.mx) && (nachbarn.py || nachbarn.my)) richtung = 1;
+    else if (art === 105 && nachbarn && (nachbarn.px || nachbarn.mx)) richtung = 0;
+    /** Punkt im Feld (0–1) um die Feldmitte drehen. */
+    const rot = (u: number, v: number): [number, number] => {
+      let a = u;
+      let b = v;
+      for (let i = 0; i < richtung % 4; i++) [a, b] = [1 - b, a];
+      return [a, b];
+    };
+    const q = (a: number, b: number, c: number, d: number, e: number, f: number, o: string, l: string, rr: string) => {
+      const [a1, b1] = rot(a, b);
+      const [d1, e1] = rot(d, e);
+      return quader(x + Math.min(a1, d1), y + Math.min(b1, e1), z + c, x + Math.max(a1, d1), y + Math.max(b1, e1), z + f, o, l, rr);
+    };
     const k = (a: number, b: number, c: number, d: number, e: number, f: number, farbe: readonly [string, string, string]) => q(a, b, c, d, e, f, farbe[0], farbe[1], farbe[2]);
     switch (art) {
       case 101:
@@ -135,11 +156,18 @@ export function zeichner(dreh: Dreh) {
         return [...k(0.02, 0.02, 0, 0.98, 0.98, 0.12, METALL), ...q(0.1, 0.1, 0.12, 0.9, 0.9, 0.13, '#5fb7e6', '#3c8fc2', '#4aa2d4'), ...k(0.6, 0.25, 0.13, 0.75, 0.4, 0.16, GRUEN)];
       case 155: // Apfelbäumchen
         return [...k(0.44, 0.44, 0, 0.56, 0.56, 0.5, DUNKELHOLZ), ...k(0.12, 0.12, 0.5, 0.88, 0.88, 1.1, GRUEN), ...q(0.2, 0.1, 0.7, 0.3, 0.12, 0.8, '#e23a4e', '#a82838', '#e23a4e'), ...q(0.6, 0.1, 0.85, 0.7, 0.12, 0.95, '#e23a4e', '#a82838', '#e23a4e')];
+      case 157: // Kaktus im Topf
+        return [...q(0.3, 0.3, 0, 0.7, 0.7, 0.25, '#c26a2c', '#9c4f1c', '#ad5c24'), ...k(0.42, 0.42, 0.25, 0.58, 0.58, 0.95, KAKTUS), ...k(0.24, 0.45, 0.45, 0.42, 0.55, 0.55, KAKTUS), ...k(0.24, 0.45, 0.55, 0.32, 0.55, 0.75, KAKTUS), ...k(0.58, 0.45, 0.55, 0.74, 0.55, 0.64, KAKTUS), ...k(0.66, 0.45, 0.64, 0.74, 0.55, 0.85, KAKTUS)];
       case 156: // Sonnenschirm
         return [...k(0.47, 0.47, 0, 0.53, 0.53, 1, WEISS), ...q(0.05, 0.05, 1, 0.95, 0.95, 1.08, '#e23a4e', '#fbfaf5', '#e23a4e')];
       // --- Spielplatz (seit 0.12) ---
       case 160: // Schaukel
-        return [...k(0.02, 0.45, 0, 0.1, 0.55, 1.2, ROT), ...k(0.9, 0.45, 0, 0.98, 0.55, 1.2, ROT), ...k(0.02, 0.45, 1.2, 0.98, 0.55, 1.28, ROT), ...k(0.35, 0.4, 0.35, 0.65, 0.6, 0.42, HOLZ), ...k(0.37, 0.48, 0.42, 0.39, 0.52, 1.2, SCHWARZ), ...k(0.61, 0.48, 0.42, 0.63, 0.52, 1.2, SCHWARZ)];
+        return [
+          ...k(0.02, 0.45, 0, 0.1, 0.55, 1.2, ROT),
+          ...k(0.9, 0.45, 0, 0.98, 0.55, 1.2, ROT),
+          ...k(0.02, 0.45, 1.2, 0.98, 0.55, 1.28, ROT),
+          ...(ohne === 'sitz' ? [] : [...k(0.35, 0.4, 0.35, 0.65, 0.6, 0.42, HOLZ), ...k(0.37, 0.48, 0.42, 0.39, 0.52, 1.2, SCHWARZ), ...k(0.61, 0.48, 0.42, 0.63, 0.52, 1.2, SCHWARZ)]),
+        ];
       case 161: // Rutsche
         return [...k(0.05, 0.6, 0, 0.35, 0.95, 1, BLAU), ...k(0.1, 0.65, 1, 0.3, 0.9, 1.1, BLAU), ...k(0.35, 0.65, 0.8, 0.55, 0.9, 0.86, GELB), ...k(0.55, 0.65, 0.5, 0.75, 0.9, 0.56, GELB), ...k(0.75, 0.65, 0.2, 0.95, 0.9, 0.26, GELB), ...k(0.88, 0.65, 0, 0.95, 0.9, 0.2, GELB)];
       case 162: // Sandkasten (begehbar)
@@ -153,8 +181,56 @@ export function zeichner(dreh: Dreh) {
     }
   }
 
+  /** Zaun (115) oder Hecke (123) mit Verbindungen zu den Nachbarfeldern. */
+  function verbindend(art: number, x: number, y: number, z: number, n: Nachbarn): Flaeche[] {
+    const k = (a: number, b: number, c: number, d: number, e: number, f: number, farbe: readonly [string, string, string]) => quader(x + a, y + b, z + c, x + d, y + e, z + f, farbe[0], farbe[1], farbe[2]);
+    const teile: Flaeche[] = [];
+    if (art === 115) {
+      const PFOSTEN: [string, string, string] = ['#b9763f', '#87521f', '#9c6634'];
+      // Querlatten von der Mitte zu jeder verbundenen Seite (oben und unten)
+      for (const [c0, c1] of [[0.4, 0.55], [0.12, 0.24]] as const) {
+        if (n.mx) teile.push(...k(0, 0.45, c0, 0.5, 0.55, c1, HOLZ));
+        if (n.px) teile.push(...k(0.5, 0.45, c0, 1, 0.55, c1, HOLZ));
+        if (n.my) teile.push(...k(0.45, 0, c0, 0.55, 0.5, c1, HOLZ));
+        if (n.py) teile.push(...k(0.45, 0.5, c0, 0.55, 1, c1, HOLZ));
+      }
+      teile.push(...k(0.4, 0.4, 0, 0.6, 0.6, 0.72, PFOSTEN));
+      return teile;
+    }
+    const HECKE: [string, string, string] = ['#3d9a5a', '#2b7544', '#33854e'];
+    teile.push(...k(0.2, 0.2, 0, 0.8, 0.8, 0.8, HECKE));
+    if (n.mx) teile.push(...k(0, 0.2, 0, 0.2, 0.8, 0.8, HECKE));
+    if (n.px) teile.push(...k(0.8, 0.2, 0, 1, 0.8, 0.8, HECKE));
+    if (n.my) teile.push(...k(0.2, 0, 0, 0.8, 0.2, 0.8, HECKE));
+    if (n.py) teile.push(...k(0.2, 0.8, 0, 0.8, 1, 0.8, HECKE));
+    return teile;
+  }
+
   return { quader, moebel };
 }
+
+/** Welche Nachbarfelder (im Plan) gehören zum selben Zaun: +x, −x, +y, −y. */
+export interface Nachbarn {
+  px: boolean;
+  mx: boolean;
+  py: boolean;
+  my: boolean;
+}
+/** Zaun, Gartentor und Hecke verbinden sich untereinander und mit Mauern aus Blöcken. */
+export const ZAUNARTIG: ReadonlySet<number> = new Set([115, 105, 123]);
+
+/** Punkt auf einer Seitenfläche (Ecken: unten-a, unten-b, oben-b, oben-a), u quer, v nach oben, beide 0 bis 1. */
+export function aufFlaeche(punkte: string, u: number, v: number): string {
+  const p = punkte.split(' ').map((e) => e.split(',').map(Number) as [number, number]);
+  const [p0, p1, p2, p3] = p as [[number, number], [number, number], [number, number], [number, number]];
+  const unten = [p0[0] + (p1[0] - p0[0]) * u, p0[1] + (p1[1] - p0[1]) * u];
+  const oben = [p3[0] + (p2[0] - p3[0]) * u, p3[1] + (p2[1] - p3[1]) * u];
+  return `${unten[0]! + (oben[0]! - unten[0]!) * v},${unten[1]! + (oben[1]! - unten[1]!) * v}`;
+}
+/** Rechteck auf einer Seitenfläche von (u0, v0) bis (u1, v1). */
+export const feldAuf = (punkte: string, u0: number, v0: number, u1: number, v1: number): string =>
+  `${aufFlaeche(punkte, u0, v0)} ${aufFlaeche(punkte, u1, v0)} ${aufFlaeche(punkte, u1, v1)} ${aufFlaeche(punkte, u0, v1)}`;
+export const linieAuf = (punkte: string, u0: number, v0: number, u1: number, v1: number): string => `M${aufFlaeche(punkte, u0, v0)} L${aufFlaeche(punkte, u1, v1)}`;
 
 /** Bildausschnitt (viewBox) für die Vorschau eines Teils in einem Feld bei Drehung 0. */
 export const VORSCHAU_VIEWBOX = `${-A - 4} ${-1.4 * C - 4} ${2 * A + 8} ${A + 1.4 * C + 8}`;

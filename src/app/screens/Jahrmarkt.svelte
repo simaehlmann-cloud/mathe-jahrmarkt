@@ -206,7 +206,7 @@
   function teleportieren() {
     if (teleport) return;
     app.spieleKlang('tipp');
-    if (!app.paket || app.einstellungen.animationenReduziert) {
+    if (app.einstellungen.animationenReduziert) {
       app.zeige({ name: 'insel', anreise: 'teleport' });
       return;
     }
@@ -516,7 +516,7 @@
         </button>
 
         <!-- Fähre zur Bauinsel: Wasser am linken Rand, Steg und Boot -->
-        <button class="faehre" style="left: {FAEHRE_X - 110}px; top: {FESTPLATZ_Y - 190}px; z-index: {FESTPLATZ_Y - 25}" onclick={zurFaehre} aria-label="Fähre zur Bauinsel{app.paket ? '' : ' (Zusatzpaket)'}">
+        <button class="faehre" style="left: {FAEHRE_X - 110}px; top: {FESTPLATZ_Y - 190}px; z-index: {FESTPLATZ_Y - 25}" onclick={zurFaehre} aria-label="Fähre zur Bauinsel">
           <svg viewBox="0 0 220 200" aria-hidden="true">
             <path d="M0 40 Q40 20 70 40 L70 200 L0 200 Z" fill="#6cc3ec" />
             <path d="M6 70 q10 -6 20 0 q10 6 20 0 M10 120 q10 -6 20 0 q10 6 20 0 M4 165 q10 -6 20 0 q10 6 20 0" stroke="#fff" stroke-width="3" fill="none" opacity="0.7" class="welle" />
@@ -529,7 +529,7 @@
             </g>
             <rect x="150" y="40" width="8" height="74" fill="#87521f" />
           </svg>
-          <span class="schild">Fähre zur Bauinsel{#if !app.paket} <Icon name="schloss" groesse={16} />{/if}</span>
+          <span class="schild">Fähre zur Bauinsel</span>
         </button>
 
         <div class="eingang" style="left: {EINGANG.x - 190}px; top: {WELT_HOEHE - 200}px" aria-hidden="true">
@@ -586,7 +586,7 @@
       <Icon name="auftrag" groesse={22} /> Aufträge {erledigt}/{auftraege.length}
     </button>
     <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })} aria-label="Bauplatz"><Icon name="block" groesse={22} /><span class="lang"> Bauplatz</span></button>
-    <button class="ticket hell" onclick={teleportieren} aria-label="Teleporter zur Bauinsel{app.paket ? '' : ' (Zusatzpaket)'}"><Icon name="insel" groesse={22} /><span class="lang"> Insel</span></button>
+    <button class="ticket hell" onclick={teleportieren} aria-label="Teleporter zur Bauinsel"><Icon name="insel" groesse={22} /><span class="lang"> Insel</span></button>
     <button class="ticket hell rund-klein" onclick={() => kamera(false)} aria-label="Wo bin ich?">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22" /></svg>
     </button>

@@ -217,16 +217,22 @@
     if (e.ersterErfolg) app.flinka = stufe === 'bronze' ? BUDE_WIEDER_AN(info.name) : stufe === 'silber' ? BUDE_FARBE(info.name) : BUDE_FEST(info.name);
   }
 
-  function zurueck() {
-    // Abgebrochene Runde: Antworten zählen fürs Lernprofil, die Runde selbst nicht. Der Stand wird zum Weiterspielen gemerkt.
+  /** Abgebrochene Runde: Antworten zählen fürs Lernprofil, die Runde selbst nicht. Der Stand wird zum Weiterspielen gemerkt. */
+  function sichereAbbruch() {
     verbuche();
-    if (fundbuero) {
-      app.zeige({ name: 'fundbuero' });
-      return;
-    }
+    if (fundbuero) return;
     const z = ende ? undefined : runde.zwischenstand();
     if (z) app.aendereProfil((q) => mitPause(q, { ...z, bude, stufe, am: Date.now(), ergebnisse: ergebnisse.slice(0, z.gestellt) }));
-    app.zeige({ name: 'bude', bude });
+  }
+  // Spieler wechseln mitten in der Runde: erst für dieses Kind sichern (seit 0.14)
+  const meineSicherung = () => {
+    if (!ende && !fundEnde) sichereAbbruch();
+  };
+  app.vorWechsel = meineSicherung;
+
+  function zurueck() {
+    sichereAbbruch();
+    app.zeige(fundbuero ? { name: 'fundbuero' } : { name: 'bude', bude });
   }
 
   function nochmal() {
@@ -275,6 +281,7 @@
 
   onDestroy(() => {
     app.zurueckAbfangen = null;
+    if (app.vorWechsel === meineSicherung) app.vorWechsel = null;
     zerstoert = true;
     szene?.zerstoere();
     void app.sprache.stopp();
