@@ -11,6 +11,9 @@ const config: CapacitorConfig = {
   backgroundColor: '#FFF6E5',
   ios: {
     contentInset: 'never',
+    // Die Seite selbst scrollt nie (body overflow: hidden); so federt auch die ganze Ansicht nicht nach
+    // und man sieht beim Ziehen am Rand nicht, was hinter dem Jahrmarkt liegt.
+    scrollEnabled: false,
     limitsNavigationsToAppBoundDomains: true,
   },
   android: {

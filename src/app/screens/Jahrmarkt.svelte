@@ -440,7 +440,7 @@
   <Kopfzeile titel="Jahrmarkt" />
   <div class="kartenrahmen">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="karte" class:bewegt bind:this={karte} onscroll={beimSchieben} onpointerdown={ziehStart} onpointermove={ziehen} onpointercancel={selbstSchauen} ontouchstart={wischStart} ontouchmove={wischen} onwheel={selbstSchauen}>
+  <div class="karte" class:bewegt style="--wiese-zeit: {tz === 'nacht' ? '#628370' : tz === 'tag' ? '#9fd88f' : '#85af8a'}" bind:this={karte} onscroll={beimSchieben} onpointerdown={ziehStart} onpointermove={ziehen} onpointercancel={selbstSchauen} ontouchstart={wischStart} ontouchmove={wischen} onwheel={selbstSchauen}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab + LEISTE_PX}px">
       <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; zoom: {massstab}" onclick={aufKarteGetippt}>
@@ -891,11 +891,11 @@
     z-index: 9000;
     pointer-events: none;
     /* Dämmerung statt grauer Schleier: Farben bleiben kräftig, die Lichter tragen die Stimmung */
-    background: rgb(80 70 170 / 0.26);
-    mix-blend-mode: multiply;
+    /* ohne mix-blend-mode: Mischmodi über die ganze Welt zwingen iOS beim Schieben zum Neuzeichnen (Flackern) */
+    background: rgb(40 30 120 / 0.22);
   }
   .dunkel.nacht {
-    background: rgb(40 40 125 / 0.42);
+    background: rgb(15 15 70 / 0.42);
   }
   .lichter {
     position: absolute;
@@ -972,8 +972,10 @@
     overflow: auto;
     position: relative;
     z-index: 1;
-    overscroll-behavior: contain;
+    /* kein Nachfedern am Rand (dort blitzte sonst helle Wiese auf) */
+    overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    background: var(--wiese-zeit, #9fd88f);
     scrollbar-width: none;
   }
   .karte::-webkit-scrollbar {
@@ -981,7 +983,7 @@
   }
   .huelle {
     position: relative;
-    background: #9fd88f; /* Wiese unter der Leiste */
+    background: var(--wiese-zeit, #9fd88f); /* Wiese unter der Leiste, abends und nachts abgedunkelt wie die Welt */
   }
   /* zoom statt transform: scale – sonst wird die ganze Welt eine riesige Grafikebene, die iOS beim Schieben
      in Kacheln neu zeichnet (Flackern). */
