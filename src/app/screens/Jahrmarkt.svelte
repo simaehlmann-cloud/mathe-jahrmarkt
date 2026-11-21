@@ -134,7 +134,7 @@
     const a = aufStrecke(lauf.weg, t * lauf.laenge);
     pos = a.p;
     richtung = a.richtung;
-    kamera(true);
+    if (folgen) kamera(true);
     if (t >= 1) {
       const fertig = lauf.fertig;
       lauf = null;
@@ -146,8 +146,52 @@
     rahmen = requestAnimationFrame(schritt);
   }
 
+  /**
+   * Folgt die Kamera der Figur? Schiebt das Kind die Karte beim Laufen selbst (Finger, Maus, Rad), hört sie auf,
+   * bis ein neues Ziel angetippt oder „Wo bin ich?“ gedrückt wird – sonst ziehen Kamera und Finger gegeneinander.
+   */
+  let folgen = true;
+  /** Wird die Karte gerade geschoben? (Bewegungen ruhen kurz) */
+  let bewegt = $state(false);
+  let bewegtUhr: ReturnType<typeof setTimeout> | undefined;
+  function beimSchieben() {
+    if (laeuft && folgen) return; // die Kamera folgt der Figur – das ist kein Schieben
+    bewegt = true;
+    clearTimeout(bewegtUhr);
+    bewegtUhr = setTimeout(() => (bewegt = false), 180);
+  }
+  function selbstSchauen() {
+    if (laeuft) folgen = false;
+  }
+  let ziehAnfang: [number, number] | null = null;
+  function ziehStart(e: PointerEvent) {
+    ziehAnfang = [e.clientX, e.clientY];
+  }
+  function ziehen(e: PointerEvent) {
+    if (!ziehAnfang || e.buttons === 0) return;
+    if (Math.hypot(e.clientX - ziehAnfang[0], e.clientY - ziehAnfang[1]) > 8) {
+      ziehAnfang = null;
+      selbstSchauen();
+    }
+  }
+  /** iOS/Android: Übernimmt der Browser das Schieben, kommt pointercancel und danach nur noch touchmove. */
+  let wischAnfang: [number, number] | null = null;
+  function wischStart(e: TouchEvent) {
+    const t = e.touches[0];
+    wischAnfang = t ? [t.clientX, t.clientY] : null;
+  }
+  function wischen(e: TouchEvent) {
+    const t = e.touches[0];
+    if (!wischAnfang || !t) return;
+    if (Math.hypot(t.clientX - wischAnfang[0], t.clientY - wischAnfang[1]) > 8) {
+      wischAnfang = null;
+      selbstSchauen();
+    }
+  }
+
   function laufeZu(zielPunkt: Punkt, fertig: () => void = () => {}) {
     cancelAnimationFrame(rahmen);
+    folgen = true;
     const w = weg(pos, zielPunkt);
     const laenge = weglaenge(w);
     if (laenge < 2 || reduziert()) {
@@ -252,10 +296,10 @@
   /* ---------- Attraktionen und Essstände (seit 0.15) ---------- */
   const SPRUECHE: Partial<Record<AttraktionsDaten['id'], string>> = {
     kettenkarussell: 'Das Kettenkarussell hat 16 Sitze. Bei 3 Fahrten sind das 48 Plätze!',
-    autoscooter: 'Im Autoscooter fahren 8 Wagen. 2 sind frei – wie viele sind besetzt?',
-    schiffschaukel: 'Hui! Die Schiffschaukel schwingt fast 4 Meter hoch.',
+    autoscooter: 'Im Autoscooter fahren 12 Wagen. Eine Fahrt dauert 3 Minuten – in einer Stunde sind das 20 Fahrten und bis zu 240 Fahrgäste!',
+    schiffschaukel: 'Hui! Die Schiffschaukel schwingt bis zu 4 Meter hoch – fast so hoch wie zwei Erwachsene übereinander.',
     musikpavillon: 'Die Kapelle spielt im Dreivierteltakt: eins, zwei, drei!',
-    kinderkarussell: '12 Pferdchen, jedes dritte ist ein Einhorn. Wie viele Einhörner sind es?',
+    kinderkarussell: '12 Pferdchen drehen sich im Kreis. Jedes dritte ist ein Einhorn – das sind 4 Einhörner, also ein Drittel.',
     zirkuszelt: 'Ins Zirkuszelt passen 300 Leute – 100 auf jeder der drei Tribünen.',
     achterbahn: 'Die Achterbahn ist 25 Meter hoch. Das sind 2 500 Zentimeter!',
     brunnen: 'Plätscher! Das Wasser fliegt in einem Bogen. So eine Kurve heißt Parabel – die lernst du in ein paar Jahren im Matheunterricht kennen.',
@@ -395,10 +439,11 @@
 {#if p}
   <Kopfzeile titel="Jahrmarkt" />
   <div class="kartenrahmen">
-  <div class="karte" bind:this={karte}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="karte" class:bewegt bind:this={karte} onscroll={beimSchieben} onpointerdown={ziehStart} onpointermove={ziehen} onpointercancel={selbstSchauen} ontouchstart={wischStart} ontouchmove={wischen} onwheel={selbstSchauen}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab + LEISTE_PX}px">
-      <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; transform: scale({massstab})" onclick={aufKarteGetippt}>
+      <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; zoom: {massstab}" onclick={aufKarteGetippt}>
         <!-- Boden: Wiese, Hügel mit Sternenmarkt, Wege, Plätze -->
         <svg class="boden" viewBox="0 0 {WELT_BREITE} {WELT_HOEHE}" width={WELT_BREITE} height={WELT_HOEHE} aria-hidden="true">
           <defs>
@@ -669,7 +714,7 @@
     <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })} aria-label="Bauplatz"><Icon name="block" groesse={22} /><span class="lang"> Bauplatz</span></button>
     <button class="ticket hell" onclick={teleportieren} aria-label="Teleporter zur Bauinsel"><Icon name="insel" groesse={22} /><span class="lang"> Insel</span></button>
     <button class="ticket hell rund-klein" onclick={() => { app.spieleKlang('tipp'); planOffen = true; }} aria-label="Lageplan"><Icon name="karte" groesse={22} /></button>
-    <button class="ticket hell rund-klein" onclick={() => kamera(false)} aria-label="Wo bin ich?">
+    <button class="ticket hell rund-klein" onclick={() => { folgen = true; kamera(false); }} aria-label="Wo bin ich?">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" fill="currentColor" /><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22" /></svg>
     </button>
   </div>
@@ -938,11 +983,16 @@
     position: relative;
     background: #9fd88f; /* Wiese unter der Leiste */
   }
+  /* zoom statt transform: scale – sonst wird die ganze Welt eine riesige Grafikebene, die iOS beim Schieben
+     in Kacheln neu zeichnet (Flackern). */
   .welt {
     position: absolute;
     left: 0;
     top: 0;
-    transform-origin: 0 0;
+  }
+  /* Während die Karte geschoben wird, ruhen die Bewegungen (Karussells, Fahnen, Laternen) – weniger zu zeichnen. */
+  .karte.bewegt :global(.welt *) {
+    animation-play-state: paused !important;
   }
   .boden {
     position: absolute;
@@ -1265,7 +1315,6 @@
     position: absolute;
     transform: translate(-50%, -88%);
     pointer-events: none;
-    filter: drop-shadow(0 2px 0 rgb(31 42 107 / 0.25));
   }
   .kette {
     position: absolute;

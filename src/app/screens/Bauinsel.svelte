@@ -156,6 +156,20 @@
       selbstSchauen();
     }
   }
+  /** iOS/Android: Übernimmt der Browser das Schieben, kommt pointercancel und danach nur noch touchmove. */
+  let wischAnfang: [number, number] | null = null;
+  function wischStart(e: TouchEvent) {
+    const t = e.touches[0];
+    wischAnfang = t ? [t.clientX, t.clientY] : null;
+  }
+  function wischen(e: TouchEvent) {
+    const t = e.touches[0];
+    if (!wischAnfang || !t) return;
+    if (Math.hypot(t.clientX - wischAnfang[0], t.clientY - wischAnfang[1]) > 8) {
+      wischAnfang = null;
+      selbstSchauen();
+    }
+  }
   /** Übersichtskarte: eine Stelle auswählen, die große Ansicht springt dorthin. */
   let karteOffen = $state(false);
   function zeigeStelle(x: number, y: number) {
@@ -616,7 +630,7 @@
     <div class="rahmen">
     <div class="kompass" aria-hidden="true" style="--w: {kompass}deg"><span class="nadel"></span><b>N</b></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="feld" class:blende bind:this={feld} onpointerdown={ziehStart} onpointermove={ziehen} onwheel={selbstSchauen}>
+    <div class="feld" class:blende bind:this={feld} onpointerdown={ziehStart} onpointermove={ziehen} onpointercancel={selbstSchauen} ontouchstart={wischStart} ontouchmove={wischen} onwheel={selbstSchauen}>
       {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag && app.paket ? auftrag.grundstueck : null} frei={!app.paket} bauen={modus !== 'laufen'} drehMarken={modus === 'drehen'} {gleitPos} {funkeln} {pose} {licht} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
     </div>
     </div>
