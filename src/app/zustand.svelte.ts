@@ -57,6 +57,10 @@ class AppZustand {
    * 'pause' = „Wer spielt jetzt?“ nach längerer Pause (App war im Hintergrund).
    */
   wechsel = $state<null | 'knopf' | 'pause'>(null);
+  /** „Neuer Spieler“ im Wechsel-Fenster: Startbildschirm öffnet gleich die Elternsperre für ein neues Profil. */
+  neuesProfil = $state(false);
+  /** Rundgang mit Flinka auf dem Jahrmarkt starten (Menü). */
+  rundgang = $state(false);
   /**
    * Vor einem Spielerwechsel sichert der offene Bildschirm hier noch für das bisherige Kind
    * (Spiel: Zwischenstand merken, Bauinsel: Figur, Tiere und Wachzeit).

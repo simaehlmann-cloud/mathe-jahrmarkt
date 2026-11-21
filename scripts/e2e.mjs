@@ -98,7 +98,27 @@ try {
     await page.getByText('Ich bin Flinka').waitFor();
     await foto('02-intro');
     // Intro: so lange „Weiter“, bis die Sprechblase weg ist
-    for (let i = 0; i < 6 && (await page.getByRole('button', { name: /Weiter|Los geht/ }).count()); i++) await weiter();
+    for (let i = 0; i < 6 && (await page.getByRole('dialog', { name: 'Flinka sagt' }).count()); i++) await weiter();
+    // Rundgang mit Flinka (seit 0.16): direkt nach der Begrüßung, mit Leuchtrahmen um das erklärte Element
+    {
+      const rg = page.getByRole('dialog', { name: /Rundgang mit Flinka/ });
+      await rg.waitFor();
+      await foto('02b-rundgang-1');
+      pruefe((await page.locator('.rundgang .leuchtrand').count()) === 1, `${name}: Rundgang zeigt, worum es geht (Leuchtrahmen)`);
+      let schritte = 1;
+      while ((await rg.count()) && schritte < 12) {
+        if (schritte === 3) await foto('02c-rundgang-bude');
+        if (schritte === 5) await foto('02d-rundgang-lageplan');
+        await rg.getByRole('button', { name: /^(Weiter|Los geht)/ }).click();
+        schritte++;
+      }
+      pruefe(schritte === 9 && (await rg.count()) === 0, `${name}: Rundgang mit 8 Schritten, danach frei`);
+      await menue('Rundgang mit Flinka');
+      await rg.waitFor();
+      await rg.getByRole('button', { name: 'Überspringen' }).click();
+      await rg.waitFor({ state: 'detached' });
+      pruefe(true, `${name}: Rundgang über das Menü wiederholbar und überspringbar`);
+    }
     await foto('03-jahrmarkt');
 
     // Begehbarer Jahrmarkt: Tippen auf die Bude, die Figur läuft hin
@@ -236,6 +256,12 @@ try {
     await menue('Spieler wechseln');
     await page.getByRole('heading', { name: 'Wer spielt?' }).waitFor();
     await foto('17-wer-spielt');
+    // Neues Profil nur über die Elternsperre (seit 0.16), Wechseln bleibt frei
+    await page.getByRole('button', { name: /Neues Profil/ }).click();
+    await page.getByRole('heading', { name: 'Nur für Erwachsene' }).waitFor();
+    await page.getByRole('button', { name: 'Abbrechen' }).click();
+    await page.getByRole('heading', { name: 'Wer spielt?' }).waitFor();
+    pruefe((await page.getByPlaceholder('Spitzname').count()) === 0, `${name}: Neues Profil erst nach der Elternsperre`);
     await page.getByRole('button', { name: /^Figur von .* gestalten$/ }).first().click();
     await page.getByRole('button', { name: 'Speichern' }).waitFor();
     pruefe(true, `${name}: Figur gestalten vom Startbildschirm erreichbar`);
@@ -488,7 +514,8 @@ try {
       await page.getByText('Cap', { exact: true }).click();
       await foto('50-roboter');
       await page.getByRole('button', { name: 'Los geht’s' }).click();
-      for (let i = 0; i < 6 && (await page.getByRole('button', { name: /Weiter|Los geht/ }).count()); i++) await page.getByRole('button', { name: /Weiter|Los geht/ }).last().click();
+      for (let i = 0; i < 6 && (await page.getByRole('dialog', { name: 'Flinka sagt' }).count()); i++) await page.getByRole('button', { name: /Weiter|Los geht/ }).last().click();
+      await page.getByRole('dialog', { name: /Rundgang mit Flinka/ }).getByRole('button', { name: 'Überspringen' }).click();
       await page.getByRole('button', { name: /Tagesaufträge/ }).click();
       pruefe((await page.locator('.auftraege li').count()) === 3, `${name}: drei Tagesaufträge`);
       await foto('51-auftraege');
@@ -612,6 +639,9 @@ try {
         if (ziel) {
           await page.mouse.click(k.x + k.width * 0.5, k.y + k.height * 0.3);
           await page.locator('.tipp-marke').waitFor({ state: 'attached' });
+          const m = await page.locator('.tipp-marke').boundingBox();
+          const abw = Math.hypot(m.x + m.width / 2 - (k.x + k.width * 0.5), m.y + m.height / 2 - (k.y + k.height * 0.3));
+          pruefe(abw < 8, `${name}: Zielkreis erscheint unter dem Finger (Abweichung ${Math.round(abw)} px)`);
           await page.waitForTimeout(4300);
           pruefe((await fig.getAttribute('style')) !== vorher, `${name}: Tippen auf die Wiese – Figur läuft hin, Zielkreis erscheint`);
         }

@@ -37,3 +37,15 @@ export const BUDE_FEST = (bude: string): string[] => [`Die ${bude} ist festlich 
 export const ENTDECKUNGEN: Readonly<Record<string, { titel: string; text: string }>> = {
   katze: { titel: 'Die Dachkatze', text: 'Auf dem Dach der Dartbude schläft Mieze. Sie mag warme Lampen.' },
 };
+
+/** Rundgang mit Flinka (seit 0.16): einmal nach der Begrüßung und jederzeit über das Menü. */
+export const RUNDGANG = (name: string): { text: string; ziel?: string }[] => [
+  { text: `Komm, ${name}, ich zeig dir schnell alles! Das bist du. Tipp hier, wenn jemand anderes spielen will.`, ziel: '.spieler-knopf' },
+  { text: 'Das sind deine Taler. Für jede Runde gibt es welche – im Andenkenstand und an den Essbuden kannst du sie ausgeben.', ziel: 'header .taler' },
+  { text: 'Tipp eine Bude an, dann läufst du hin. Die Medaille daran zeigt, wie weit du schon bist: Bronze, Silber, Gold.', ziel: '.welt .bude' },
+  { text: 'Die gelben Fähnchen sind deine drei Tagesaufträge. Hier ist die Liste.', ziel: '.leiste .ticket.gelb' },
+  { text: 'Der Lageplan zeigt dir den ganzen Jahrmarkt. Tipp dort eine Bude an, und du läufst sofort hin.', ziel: '.leiste [aria-label="Lageplan"]' },
+  { text: 'Jede geschaffte Bude lässt eine Gondel im Riesenrad leuchten. Steig ein, dann siehst du alles von oben.', ziel: '.welt .riesenrad' },
+  { text: 'Mit dem Teleporter kommst du zur Bauinsel. Dort baust du mit den Blöcken, die du hier verdienst.', ziel: '.leiste [aria-label="Teleporter zur Bauinsel"]' },
+  { text: 'Karussells und Brunnen kannst du antippen. Und hinter dem Tor oben wartet der Sternenmarkt. Viel Spaß!' },
+];

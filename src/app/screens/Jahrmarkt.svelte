@@ -38,9 +38,10 @@
   } from '../../domain/karte';
   import AttraktionsBild from '../grafik/Attraktion.svelte';
   import JahrmarktPlan from '../components/JahrmarktPlan.svelte';
+  import Rundgang from '../components/Rundgang.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import Sprechblase from '../components/Sprechblase.svelte';
-  import { AUFTRAG_ERKLAERUNG, ENTDECKUNGEN, GASSE_BEGRUESSUNG, INTRO, NOCH_IM_AUFBAU, ABENDMARKT_ZU } from '../geschichte';
+  import { RUNDGANG, AUFTRAG_ERKLAERUNG, ENTDECKUNGEN, GASSE_BEGRUESSUNG, INTRO, NOCH_IM_AUFBAU, ABENDMARKT_ZU } from '../geschichte';
   import BudeStand from '../grafik/BudeStand.svelte';
   import Flinka from '../grafik/Flinka.svelte';
   import Laeufer from '../grafik/Laeufer.svelte';
@@ -114,17 +115,52 @@
   const LEISTE_PX = 72;
 
   /** Figur in die Mitte holen; `weich` folgt der Figur beim Laufen. */
+  /**
+   * Umrechnung Welt ↔ Bildschirm über zwei unsichtbare Messpunkte in der Welt (bei 0|0 und 1000|1000).
+   * Hintergrund: Die Welt wird mit `zoom` verkleinert (gegen Flackern). Safari/WebKit gibt Positionen von
+   * Elementen und Fingern *innerhalb* einer gezoomten Fläche durch den Zoom geteilt an, Chrome nicht. Mit reiner
+   * Rechnung über massstab lag das Tippen auf dem iPad deshalb einige Zentimeter daneben.
+   * Die Messpunkte liegen im selben „Maßsystem“ wie der Finger – daraus stimmt die Umrechnung auf jedem Gerät.
+   */
+  let messA = $state<HTMLElement>();
+  let messB = $state<HTMLElement>();
+  type Abbildung = { ax: number; ay: number; sx: number; sy: number; k: number };
+  function abbildung(): Abbildung {
+    if (messA && messB) {
+      const a = messA.getBoundingClientRect();
+      const b = messB.getBoundingClientRect();
+      const sx = (b.left - a.left) / 1000;
+      const sy = (b.top - a.top) / 1000;
+      if (sx > 0.05 && sy > 0.05 && Number.isFinite(sx) && Number.isFinite(sy)) {
+        // k: Faktor zurück in echte Bildschirmpunkte. Kommt 1 statt massstab heraus, teilt der Browser durch den Zoom.
+        const k = massstab < 0.98 && Math.abs(sx - 1) < Math.abs(sx - massstab) ? massstab : 1;
+        return { ax: a.left, ay: a.top, sx, sy, k };
+      }
+    }
+    // Rückfall: rechnen
+    const r = karte!.getBoundingClientRect();
+    return { ax: r.left - karte!.scrollLeft, ay: r.top - karte!.scrollTop, sx: massstab, sy: massstab, k: 1 };
+  }
+  /** Finger (clientX/Y eines Ereignisses in der Welt) → Weltpunkt. Finger und Messpunkte sind gleich gemessen. */
+  function bildZuWelt(cx: number, cy: number): Punkt {
+    const m = abbildung();
+    return { x: (cx - m.ax) / m.sx, y: (cy - m.ay) / m.sy };
+  }
+
   function kamera(weich: boolean) {
     if (!karte) return;
-    const zx = pos.x * massstab - karte.clientWidth / 2;
+    const m = abbildung();
+    const r = karte.getBoundingClientRect();
+    // Wo steht die Figur gerade auf dem Bildschirm (echte Punkte), und wo soll sie hin?
     // Die Leiste unten deckt etwa 70 px ab: Figur in die Mitte der sichtbaren Fläche
-    const zy = (pos.y - 80) * massstab - (karte.clientHeight - LEISTE_PX) / 2;
+    const dx = (m.ax + pos.x * m.sx) * m.k - (r.left + karte.clientWidth / 2);
+    const dy = (m.ay + (pos.y - 80) * m.sy) * m.k - (r.top + (karte.clientHeight - LEISTE_PX) / 2);
     if (!weich) {
-      karte.scrollTo({ left: zx, top: zy });
+      karte.scrollTo({ left: karte.scrollLeft + dx, top: karte.scrollTop + dy });
       return;
     }
-    karte.scrollLeft += (zx - karte.scrollLeft) * 0.12;
-    karte.scrollTop += (zy - karte.scrollTop) * 0.12;
+    karte.scrollLeft += dx * 0.12;
+    karte.scrollTop += dy * 0.12;
   }
 
   /* ---------- Laufen ---------- */
@@ -281,13 +317,15 @@
   function aufKarteGetippt(e: MouseEvent) {
     if ((e.target as HTMLElement).closest('button')) return;
     if (!karte) return;
-    // Aus Bildschirm- in Weltkoordinaten: über die Karte (Scrollposition) statt über die skalierte Welt –
-    // die Welt ragt mit Bäumen und Schildern über ihren Rand hinaus und liefert sonst ein verschobenes Rechteck.
-    const r = karte.getBoundingClientRect();
-    const punkt = { x: (e.clientX - r.left + karte.scrollLeft) / massstab, y: (e.clientY - r.top + karte.scrollTop) / massstab };
+    const punkt = bildZuWelt(e.clientX, e.clientY);
     let z = aufWeg(punkt);
     if (!abendOffen && hinterDemTor(z)) z = TOR;
-    tippMarke = { x: z.x, y: z.y, n: (tippMarke?.n ?? 0) + 1 };
+    // Der Kreis erscheint unter dem Finger und gleitet zum Ziel (auf der Wiese: zum nächsten Weg oder Platz)
+    const n = (tippMarke?.n ?? 0) + 1;
+    tippMarke = { x: punkt.x, y: punkt.y, n };
+    setTimeout(() => {
+      if (tippMarke?.n === n) tippMarke = { x: z.x, y: z.y, n };
+    }, 160);
     laufeZu(z);
   }
   /** Kleiner Kreis, wo die Figur hinläuft. */
@@ -368,7 +406,13 @@
         saetze: INTRO(p.name),
         danach: () => app.aendereProfil((q) => ({ ...q, gesehen: { ...q.gesehen, intro: true } })),
       };
-    } else if (p && p.gesehen.intro && dialog === null && auftraege.length > 0 && !p.gesehen.hinweise.includes('auftraege')) {
+    } else if (p && p.gesehen.intro && dialog === null && !rundgangOffen && (app.rundgang || !p.gesehen.hinweise.includes('rundgang'))) {
+      // Rundgang: einmal nach der Begrüßung (auch für Kinder, die schon länger spielen) und über das Menü
+      app.rundgang = false;
+      planOffen = false;
+      auftraegeOffen = false;
+      void tick().then(() => (rundgangOffen = true));
+    } else if (p && p.gesehen.intro && dialog === null && !rundgangOffen && auftraege.length > 0 && !p.gesehen.hinweise.includes('auftraege')) {
       // Einmal erklären, was die Fähnchen bedeuten
       dialog = {
         saetze: AUFTRAG_ERKLAERUNG,
@@ -376,6 +420,15 @@
       };
     }
   });
+
+  let rundgangOffen = $state(false);
+  function rundgangFertig() {
+    rundgangOffen = false;
+    app.aendereProfil((q) => {
+      const neu = ['rundgang', 'auftraege'].filter((h) => !q.gesehen.hinweise.includes(h));
+      return neu.length ? { ...q, gesehen: { ...q.gesehen, hinweise: [...q.gesehen.hinweise, ...neu] } } : q;
+    });
+  }
 
   /** Flinka am Eingang: hingehen und einen Tipp abholen. */
   function zuFlinka() {
@@ -444,6 +497,8 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="huelle" style="width: {WELT_BREITE * massstab}px; height: {WELT_HOEHE * massstab + LEISTE_PX}px">
       <div class="welt" style="width: {WELT_BREITE}px; height: {WELT_HOEHE}px; zoom: {massstab}" onclick={aufKarteGetippt}>
+        <span class="mess" bind:this={messA} style="left: 0; top: 0" aria-hidden="true"></span>
+        <span class="mess" bind:this={messB} style="left: 1000px; top: 1000px" aria-hidden="true"></span>
         <!-- Boden: Wiese, Hügel mit Sternenmarkt, Wege, Plätze -->
         <svg class="boden" viewBox="0 0 {WELT_BREITE} {WELT_HOEHE}" width={WELT_BREITE} height={WELT_HOEHE} aria-hidden="true">
           <defs>
@@ -775,10 +830,13 @@
     <RiesenradFahrt profil={p} paket={app.paket} onzu={() => (fahrtOffen = false)} onbude={fahrtZurBude} />
   {/if}
 
-  {#if feiern[0] && !dialog}
+  {#if feiern[0] && !dialog && !rundgangOffen}
     {#key feierSchluessel(feiern[0])}<Feier feier={feiern[0]} onweiter={feierFertig} />{/key}
   {/if}
 
+  {#if rundgangOffen && p}
+    <Rundgang schritte={RUNDGANG(p.name)} onfertig={rundgangFertig} />
+  {/if}
   {#if dialog}
     <div class="schleier"></div>
     {#key dialog}
@@ -1105,6 +1163,13 @@
       opacity: 0;
     }
   }
+  .mess {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
   .tipp-marke {
     position: absolute;
     width: 46px;
@@ -1114,7 +1179,10 @@
     border-radius: 50%;
     box-shadow: 0 0 0 2px rgba(42, 47, 99, 0.35);
     pointer-events: none;
-    animation: tipp-marke 0.9s ease-out forwards;
+    animation: tipp-marke 1.1s ease-out forwards;
+    transition:
+      left 0.3s ease-out,
+      top 0.3s ease-out;
   }
   @keyframes tipp-marke {
     from {

@@ -57,7 +57,7 @@
           {/each}
         </div>
         <div class="knoepfe">
-          <button class="ticket hell" onclick={() => { app.wechsel = null; app.zeige({ name: 'start' }); }}>Neuer Spieler</button>
+          <button class="ticket hell" onclick={() => { app.wechsel = null; app.neuesProfil = true; app.zeige({ name: 'start' }); }}>Neuer Spieler</button>
           <button class="ticket" onclick={schliessen}>{pause ? 'Ich spiele weiter' : 'Schließen'}</button>
         </div>
       </div>

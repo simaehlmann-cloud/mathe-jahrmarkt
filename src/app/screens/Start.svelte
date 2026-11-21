@@ -2,6 +2,7 @@
   import { standardAussehen, type Aussehen } from '../../domain/aussehen';
   import { MAX_NAME, MAX_PROFILE, type FigurId } from '../../domain/profil';
   import Baukasten from '../components/Baukasten.svelte';
+  import Elternsperre from '../components/Elternsperre.svelte';
   import Flinka from '../grafik/Flinka.svelte';
   import Figur from '../grafik/Figur.svelte';
   import { app } from '../zustand.svelte';
@@ -10,6 +11,19 @@
   import { hoechsteStufe } from '../../domain/fortschritt/fortschritt';
 
   let anlegen = $state(app.bestand.profile.length === 0);
+  /**
+   * Neues Profil nur über die Elternsperre, sobald es schon eines gibt (Wechseln bleibt frei) –
+   * so legen Kinder nicht nebenbei weitere Profile an. Das allererste Profil braucht keine Sperre.
+   */
+  let sperre = $state(false);
+  function neuesProfil() {
+    if (app.bestand.profile.length === 0) anlegen = true;
+    else sperre = true;
+  }
+  if (app.neuesProfil) {
+    app.neuesProfil = false;
+    if (app.bestand.profile.length < MAX_PROFILE) neuesProfil();
+  }
   /** Profil anlegen in zwei Schritten: erst der Name, dann die Figur. */
   let schritt = $state<'name' | 'figur'>('name');
   let name = $state('');
@@ -121,7 +135,7 @@
         {/each}
         {#if !voll}
           <li class="karte-eintritt neu">
-            <button class="profil leer" onclick={() => (anlegen = true)}>
+            <button class="profil leer" onclick={neuesProfil}>
               <span class="plus" aria-hidden="true">+</span>
               <span class="name">Neues Profil</span>
             </button>
@@ -178,7 +192,28 @@
   {/if}
 </div>
 
+{#if sperre}
+  <div class="sperre-schleier" role="dialog" aria-modal="true" aria-label="Neues Profil – nur für Eltern">
+    <p class="sperre-hinweis">Ein neues Profil legen Eltern an.</p>
+    <Elternsperre onoffen={() => { sperre = false; anlegen = true; schritt = 'name'; }} onabbrechen={() => (sperre = false)} />
+  </div>
+{/if}
+
 <style>
+  .sperre-schleier {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: var(--himmel);
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .sperre-hinweis {
+    margin: calc(var(--oben) + 1rem) var(--rand-r) 0 var(--rand);
+    text-align: center;
+    font-weight: 800;
+  }
   .start {
     min-height: 0;
     flex: 1;
