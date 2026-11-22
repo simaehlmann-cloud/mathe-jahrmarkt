@@ -4,6 +4,7 @@
   import Baukasten from '../components/Baukasten.svelte';
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import { app } from '../zustand.svelte';
+  import { SCHULE } from '../../ausgabe';
 
   let { von }: { von?: 'profil' | undefined } = $props();
   /** Zurück dorthin, woher man kam: Mathe-Profil oder Jahrmarkt (Menü, Startbildschirm). */
@@ -15,7 +16,8 @@
   function speichern() {
     const f = figur;
     const a = $state.snapshot(aussehen);
-    app.aendereProfil((p) => ({ ...p, figur: f, aussehen: a }));
+    // Schulversion: Die Figur ist gestaltet, beim nächsten Anmelden geht es gleich auf den Jahrmarkt
+    app.aendereProfil((p) => ({ ...p, figur: f, aussehen: a, ...(SCHULE ? { figurGewaehlt: true } : {}) }));
     app.spieleKlang('jubel');
     zurueckZiel();
   }

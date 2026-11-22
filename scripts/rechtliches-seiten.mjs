@@ -4,7 +4,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 // Die öffentlichen Seiten gelten für beide Stores (in der App setzt Vite __PLATTFORM__ beim Bauen).
 globalThis.__PLATTFORM__ = 'alle';
-const { ANBIETER, DATENSCHUTZ, IMPRESSUM, STAND } = await import('../src/app/rechtliches.ts');
+const { ANBIETER, DATENSCHUTZ, IMPRESSUM, STAND, adresse } = await import('../src/app/rechtliches.ts');
+const { datenschutzSchule } = await import('../src/schule/rechtliches.ts');
+const DATENSCHUTZ_SCHULE = datenschutzSchule(ANBIETER, adresse);
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const absatz = (p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`;
@@ -55,6 +57,21 @@ writeFileSync(
     `<p>Eine Lern-App für den Übergang von der Grundschule zur weiterführenden Schule im Fach Mathematik: 27 Buden auf einem Jahrmarkt, Aufgaben nach dem Kerncurriculum Niedersachsen, ohne Werbung, ohne Konto, alle Daten bleiben auf dem Gerät.</p>
 <p>Kontakt: <a href="mailto:${ANBIETER.email}">${ANBIETER.email}</a></p>`,
     [['impressum.html', 'Impressum'], ['datenschutz.html', 'Datenschutz']],
+  ),
+);
+// Schulversion (eigene App): eigene Datenschutzerklärung, gleiches Impressum
+mkdirSync('docs/schule', { recursive: true });
+writeFileSync(
+  'docs/schule/datenschutz.html',
+  seite('Datenschutzerklärung – Mathe-Jahrmarkt Schule', abschnitte(DATENSCHUTZ_SCHULE), [['../index.html', 'Mathe-Jahrmarkt'], ['../impressum.html', 'Impressum']]),
+);
+writeFileSync(
+  'docs/schule/index.html',
+  seite(
+    'Mathe-Jahrmarkt Schule',
+    `<p>Die Schulversion von Mathe-Jahrmarkt für schuleigene iPads: alle Inhalte freigeschaltet, bis zu 32 Kinder je iPad mit Bildpasswort, Lehrerbereich mit Klassen- und Einzelauswertung. Kein Konto, keine Server, alle Daten bleiben auf den Geräten der Schule.</p>
+<p>Kontakt: <a href="mailto:${ANBIETER.email}">${ANBIETER.email}</a></p>`,
+    [['datenschutz.html', 'Datenschutz'], ['../impressum.html', 'Impressum']],
   ),
 );
 writeFileSync('docs/.nojekyll', '');

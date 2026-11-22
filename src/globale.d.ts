@@ -8,3 +8,11 @@ declare const __APP_VERSION__: string;
  * (Apple-Richtlinie 2.3.10: keine Hinweise auf Google Play in der iOS-App).
  */
 declare const __PLATTFORM__: 'ios' | 'android' | 'alle';
+
+/**
+ * Ausgabe der App, eingesetzt von Vite aus VITE_AUSGABE:
+ * 'privat' für die Familien-App im App Store (kostenlos mit Zusatzpaket als In-App-Kauf),
+ * 'schule' für die Schulversion (eigene App, Einmalkauf über Apple School Manager, alles freigeschaltet,
+ * bis zu 32 Profile mit Bildpasswort, Lehrerbereich statt Elternbereich).
+ */
+declare const __AUSGABE__: 'privat' | 'schule';

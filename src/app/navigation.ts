@@ -24,6 +24,8 @@ export function zurueckZiel(b: Bildschirm, hatProfil: boolean): ZurueckZiel {
     case 'duell':
     case 'eltern':
       return hatProfil ? { name: 'jahrmarkt' } : { name: 'start' };
+    case 'lehrer':
+      return { name: 'start' };
     case 'bude':
       return { name: 'jahrmarkt' };
     case 'spiel':

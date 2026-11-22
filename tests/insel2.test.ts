@@ -461,3 +461,31 @@ describe('Bauinsel 0.14: Möbel richten sich aus', () => {
     expect(mitRichtung(s, 14, 20, 0, 2)).toBe(s); // Block bleibt
   });
 });
+
+describe('Bauinsel 0.18.1: Hecken stehen einzeln', () => {
+  it('Eine neue Hecke reiht sich längs an eine Hecke daneben', () => {
+    let s: InselStand = { ...leereInsel(), inventar: { '123': 2 } };
+    s = ok(setzeAn(s, 10, 20, 0, 123, 99));
+    expect(drehbar(123)).toBe(true);
+    expect(autoRichtung(s, 11, 20, 0, 123)).toBe(0);
+    expect(autoRichtung(s, 10, 21, 0, 123)).toBe(1);
+    expect(autoRichtung(s, 5, 5, 0, 123)).toBeUndefined();
+  });
+});
+
+import { AKTIONEN } from '../src/domain/insel';
+describe('Bauinsel 0.18.1: Spielgeräte und Tiere', () => {
+  it('Jedes Spielgerät mit Aktion gibt es im Laden; in den Sandkasten geht man hinein', () => {
+    for (const [id, a] of Object.entries(AKTIONEN)) {
+      const e = EINRICHTUNG.find((x) => x.id === Number(id));
+      expect(e?.kategorie).toBe('spielen');
+      expect(a.ms).toBeGreaterThan(1000);
+      if (a.hinein) expect(e?.begehbar).toBe('flach');
+    }
+    expect(Object.values(AKTIONEN).map((a) => a.typ).sort()).toEqual(['buddeln', 'rutschen', 'schaukeln', 'springen']);
+  });
+  it('Jedes Tier sagt etwas', () => {
+    for (const t of TIERE) expect(t.laut.length).toBeGreaterThan(1);
+  });
+});
+

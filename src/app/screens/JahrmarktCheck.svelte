@@ -62,6 +62,9 @@
     const e = werteCheckAus(antworten, q, app.paket, Date.now());
     // Aufträge von heute neu würfeln, damit die Empfehlung gleich drin ist (erledigte bleiben erhalten)
     app.aendereProfil((r) => ({ ...r, check: e, auftraege: r.auftraege && r.auftraege.liste.some((a) => a.erledigt) ? r.auftraege : null }));
+    // Schulversion: jeden Check im Verlauf merken (Vorher-nachher-Vergleich für die Lehrkraft)
+    const schule = app.schule;
+    if (schule) app.aendereProfil((r) => schule.nachCheck(r));
     app.auftraegeSicherstellen();
     app.spieleKlang('jubel');
     phase = 'fertig';

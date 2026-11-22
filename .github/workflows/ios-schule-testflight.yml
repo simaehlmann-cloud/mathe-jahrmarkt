@@ -1,0 +1,168 @@
+name: iOS TestFlight Schule
+
+# Baut die SCHULVERSION (eigene App „Mathe-Jahrmarkt Schule“, Einmalkauf über Apple School Manager)
+# auf einem Mac von GitHub und lädt sie zu TestFlight hoch. Gleicher Code wie die Familien-App, gebaut mit
+# VITE_AUSGABE=schule, eigener App-Kennung und eigenem Symbol (ios-schule/AppIcon-512@2x.png).
+# Start von Hand: GitHub → Actions → „iOS TestFlight Schule“ → „Run workflow“.
+#
+# Einmalig vorher: In App Store Connect eine NEUE App mit der Kennung de.maehlmann.mathejahrmarkt.schule anlegen
+# (die Kennung vorher unter developer.apple.com → Identifiers registrieren). Secrets wie beim Workflow „iOS TestFlight“.
+#
+# Einmalig nötig (GitHub → Settings → Secrets and variables → Actions → New repository secret):
+#   APPLE_TEAM_ID   Team-ID aus developer.apple.com → Membership (10 Zeichen)
+#   ASC_KEY_ID      Schlüssel-ID des App-Store-Connect-API-Schlüssels
+#   ASC_ISSUER_ID   Issuer-ID (steht über der Schlüsselliste)
+#   ASC_KEY_P8      Inhalt der Datei AuthKey_XXXX.p8 (komplett, mit BEGIN/END-Zeilen; Base64 geht auch)
+#   IOS_DIST_P12_PASSWORD  selbst gewähltes Kennwort (mind. 12 Zeichen)
+#   IOS_DIST_P12_BASE64    Verteilungszertifikat – erzeugt einmalig der Workflow „iOS Zertifikat erstellen“
+# Der Schlüssel braucht die Rolle „Admin“, damit Xcode das App-Store-Profil selbst anlegen darf.
+#
+# Signierung ohne eigenen Mac (wie bei GradeGoal bewährt): Das Archiv wird unsigniert gebaut und erst
+# beim Export mit dem Verteilungszertifikat signiert. Signiertes Archivieren braucht ein Entwicklerprofil
+# und damit ein registriertes Gerät; reines Cloud Signing signiert die Capacitor-Frameworks nicht gültig.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-testflight-schule
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Xcode-Version prüfen
+        # Apple nimmt seit 28.04.2026 nur noch Builds mit Xcode 26 / iOS-26-SDK an.
+        run: |
+          xcodebuild -version
+          MAJOR=$(xcodebuild -version | head -1 | sed -E 's/Xcode ([0-9]+).*/\1/')
+          [ "$MAJOR" -ge 26 ] || { echo "::error::Xcode 26 oder neuer nötig, gefunden: $MAJOR"; exit 1; }
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Geheimnisse vorhanden?
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          P12: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          P12_PW: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+        run: |
+          fehlt=""
+          [ -n "$TEAM" ] || fehlt="$fehlt APPLE_TEAM_ID"
+          [ -n "$KEY_ID" ] || fehlt="$fehlt ASC_KEY_ID"
+          [ -n "$ISSUER" ] || fehlt="$fehlt ASC_ISSUER_ID"
+          [ -n "$P8" ] || fehlt="$fehlt ASC_KEY_P8"
+          [ -n "$P12_PW" ] || fehlt="$fehlt IOS_DIST_P12_PASSWORD"
+          [ -n "$P12" ] || fehlt="$fehlt IOS_DIST_P12_BASE64(Workflow „iOS Zertifikat erstellen“ einmal ausführen)"
+          if [ -n "$fehlt" ]; then echo "::error::Es fehlen Secrets:$fehlt"; exit 1; fi
+
+      - run: npm ci
+      - name: Typprüfung und Tests
+        run: npm run check && npm run grenzen && npm test
+      - name: Schulversion bauen und prüfen
+        run: npm run build && npm run store-check && npm run grenzen -- --bundle
+        env:
+          VITE_PLATTFORM: ios
+          VITE_AUSGABE: schule
+      - name: In das iOS-Projekt kopieren
+        run: npx cap sync ios
+      - name: Eigene App-Kennung und eigenes Symbol (nur in dieser Arbeitskopie, nichts wird zurückgeschrieben)
+        run: |
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = de.maehlmann.mathejahrmarkt;/PRODUCT_BUNDLE_IDENTIFIER = de.maehlmann.mathejahrmarkt.schule;/' ios/App/App.xcodeproj/project.pbxproj
+          grep -q "de.maehlmann.mathejahrmarkt.schule;" ios/App/App.xcodeproj/project.pbxproj || { echo "::error::App-Kennung ließ sich nicht setzen"; exit 1; }
+          cp ios-schule/AppIcon-512@2x.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+      - name: .jahrmarkt-Dateien mit der App öffnen (Dokumenttyp, nur in der Schulversion)
+        run: python3 ios-schule/dokumenttyp.py ios/App/App/Info.plist && plutil -lint ios/App/App/Info.plist
+
+      - name: API-Schlüssel und Build-Nummer vorbereiten
+        env:
+          P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          # Roh (mit BEGIN-Zeile) oder Base64 – beides geht
+          if printf '%s' "$P8" | grep -q "BEGIN PRIVATE KEY"; then printf '%s\n' "$P8" > "$RUNNER_TEMP/AuthKey.p8"
+          else printf '%s' "$P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"; fi
+          grep -q "BEGIN PRIVATE KEY" "$RUNNER_TEMP/AuthKey.p8" || { echo "::error::ASC_KEY_P8 ist kein gültiger .p8-Schlüssel"; exit 1; }
+          # Version 0.13.0 → 1300; dazu die Laufnummer, damit jeder Upload eindeutig ist (z. B. 1300.4)
+          BASIS=$(node -p "const [a,b,c]=require('./package.json').version.split('.').map(Number); a*10000+b*100+c")
+          echo "BUILD=$BASIS.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Verteilungszertifikat importieren
+        env:
+          P12: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          P12_PW: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+        run: |
+          KC="$RUNNER_TEMP/signing.keychain-db"
+          KC_PW=$(uuidgen)
+          printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security create-keychain -p "$KC_PW" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KC_PW" "$KC"
+          security import "$RUNNER_TEMP/dist.p12" -P "$P12_PW" -A -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KC_PW" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/dist.p12"
+          security find-identity -v -p codesigning "$KC" | grep -q "Apple Distribution\|iPhone Distribution" \
+            || { echo "::error::Im Zertifikat steckt keine Verteilungs-Identität (Kennwort falsch?)"; exit 1; }
+
+      - name: Archiv bauen (unsigniert)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)" || true
+          [ -d "$RUNNER_TEMP/App.xcarchive" ] || { echo "::error::Archiv wurde nicht erstellt"; tail -60 "$RUNNER_TEMP/archive.log"; exit 1; }
+
+      - name: Zu TestFlight hochladen
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER"
+          echo "### Schulversion hochgeladen: Version $VERSION, Build $BUILD" >> "$GITHUB_STEP_SUMMARY"
+          echo "Nach 10–30 Minuten Verarbeitung erscheint der Build in App Store Connect → TestFlight." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Schlüssel löschen
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/AuthKey.p8"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true

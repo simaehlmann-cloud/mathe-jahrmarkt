@@ -70,6 +70,11 @@
   let auftraege = $derived(p?.auftraege?.liste ?? []);
   let auftragsBuden = $derived(new Set(auftraege.filter((a) => !a.erledigt).map((a) => a.bude)));
   let erledigt = $derived(auftraege.filter((a) => a.erledigt).length);
+  // Schulversion: Aufträge der Lehrkraft (in der Familien-App immer leer)
+  let lehrerAuftraege = $derived(p && app.schule ? app.schule.auftraegeFuer(app.bestand, p) : []);
+  let lehrerBuden = $derived(new Set(lehrerAuftraege.filter((a) => !a.erledigt && a.bude !== null).map((a) => a.bude as string)));
+  let lehrerOffen = $derived(lehrerAuftraege.filter((a) => !a.erledigt).length);
+  let planBuden = $derived(lehrerBuden.size ? new Set([...auftragsBuden, ...lehrerBuden]) : auftragsBuden);
   let feiern = $derived(p && p.gesehen.intro ? offeneFeiern(p) : []);
   let tage = $derived(p ? spieltageDieseWoche(p, new Date()) : 0);
   let wocheGeschafft = $derived(p ? p.belohnt.includes(`woche:${wochenKennung(new Date())}`) : false);
@@ -300,7 +305,11 @@
       return;
     }
     teleport = true;
-    setTimeout(() => app.zeige({ name: 'insel', anreise: 'teleport' }), 750);
+    setTimeout(() => {
+      // Bleibt die Bauinsel zu (Schulversion), bleibt man hier – das Glitzern endet trotzdem
+      teleport = false;
+      app.zeige({ name: 'insel', anreise: 'teleport' });
+    }, 750);
   }
 
   function zurFaehre() {
@@ -412,6 +421,17 @@
       planOffen = false;
       auftraegeOffen = false;
       void tick().then(() => (rundgangOffen = true));
+    } else if (p && p.gesehen.intro && dialog === null && !rundgangOffen && lehrerAuftraege.some((a) => !a.erledigt && !p.gesehen.hinweise.includes(`lehrer:${a.id}`))) {
+      // Schulversion: neuer Auftrag der Lehrkraft – einmal ansagen
+      const neu = lehrerAuftraege.filter((a) => !a.erledigt && !p.gesehen.hinweise.includes(`lehrer:${a.id}`));
+      dialog = {
+        saetze: [
+          neu.length === 1 ? 'Deine Lehrkraft hat dir einen Auftrag gegeben!' : `Deine Lehrkraft hat dir ${neu.length} Aufträge gegeben!`,
+          `${neu.map((a) => a.text).join(', ')}. Die blauen Fähnchen zeigen dir, wo. Unter „Aufträge“ findest du alles.`,
+        ],
+        danach: () =>
+          app.aendereProfil((q) => ({ ...q, gesehen: { ...q.gesehen, hinweise: [...q.gesehen.hinweise, ...neu.map((a) => `lehrer:${a.id}`).filter((h) => !q.gesehen.hinweise.includes(h))] } })),
+      };
     } else if (p && p.gesehen.intro && dialog === null && !rundgangOffen && auftraege.length > 0 && !p.gesehen.hinweise.includes('auftraege')) {
       // Einmal erklären, was die Fähnchen bedeuten
       dialog = {
@@ -635,7 +655,8 @@
               {/if}
               <div class="schild" class:zu={!info.spielbar}>{info.name}</div>
               {#if medaille}<div class="medaille m-{medaille}" aria-hidden="true" title="{STUFEN_NAME[medaille]} geschafft"><span>{medaille === 'gold' ? 'G' : medaille === 'silber' ? 'S' : 'B'}</span></div>{/if}
-              {#if auftragsBuden.has(o.id)}<div class="auftrag-fahne" aria-hidden="true"><span class="stange"></span><span class="tuch">Auftrag</span></div>{/if}
+              {#if lehrerBuden.has(o.id)}<div class="auftrag-fahne lehrer" aria-hidden="true"><span class="stange"></span><span class="tuch">Lehrer</span></div>
+              {:else if auftragsBuden.has(o.id)}<div class="auftrag-fahne" aria-hidden="true"><span class="stange"></span><span class="tuch">Auftrag</span></div>{/if}
             </div>
           {/if}
         {/each}
@@ -763,8 +784,8 @@
   </div>
 
   <div class="leiste">
-    <button class="ticket gelb" onclick={() => (auftraegeOffen = true)} aria-label="Tagesaufträge, {erledigt} von {auftraege.length} erledigt">
-      <Icon name="auftrag" groesse={22} /> Aufträge {erledigt}/{auftraege.length}
+    <button class="ticket gelb" onclick={() => (auftraegeOffen = true)} aria-label="Tagesaufträge, {erledigt} von {auftraege.length} erledigt{lehrerOffen ? `, ${lehrerOffen} offen von deiner Lehrkraft` : ''}">
+      <Icon name="auftrag" groesse={22} /> Aufträge {erledigt}/{auftraege.length}{#if lehrerOffen}<span class="lehrer-punkt" aria-hidden="true">{lehrerOffen}</span>{/if}
     </button>
     <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz' })} aria-label="Bauplatz"><Icon name="block" groesse={22} /><span class="lang"> Bauplatz</span></button>
     <button class="ticket hell" onclick={teleportieren} aria-label="Teleporter zur Bauinsel"><Icon name="insel" groesse={22} /><span class="lang"> Insel</span></button>
@@ -780,7 +801,23 @@
     <div class="tafel auftraege" role="dialog" aria-modal="true" aria-labelledby="auftraege-titel">
       <div class="markise"></div>
       <div class="inhalt">
-        <h2 id="auftraege-titel">Tagesaufträge</h2>
+        {#if lehrerAuftraege.length}
+          <h2 id="auftraege-titel">Von deiner Lehrkraft</h2>
+          <ul>
+            {#each lehrerAuftraege as a (a.id)}
+              <li class:fertig={a.erledigt} style="--f: #3c78d8">
+                <span class="haken" aria-hidden="true">{#if a.erledigt}<Icon name="haken" groesse={20} />{/if}</span>
+                <span class="was"><strong>{a.text}</strong><small>{a.bude === null ? 'einmal durchspielen' : a.stufe ? 'eine Runde in dieser Stufe' : 'eine Runde spielen'}</small></span>
+                {#if !a.erledigt}
+                  <button class="ticket rot klein" onclick={() => { auftraegeOffen = false; if (a.bude) zurBude(a.bude); else app.zeige({ name: 'check' }); }}>Hin</button>
+                {:else}<span class="erledigt">erledigt</span>{/if}
+              </li>
+            {/each}
+          </ul>
+          <h2>Tagesaufträge</h2>
+        {:else}
+          <h2 id="auftraege-titel">Tagesaufträge</h2>
+        {/if}
         <div class="wochenziel" aria-label="Wochenziel: an {Math.min(tage, WOCHENZIEL_TAGE)} von {WOCHENZIEL_TAGE} Tagen gespielt">
           <span>Wochenziel</span>
           {#each Array(WOCHENZIEL_TAGE) as _, i (i)}<span class="tag" class:an={i < tage} aria-hidden="true"></span>{/each}
@@ -806,7 +843,7 @@
   {/if}
 
   {#if planOffen}
-    <JahrmarktPlan {medaillen} auftraege={auftragsBuden} figur={pos} sternOffen={abendOffen} onzu={() => (planOffen = false)} onbude={(id) => { planOffen = false; zurBude(id); }} />
+    <JahrmarktPlan {medaillen} auftraege={planBuden} figur={pos} sternOffen={abendOffen} onzu={() => (planOffen = false)} onbude={(id) => { planOffen = false; zurBude(id); }} />
   {/if}
 
   {#if essen}
@@ -1539,6 +1576,20 @@
     color: var(--tinte);
     transform-origin: left center;
     animation: wehen 1.6s ease-in-out infinite alternate;
+  }
+  .auftrag-fahne.lehrer .tuch {
+    background: #8fb8f5;
+  }
+  .lehrer-punkt {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.4em;
+    height: 1.4em;
+    margin-left: 4px;
+    border-radius: 999px;
+    background: #3c78d8;
+    color: #fff;
+    font-size: 0.85em;
   }
   @keyframes wehen {
     to {

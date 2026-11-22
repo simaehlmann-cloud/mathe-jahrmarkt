@@ -1,4 +1,4 @@
-import { MAX_PROFILE, type Profil } from '../domain/profil';
+import { profilGrenze, type Profil } from '../domain/profil';
 import { SCHEMA, migriere, type Datenbestand } from './datenbestand';
 
 /**
@@ -34,7 +34,8 @@ export function sicherungEinspielen(bestand: Datenbestand, textInhalt: string): 
     throw new Error('Das ist keine Sicherung vom Mathe-Jahrmarkt.');
   }
   const r = roh as { schema?: unknown; profile?: unknown };
-  const geprueft = migriere({ schema: r.schema, profile: r.profile });
+  // Schulversion: bis zu 32 Profile, Klassen dieses Geräts bleiben am Profil
+  const geprueft = migriere({ schema: r.schema, profile: r.profile, ...(bestand.schule ? { schule: { klassen: bestand.schule.klassen } } : {}) });
   let profile: Profil[] = [...bestand.profile];
   let uebernommen = 0;
   let ersetzt = 0;
@@ -44,7 +45,7 @@ export function sicherungEinspielen(bestand: Datenbestand, textInhalt: string): 
     if (i >= 0) {
       profile = profile.map((q, j) => (j === i ? p : q));
       ersetzt++;
-    } else if (profile.length < MAX_PROFILE) {
+    } else if (profile.length < profilGrenze(!!bestand.schule)) {
       profile = [...profile, p];
       uebernommen++;
     } else {

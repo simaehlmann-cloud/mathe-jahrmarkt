@@ -1,3 +1,4 @@
+import { alleAenderungen, keineAenderung, vereinige, type Aenderung } from './aenderung';
 import { leererBestand, migriere, type Datenbestand } from './datenbestand';
 
 /** Schlüssel-Wert-Speicher. In der App: Capacitor Preferences. In Tests: Speicher im Arbeitsspeicher. */
@@ -61,23 +62,37 @@ export async function speichern(kv: KeyValue, bestand: Datenbestand): Promise<vo
   await kv.set(SCHLUESSEL, JSON.stringify(bestand));
 }
 
+/** Wohin der Speicherplan schreibt: ein Schlüssel (Familien-App) oder einzelne Dateien (Schulversion, services/ablage.ts). */
+export interface Ablage {
+  schreiben(bestand: Datenbestand, aenderung: Aenderung): Promise<void>;
+}
+
+const istKeyValue = (x: KeyValue | Ablage): x is KeyValue => 'get' in x && 'set' in x;
+
 /**
  * Bündelt schnelle Folgen von Änderungen zu einem Schreibvorgang.
  * `sofort()` schreibt ausstehende Änderungen sofort, z. B. wenn die App in den Hintergrund geht.
+ * Statt eines Bestands kann `vormerken` eine Funktion bekommen, die ihn erst beim Schreiben liefert
+ * (so wird bei vielen schnellen Änderungen nur einmal kopiert). Sie bekommt alle Änderungen seit dem letzten Schreiben.
  */
 export class Speicherplan {
   private timer: ReturnType<typeof setTimeout> | undefined;
-  private ausstehend: Datenbestand | undefined;
+  private ausstehend: Datenbestand | ((aenderung: Aenderung) => Datenbestand) | undefined;
+  private aenderung: Aenderung = keineAenderung();
   private laufend: Promise<void> = Promise.resolve();
+  private readonly ablage: Ablage;
 
   constructor(
-    private readonly kv: KeyValue,
+    ziel: KeyValue | Ablage,
     private readonly verzoegerungMs = 400,
     private readonly beiFehler: (e: unknown) => void = () => {},
-  ) {}
+  ) {
+    this.ablage = istKeyValue(ziel) ? { schreiben: (b) => speichern(ziel, b) } : ziel;
+  }
 
-  vormerken(bestand: Datenbestand): void {
+  vormerken(bestand: Datenbestand | ((aenderung: Aenderung) => Datenbestand), aenderung: Aenderung = alleAenderungen()): void {
     this.ausstehend = bestand;
+    this.aenderung = vereinige(this.aenderung, aenderung);
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.sofort(), this.verzoegerungMs);
   }
@@ -85,10 +100,19 @@ export class Speicherplan {
   sofort(): Promise<void> {
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
-    const daten = this.ausstehend;
+    const quelle = this.ausstehend;
+    const aenderung = this.aenderung;
     this.ausstehend = undefined;
-    if (!daten) return this.laufend;
-    this.laufend = this.laufend.then(() => speichern(this.kv, daten)).catch(this.beiFehler);
+    this.aenderung = keineAenderung();
+    if (!quelle) return this.laufend;
+    const daten = typeof quelle === 'function' ? quelle(aenderung) : quelle;
+    this.laufend = this.laufend
+      .then(() => this.ablage.schreiben(daten, aenderung))
+      .catch((e: unknown) => {
+        // Beim nächsten Mal alles schreiben, damit nichts verloren geht
+        this.aenderung = vereinige(this.aenderung, alleAenderungen());
+        this.beiFehler(e);
+      });
     return this.laufend;
   }
 }

@@ -61,6 +61,15 @@ ok(/<Elternsperre /.test(eltern) && /\{#if !offen\}/.test(eltern), 'Elternbereic
 ok(!quellen.some((q) => /elternsperre(Aus|Deaktiv|Abschalt)/i.test(q)), 'Die Elternsperre darf sich nicht abschalten lassen');
 ok(!quellen.filter((q) => q !== eltern).some((q) => /app\.kauf\.kaufen\(/.test(q)), 'Kauf nur im Elternbereich hinter der Sperre');
 
+/* 6b. Schulversion: Lehrerbereich beginnt mit der Lehrer-PIN, schließt sich von selbst */
+const lehrer = readFileSync(join(wurzel, 'src/schule/app/Lehrer.svelte'), 'utf8');
+ok(/<LehrerTor /.test(lehrer) && /\{#if !offen\}/.test(lehrer), 'Lehrerbereich muss mit der Lehrer-PIN beginnen');
+ok(/AUTO_ZU_MS/.test(lehrer), 'Lehrerbereich muss sich nach einer Weile ohne Eingabe schließen');
+if (process.env.VITE_AUSGABE === 'schule') {
+  // Kein Kauf in der Schulversion (Apple School Manager kann keine In-App-Käufe verteilen)
+  ok(code.includes('Lehrerbereich einrichten'), 'Schulversion: Startbildschirm der Schule fehlt im Bundle');
+}
+
 /* 7. Die iOS-Version nennt keine anderen Plattformen (Apple-Richtlinie 2.3.10) */
 if (process.env.VITE_PLATTFORM === 'ios') {
   for (const w of ['Google Play', 'Play Store', 'Android-']) ok(!code.includes(w), `iOS-Build enthält „${w}“ – Text mit __PLATTFORM__ unterscheiden`);

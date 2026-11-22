@@ -89,9 +89,24 @@ export interface Profil {
   fundbuero: Fundsache[];
   /** Heutige Spielzeit für die Pausen-Erinnerung. */
   spielzeit: Spielzeit;
+  /** Nur Schulversion: Kennung der Klasse. */
+  klasse?: string | undefined;
+  /** Nur Schulversion: Bildpasswort (Kennungen der Bildsymbole in Reihenfolge). */
+  passwort?: string[] | undefined;
+  /**
+   * Nur Schulversion: Die Lehrkraft legt Profile ohne Figur an. Beim ersten Anmelden gestaltet das Kind
+   * seine Figur; danach steht hier true.
+   */
+  figurGewaehlt?: boolean | undefined;
+  /** Nur Schulversion: frühere Jahrmarkt-Checks für den Vorher-nachher-Vergleich (der letzte steht auch in `check`). */
+  checkVerlauf?: CheckErgebnis[] | undefined;
 }
 
 export const MAX_PROFILE = 4;
+/** Schulversion: ein Klassensatz an einem Gerät. */
+export const MAX_PROFILE_SCHULE = 32;
+/** Wie viele Profile auf ein Gerät passen. */
+export const profilGrenze = (schule: boolean): number => (schule ? MAX_PROFILE_SCHULE : MAX_PROFILE);
 export const MAX_RUNDEN = 500;
 export const MAX_NAME = 16;
 
@@ -137,6 +152,10 @@ export function fortschrittZurueckgesetzt(p: Profil): Profil {
     gesehen: { ...neu.gesehen, intro: p.gesehen.intro, hinweise: p.gesehen.hinweise },
     // Die heutige Spielzeit zählt weiter – Zurücksetzen ist kein Weg um die Pause herum
     spielzeit: p.spielzeit,
+    // Schulversion: Klasse, Bildpasswort und die gestaltete Figur bleiben
+    ...(p.klasse !== undefined ? { klasse: p.klasse } : {}),
+    ...(p.passwort !== undefined ? { passwort: [...p.passwort] } : {}),
+    ...(p.figurGewaehlt !== undefined ? { figurGewaehlt: p.figurGewaehlt } : {}),
   };
 }
 

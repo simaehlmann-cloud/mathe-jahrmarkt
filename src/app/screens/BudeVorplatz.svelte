@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SCHULE } from '../../ausgabe';
   import { STUFEN, STUFEN_NAME, budeInfo, type Stufe } from '../../domain/buden';
   import { budenZustand, istGeschafft, stufenStand } from '../../domain/fortschritt/fortschritt';
   import { stufeFreigabe } from '../../domain/fortschritt/kaufgrenze';
@@ -23,8 +24,13 @@
     gewaehlt = naechste ?? 'bronze';
   });
 
+  /**
+   * Familien-Bestenliste aller Profile. Schulversion: nur die eigene Klasse und nur, wenn die Lehrkraft sie
+   * eingeschaltet hat (sonst sieht jedes Kind nur seine eigenen Rekorde).
+   */
   let bestenliste = $derived(
     app.bestand.profile
+      .filter((q) => !SCHULE || (app.bestand.schule?.bestenliste === true && q.klasse !== undefined && q.klasse === p?.klasse))
       .map((q) => ({ p: q, rekord: stufenStand(q, bude, gewaehlt)?.rekord ?? 0 }))
       .filter((x) => x.rekord > 0)
       .sort((a, b) => b.rekord - a.rekord),
@@ -103,7 +109,7 @@
 
         {#if bestenliste.length > 0}
           <div class="familie">
-            <h2>Familien-Bestenliste {STUFEN_NAME[gewaehlt]}</h2>
+            <h2>{SCHULE ? 'Bestenliste der Klasse' : 'Familien-Bestenliste'} {STUFEN_NAME[gewaehlt]}</h2>
             <ol>
               {#each bestenliste as e (e.p.id)}
                 <li class:ich={e.p.id === p.id}>

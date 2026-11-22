@@ -1,5 +1,8 @@
 <script lang="ts" module>
   export type { Seite } from './inselTeile';
+  import type { Aktion } from '../../domain/insel';
+  /** Figur sitzt, liegt oder spielt an einem Spielgerät (Feld des Teils, Ebene, Höhe in Ebenen, Drehung des Teils). */
+  export type Pose = { x: number; y: number; z: number; typ: 'sitzen' | 'liegen' | Aktion; hoehe: number; richtung?: number };
 </script>
 
 <script lang="ts">
@@ -12,7 +15,7 @@
   import type { Ansicht } from './Figur.svelte';
   import TierBild from './TierBild.svelte';
   import TeilExtra from './TeilExtra.svelte';
-  import { A, C, KAKTUS, ZAUNARTIG, zeichner, type Nachbarn, type Seite } from './inselTeile';
+  import { A, C, KAKTUS, ZAUNARTIG, ZAUN_PARTNER, zeichner, type Nachbarn, type Seite } from './inselTeile';
 
   /**
    * Die Bauinsel in isometrischer Ansicht. Alles wird in Diagonalreihen (x + y) von hinten nach vorne gezeichnet,
@@ -33,6 +36,7 @@
     gleitPos = null,
     funkeln = false,
     pose = null,
+    gestreichelt = null,
     licht = 1,
     frei = false,
     drehMarken = false,
@@ -56,7 +60,9 @@
     /** Kurzes Glitzern um die Figur (Ankunft mit dem Teleporter). */
     funkeln?: boolean;
     /** Figur sitzt oder liegt auf einem Möbel (Feld des Möbels, Ebene, Sitz-/Liegehöhe). */
-    pose?: { x: number; y: number; z: number; typ: 'sitzen' | 'liegen' | 'schaukeln'; hoehe: number; richtung?: number } | null;
+    pose?: Pose | null;
+    /** Angetipptes Tier (Nummer in stand.tiere) mit seinem Laut: hüpft und zeigt eine Sprechblase. */
+    gestreichelt?: { nr: number; laut: string } | null;
     /** Tageslicht: 1 = Tag, 0 = tiefe Nacht (seit 0.14). Lampen und Fenster leuchten dann. */
     licht?: number;
     /** Freie Version (ohne Zusatzpaket): Tor mit Schild am Anfang der Brücke zur zweiten Insel. */
@@ -117,6 +123,7 @@
   const richtungen = $derived(stand.richtung);
   /**
    * Offene Tür: Steht oder geht die Figur durch ein Türfeld (oder direkt davor), ist diese Tür offen.
+   * Seit 0.18.1 gilt das auch für Gartentore.
    * Nur der Schlüssel wird verglichen – das Bild wird nur neu berechnet, wenn eine Tür auf- oder zugeht.
    */
   const tuerAuf = $derived.by(() => {
@@ -127,7 +134,8 @@
         if (x < 0 || y < 0 || x >= W || y >= H) continue;
         const i = y * W + x;
         const h = LANDSCHAFT.hoehe[i] ?? 0;
-        if ((stapel[i] ?? [])[zf - h] !== 101) continue;
+        const teil = (stapel[i] ?? [])[zf - h];
+        if (teil !== 101 && teil !== 105) continue;
         if (Math.abs(pos.x - x) <= 1.05 && Math.abs(pos.y - y) <= 1.05 && Math.abs(pos.x - x) + Math.abs(pos.y - y) <= 1.05) return `${x},${y},${zf}`;
       }
     return '';
@@ -166,14 +174,13 @@
       const ni = ny * W + nx;
       return (stapel[ni] ?? [])[nz - (LANDSCHAFT.hoehe[ni] ?? 0)] ?? LUFT;
     };
-    /** Zaun verbindet sich mit Zaun, Tor, Hecke und Mauern; Hecken nur mit Hecken und Mauern. */
-    const passt = (eigen: number, b: number): boolean =>
-      b !== LUFT && (BLOCKARTEN.some((k) => k.id === b) || (eigen === 123 ? b === 123 : ZAUNARTIG.has(b)));
-    const nachbarnVon = (nx: number, ny: number, nz: number, eigen: number): Nachbarn => ({
-      px: passt(eigen, teilBei(nx + 1, ny, nz)),
-      mx: passt(eigen, teilBei(nx - 1, ny, nz)),
-      py: passt(eigen, teilBei(nx, ny + 1, nz)),
-      my: passt(eigen, teilBei(nx, ny - 1, nz)),
+    /** Zaun und Gartentor schließen an Zaun, Tor, Hecke und Mauern an. Hecken verbinden sich nicht (seit 0.18.1). */
+    const passt = (b: number): boolean => b !== LUFT && (BLOCKARTEN.some((k) => k.id === b) || ZAUN_PARTNER.has(b));
+    const nachbarnVon = (nx: number, ny: number, nz: number): Nachbarn => ({
+      px: passt(teilBei(nx + 1, ny, nz)),
+      mx: passt(teilBei(nx - 1, ny, nz)),
+      py: passt(teilBei(nx, ny + 1, nz)),
+      my: passt(teilBei(nx, ny - 1, nz)),
     });
     const offen = tuerAuf;
     const sperre = frei;
@@ -238,7 +245,8 @@
             liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen: dunkler(blatt), tippbar: true, durchsichtig: vorne, extra: 'tuerauf' });
             return;
           }
-          const flaechen = a >= 100 ? moebel(a, x, y, z, rtg[`${x},${y},${z}`] ?? 0, schaukel === `${x},${y},${z}` ? 'sitz' : undefined, ZAUNARTIG.has(a) ? nachbarnVon(x, y, z, a) : undefined) : quader(x, y, z, x + 1, y + 1, z + 1, block?.oben ?? '#ccc', block?.links ?? '#999', block?.rechts ?? '#aaa');
+          const stelle = `${x},${y},${z}`;
+          const flaechen = a >= 100 ? moebel(a, x, y, z, rtg[stelle] ?? 0, schaukel === stelle ? 'sitz' : a === 105 && offen === stelle ? 'offen' : undefined, ZAUNARTIG.has(a) ? nachbarnVon(x, y, z) : undefined) : quader(x, y, z, x + 1, y + 1, z + 1, block?.oben ?? '#ccc', block?.links ?? '#999', block?.rechts ?? '#aaa');
           const lampe = LAMPEN.has(a);
           liste[rr]!.push({
             schluessel: `s${x},${y},${z}`,
@@ -301,8 +309,27 @@
     const winkel = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
     return { fuss, kopf: [dx, dy] as const, winkel, skala: Math.max(0.45, Math.min(1, laenge / 50)) };
   });
+  /**
+   * Rutschen (seit 0.18.1): Die Figur startet oben auf der Rutsche und gleitet zum unteren Ende.
+   * Punkte im Feld werden wie das Teil selbst gedreht (Viertelumdrehungen um die Feldmitte).
+   */
+  const rutsche = $derived.by(() => {
+    if (pose?.typ !== 'rutschen') return null;
+    const imFeld = (u: number, v: number, h: number): [number, number] => {
+      let a = u;
+      let b = v;
+      for (let i = 0; i < (pose.richtung ?? 0) % 4; i++) [a, b] = [1 - b, a];
+      const [p, q] = dreh(pose.x + a, pose.y + b);
+      return [(p - q) * A, ((p + q) * A) / 2 - (pose.z + h) * C];
+    };
+    const start = imFeld(0.28, 0.78, 1.0);
+    const ende = imFeld(0.95, 0.78, 0.12);
+    return { start, weg: [ende[0] - start[0], ende[1] - start[1]] as const };
+  });
   const figurPunkt = $derived(
-    liegen
+    rutsche
+      ? rutsche.start
+      : liegen
       ? liegen.fuss
       : pose
       ? punktVon(pose.x, pose.y, pose.z + pose.hoehe)
@@ -352,12 +379,12 @@
   /** Tiere je Reihe. */
   const tiere = $derived(stand.tiere);
   const tierReihen = $derived.by(() => {
-    const m = new Map<number, { art: number; px: number; py: number; schluessel: string }[]>();
+    const m = new Map<number, { art: number; px: number; py: number; schluessel: string; nr: number }[]>();
     tiere.forEach((t, k) => {
       const [a, b] = dreh(t.x + 0.5, t.y + 0.5);
       const rr = reihe(t.x, t.y);
       const l = m.get(rr) ?? [];
-      l.push({ art: t.art, px: (a - b) * A, py: ((a + b) * A) / 2 - t.z * C, schluessel: `tier${k}` });
+      l.push({ art: t.art, px: (a - b) * A, py: ((a + b) * A) / 2 - t.z * C, schluessel: `tier${k}`, nr: k });
       m.set(rr, l);
     });
     return m;
@@ -487,7 +514,18 @@
         </g>
       {/if}
       {#each tierReihen.get(rr) ?? [] as t (t.schluessel)}
-        <g class="tier" style="transform: translate({t.px}px, {t.py}px){lichtStufe < 1 ? `; filter: brightness(${(0.55 + 0.45 * lichtStufe).toFixed(2)})` : ''}" pointer-events="none"><TierBild art={t.art} /></g>
+        <g class="tier" style="transform: translate({t.px}px, {t.py}px){lichtStufe < 1 ? `; filter: brightness(${(0.55 + 0.45 * lichtStufe).toFixed(2)})` : ''}" pointer-events="none">
+          {#if gestreichelt?.nr === t.nr}
+            <g class="freut"><TierBild art={t.art} /></g>
+            <g class="laut" aria-hidden="true">
+              <rect x="-26" y="-46" width="52" height="20" rx="10" fill="#fffdf7" stroke="#1f2a6b" stroke-width="1.5" />
+              <text x="0" y="-32" text-anchor="middle">{gestreichelt.laut}</text>
+              <path d="M20 -54 c-3 -5 -10 -2 -6 3 l6 6 l6 -6 c4 -5 -3 -8 -6 -3 Z" fill="#e23a4e" stroke="#1f2a6b" stroke-width="1" />
+            </g>
+          {:else}
+            <TierBild art={t.art} />
+          {/if}
+        </g>
       {/each}
       {#if rr === fReihe}
         <g class="figur" transform="translate({figurPunkt[0]} {figurPunkt[1]})" pointer-events="none" style={lichtStufe < 1 ? `filter: brightness(${(0.65 + 0.35 * lichtStufe).toFixed(2)})` : undefined}>
@@ -498,6 +536,20 @@
               <line x1="7" y1="0" x2="7" y2={-(1.2 - pose.hoehe) * C} stroke={d('#3a3d4f')} stroke-width="1.6" />
               <g class="sitzt"><InselFigur {figur} {aussehen} sitzt g={48} /></g>
               <rect x="-10" y="-1" width="20" height="4" rx="1" fill={d('#d9a066')} stroke="#1f2a6b" stroke-width="1" />
+            </g>
+          {:else if pose?.typ === 'springen'}
+            <!-- Trampolin: hoch und runter -->
+            <g class="springt"><InselFigur {figur} {aussehen} ansicht="vorne" /></g>
+          {:else if pose?.typ === 'rutschen' && rutsche}
+            <!-- Rutsche: kurz oben sitzen, dann hinunter -->
+            <g class="rutscht" style="--rx: {rutsche.weg[0].toFixed(1)}px; --ry: {rutsche.weg[1].toFixed(1)}px"><g class="sitzt"><InselFigur {figur} {aussehen} sitzt ansicht="vorne" /></g></g>
+          {:else if pose?.typ === 'buddeln'}
+            <!-- Sandkasten: sitzen und buddeln, Sand fliegt -->
+            <g class="sitzt"><InselFigur {figur} {aussehen} sitzt ansicht="vorne" /></g>
+            <g class="sand" aria-hidden="true">
+              {#each [[-14, -4], [12, -6], [-4, -2], [16, -2], [-18, -8]] as [sx, sy], k (k)}
+                <circle cx={sx} cy={sy} r="2.2" fill={d('#e8cf86')} stroke={d('#b8994e')} stroke-width="0.6" style="animation-delay: {k * 180}ms" />
+              {/each}
             </g>
           {:else}
             <g class:sitzt={pose?.typ === 'sitzen'} transform={liegen ? `rotate(${liegen.winkel.toFixed(1)}) scale(${liegen.skala.toFixed(2)})` : undefined}>
@@ -569,6 +621,82 @@
       rotate: 20deg;
     }
   }
+  /* Trampolin: springen (seit 0.18.1) */
+  .springt {
+    animation: springen 0.8s cubic-bezier(0.3, 0, 0.4, 1) infinite;
+  }
+  @keyframes springen {
+    0%,
+    100% {
+      translate: 0 0;
+      scale: 1.06 0.94;
+    }
+    12% {
+      scale: 1;
+    }
+    50% {
+      translate: 0 -34px;
+    }
+  }
+  /* Rutsche: oben kurz sitzen, dann hinunter */
+  .rutscht {
+    animation: rutschen 2.4s ease-in forwards;
+  }
+  @keyframes rutschen {
+    0%,
+    30% {
+      translate: 0 0;
+    }
+    85%,
+    100% {
+      translate: var(--rx) var(--ry);
+    }
+  }
+  /* Sandkasten: Sandkörner fliegen hoch */
+  .sand circle {
+    opacity: 0;
+    animation: sand 0.9s ease-out infinite;
+  }
+  @keyframes sand {
+    0% {
+      opacity: 1;
+      translate: 0 0;
+    }
+    100% {
+      opacity: 0;
+      translate: 0 -18px;
+    }
+  }
+  /* Tier antippen: hüpft und sagt etwas */
+  .freut {
+    animation: freut 0.45s ease-out 3;
+  }
+  @keyframes freut {
+    40% {
+      translate: 0 -9px;
+    }
+  }
+  .laut {
+    animation: laut 1.6s ease-out forwards;
+  }
+  .laut text {
+    font: 900 11px Nunito, sans-serif;
+    fill: #1f2a6b;
+  }
+  @keyframes laut {
+    0% {
+      opacity: 0;
+      translate: 0 6px;
+    }
+    15%,
+    80% {
+      opacity: 1;
+      translate: 0 0;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
   .zzz text {
     font: 900 11px Nunito, sans-serif;
     fill: #fffdf7;
@@ -623,7 +751,9 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .tier { animation: none; }
-    .schaukeln, .schaukel { animation: none; }
+    .schaukeln, .schaukel, .springt, .freut, .laut { animation: none; }
+    .rutscht { animation: none; translate: var(--rx) var(--ry); }
+    .sand circle { animation: none; opacity: 0; }
     .funkeln path { animation: none; opacity: 0; }
   }
 </style>

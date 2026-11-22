@@ -1,3 +1,4 @@
+import { SCHULE } from '../ausgabe';
 /**
  * Texte der Geschichte. Höchstens zwei kurze Sätze pro Blase, alles wird vorgelesen.
  */
@@ -40,7 +41,13 @@ export const ENTDECKUNGEN: Readonly<Record<string, { titel: string; text: string
 
 /** Rundgang mit Flinka (seit 0.16): einmal nach der Begrüßung und jederzeit über das Menü. */
 export const RUNDGANG = (name: string): { text: string; ziel?: string }[] => [
-  { text: `Komm, ${name}, ich zeig dir schnell alles! Das bist du. Tipp hier, wenn jemand anderes spielen will.`, ziel: '.spieler-knopf' },
+  {
+    text:
+      SCHULE
+        ? `Komm, ${name}, ich zeig dir schnell alles! Das bist du. Tipp hier, wenn du fertig bist und dich abmelden willst.`
+        : `Komm, ${name}, ich zeig dir schnell alles! Das bist du. Tipp hier, wenn jemand anderes spielen will.`,
+    ziel: '.spieler-knopf',
+  },
   { text: 'Das sind deine Taler. Für jede Runde gibt es welche – im Andenkenstand und an den Essbuden kannst du sie ausgeben.', ziel: 'header .taler' },
   { text: 'Tipp eine Bude an, dann läufst du hin. Die Medaille daran zeigt, wie weit du schon bist: Bronze, Silber, Gold.', ziel: '.welt .bude' },
   { text: 'Die gelben Fähnchen sind deine drei Tagesaufträge. Hier ist die Liste.', ziel: '.leiste .ticket.gelb' },

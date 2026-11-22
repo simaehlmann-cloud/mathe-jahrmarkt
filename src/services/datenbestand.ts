@@ -19,7 +19,8 @@ import { pruefeInsel } from '../domain/insel';
 import { pruefeFundbuero } from '../domain/fundbuero';
 import { pruefeSpielzeit, STANDARD_SPIELZEIT, SPIELZEIT_OPTIONEN } from '../domain/spielzeit';
 import { STUFEN } from '../domain/buden';
-import { FIGUREN, MAX_PROFILE, bereinigeName, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
+import type { SchulDaten } from '../schule/domain/schuldaten';
+import { FIGUREN, bereinigeName, profilGrenze, type Abzeichen, type FigurId, type Profil, type Runde, type StufenStand } from '../domain/profil';
 import type { Ereignis, Wochenwert } from '../domain/lernprofil/lernprofil';
 
 export type Schrift = 'normal' | 'gross' | 'sehrGross';
@@ -67,6 +68,8 @@ export interface Datenbestand {
   aktiv?: string | undefined;
   einstellungen: Einstellungen;
   paket: { gekauft: boolean; seit?: number | undefined };
+  /** Nur in der Schulversion: Klassen, Lehrer-PIN, Gerät, eingesammelte Ergebnisse. */
+  schule?: SchulDaten | undefined;
 }
 
 export const SCHEMA = 3;
@@ -88,21 +91,23 @@ export const standardEinstellungen = (): Einstellungen => ({
   spielzeitMin: STANDARD_SPIELZEIT,
 });
 
-export const leererBestand = (): Datenbestand => ({
+/** Leerer Bestand. Die Schulversion gibt ihre leeren Schuldaten mit. */
+export const leererBestand = (schule?: SchulDaten): Datenbestand => ({
   schema: SCHEMA,
   profile: [],
   einstellungen: standardEinstellungen(),
   paket: { gekauft: false },
+  ...(schule ? { schule } : {}),
 });
 
 /* ---------- Prüfung unbekannter Daten (Speicher, Sicherungsdatei) ---------- */
 
-const istObjekt = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
-const zahl = (x: unknown, ersatz: number, min = -Infinity, max = Infinity): number =>
+export const istObjekt = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+export const zahl = (x: unknown, ersatz: number, min = -Infinity, max = Infinity): number =>
   typeof x === 'number' && Number.isFinite(x) ? Math.min(max, Math.max(min, x)) : ersatz;
-const text = (x: unknown, ersatz = ''): string => (typeof x === 'string' ? x : ersatz);
-const bool = (x: unknown, ersatz = false): boolean => (typeof x === 'boolean' ? x : ersatz);
-const liste = <T>(x: unknown, element: (y: unknown) => T | undefined): T[] =>
+export const text = (x: unknown, ersatz = ''): string => (typeof x === 'string' ? x : ersatz);
+export const bool = (x: unknown, ersatz = false): boolean => (typeof x === 'boolean' ? x : ersatz);
+export const liste = <T>(x: unknown, element: (y: unknown) => T | undefined): T[] =>
   Array.isArray(x) ? x.map(element).filter((y): y is T => y !== undefined) : [];
 
 function pruefeStand(x: unknown): StufenStand | undefined {
@@ -198,7 +203,26 @@ export function pruefeProfil(x: unknown): Profil | undefined {
     fundbuero: pruefeFundbuero(x.fundbuero),
     spielzeit: pruefeSpielzeit(x.spielzeit),
     insel: pruefeInsel(x.insel),
+    // Schulversion (fehlt in der Familien-App). Hier nur die Form; die Schulversion prüft den Inhalt
+    // (Klasse vorhanden, Bildsymbole bekannt) in src/schule/domain/pruefen.ts.
+    ...(typeof x.klasse === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(x.klasse) ? { klasse: x.klasse } : {}),
+    ...(Array.isArray(x.passwort) && x.passwort.length === 3 && x.passwort.every((z) => typeof z === 'string' && /^[a-z]{1,20}$/.test(z)) ? { passwort: [...(x.passwort as string[])] } : {}),
+    ...(typeof x.figurGewaehlt === 'boolean' ? { figurGewaehlt: x.figurGewaehlt } : {}),
+    ...(Array.isArray(x.checkVerlauf) ? { checkVerlauf: liste(x.checkVerlauf, (c) => pruefeCheck(c) ?? undefined).slice(-MAX_CHECKVERLAUF) } : {}),
   };
+}
+
+/** Schulversion: so viele Jahrmarkt-Checks je Kind bleiben für den Vorher-nachher-Vergleich. */
+export const MAX_CHECKVERLAUF = 8;
+
+/**
+ * Prüfung der Schuldaten. Die Schulversion meldet sie beim Start an (src/schule/domain/pruefen.ts);
+ * die Familien-App kennt sie nicht und lässt ein Feld `schule` einfach weg.
+ */
+export type SchulPruefung = (roh: unknown, profile: Profil[]) => { schule: SchulDaten; profile: Profil[] };
+let schulPruefung: SchulPruefung | null = null;
+export function setzeSchulPruefung(f: SchulPruefung | null): void {
+  schulPruefung = f;
 }
 
 export function pruefeEinstellungen(x: unknown): Einstellungen {
@@ -222,20 +246,34 @@ export function pruefeEinstellungen(x: unknown): Einstellungen {
   };
 }
 
-/** Prüft einen Bestand aktueller Schema-Version. Ungültige Profile fallen weg, Lücken werden gefüllt. */
+/**
+ * Prüft einen Bestand aktueller Schema-Version. Ungültige Profile fallen weg, Lücken werden gefüllt.
+ * Ein Bestand mit Feld `schule` ist einer der Schulversion (bis zu 32 Profile), sonst bis zu 4.
+ */
 export function pruefeBestand(x: unknown): Datenbestand {
   if (!istObjekt(x)) throw new Error('Kein Datenbestand');
+  const istSchule = istObjekt(x.schule) && schulPruefung !== null;
   const profile = liste(x.profile, pruefeProfil);
-  const eindeutig = profile.filter((p, i) => profile.findIndex((q) => q.id === p.id) === i).slice(0, MAX_PROFILE);
-  const aktiv = typeof x.aktiv === 'string' && eindeutig.some((p) => p.id === x.aktiv) ? x.aktiv : undefined;
+  const eindeutig = profile.filter((p, i) => profile.findIndex((q) => q.id === p.id) === i).slice(0, profilGrenze(istSchule));
+  const schule = istSchule && schulPruefung ? schulPruefung(x.schule, eindeutig) : undefined;
+  const gepruefte = schule ? schule.profile : eindeutig;
+  const aktiv = typeof x.aktiv === 'string' && gepruefte.some((p) => p.id === x.aktiv) ? x.aktiv : undefined;
   const paket = istObjekt(x.paket) ? x.paket : {};
   return {
     schema: SCHEMA,
-    profile: eindeutig,
+    profile: gepruefte,
     aktiv,
     einstellungen: pruefeEinstellungen(x.einstellungen),
     paket: { gekauft: bool(paket.gekauft), seit: typeof paket.seit === 'number' ? paket.seit : undefined },
+    ...(schule ? { schule: schule.schule } : {}),
   };
+}
+
+/** Zufällige Kennung aus Buchstaben und Ziffern, z. B. für Profile, Klassen und Geräte. */
+export function neueKennung(vorsilbe: string): string {
+  const zufall = new Uint32Array(2);
+  globalThis.crypto.getRandomValues(zufall);
+  return `${vorsilbe}${Date.now().toString(36)}${[...zufall].map((z) => z.toString(36)).join('')}`.slice(0, 40);
 }
 
 /* ---------- Migrationen ---------- */

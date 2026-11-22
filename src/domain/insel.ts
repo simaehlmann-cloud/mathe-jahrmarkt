@@ -95,6 +95,18 @@ export const EINRICHTUNG: readonly Einrichtung[] = [
 ];
 /** Hier kann sich die Figur hinsetzen (Sitzhöhe in Ebenen) bzw. hinlegen. */
 export const SITZEN: Readonly<Record<number, number>> = { 116: 0.36, 117: 0.4, 124: 0.42, 136: 0.36 };
+/** Kurze Spielplatz-Aktionen der Figur (nur Anzeige): schaukeln, springen, rutschen, buddeln. */
+export type Aktion = 'schaukeln' | 'springen' | 'rutschen' | 'buddeln';
+/**
+ * Spielgeräte: Die Figur läuft hin (beim Sandkasten hinein), macht eine kurze Aktion und hört dann von selbst auf.
+ * hoehe: Höhe in Ebenen, auf der die Figur steht oder sitzt; ms: Dauer. Schaukel seit 0.14, der Rest seit 0.18.1.
+ */
+export const AKTIONEN: Readonly<Record<number, { typ: Aktion; hoehe: number; ms: number; hinein?: boolean }>> = {
+  160: { typ: 'schaukeln', hoehe: 0.42, ms: 3600 },
+  163: { typ: 'springen', hoehe: 0.36, ms: 3200 },
+  161: { typ: 'rutschen', hoehe: 1.1, ms: 2400 },
+  162: { typ: 'buddeln', hoehe: 0.04, ms: 3200, hinein: true },
+};
 /** Auf diese Teile setzt sich die Figur und schaukelt eine Runde (Sitzhöhe in Ebenen). */
 export const SCHAUKELN: Readonly<Record<number, number>> = { 160: 0.42 };
 /** Diese Einrichtung sieht von allen Seiten gleich aus oder bestimmt den Weg (Tür, Treppe) – sie wird nicht gedreht. */
@@ -110,16 +122,18 @@ export interface TierArt {
   id: number;
   name: string;
   preis: number;
+  /** Was das Tier sagt, wenn man es antippt (seit 0.18.1). */
+  laut: string;
 }
 export const TIERE: readonly TierArt[] = [
-  { id: 140, name: 'Schaf', preis: 30 },
-  { id: 141, name: 'Hund', preis: 35 },
-  { id: 142, name: 'Katze', preis: 30 },
-  { id: 143, name: 'Huhn', preis: 15 },
-  { id: 144, name: 'Kaninchen', preis: 20 },
-  { id: 145, name: 'Pferd', preis: 45 },
-  { id: 146, name: 'Ente', preis: 15 },
-  { id: 147, name: 'Kuh', preis: 40 },
+  { id: 140, name: 'Schaf', preis: 30, laut: 'Mäh!' },
+  { id: 141, name: 'Hund', preis: 35, laut: 'Wuff!' },
+  { id: 142, name: 'Katze', preis: 30, laut: 'Miau!' },
+  { id: 143, name: 'Huhn', preis: 15, laut: 'Gack!' },
+  { id: 144, name: 'Kaninchen', preis: 20, laut: 'Schnuffel!' },
+  { id: 145, name: 'Pferd', preis: 45, laut: 'Wieher!' },
+  { id: 146, name: 'Ente', preis: 15, laut: 'Quak!' },
+  { id: 147, name: 'Kuh', preis: 40, laut: 'Muh!' },
 ];
 export const tierArt = (id: number): TierArt | undefined => TIERE.find((t) => t.id === id);
 export interface Tier {
@@ -520,6 +534,7 @@ export function mitRichtung(s: InselStand, x: number, y: number, z: number, r: n
   return { ...s, richtung };
 }
 
+const HECKE = 123;
 /** Sitzmöbel schauen von selbst zum Tisch (Lehne auf der anderen Seite). */
 const SITZMOEBEL = new Set([116, 117, 124, 136]);
 const TISCHE = new Set([112, 138]);
@@ -527,7 +542,8 @@ const TISCHE = new Set([112, 138]);
 const BLICK: readonly [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 /**
  * Richtung beim Setzen ohne eigene Wahl (seit 0.14): Stuhl, Sessel, Sofa und Bank schauen zu einem Tisch daneben,
- * ein Bett stellt sich mit dem Kopfende an eine Wand daneben. undefined = nichts Passendes in der Nähe.
+ * ein Bett stellt sich mit dem Kopfende an eine Wand daneben. Seit 0.18.1: Eine Hecke reiht sich an eine
+ * Hecke daneben an (längs zur Nachbarhecke). undefined = nichts Passendes in der Nähe.
  */
 export function autoRichtung(s: InselStand, x: number, y: number, z: number, art: number): number | undefined {
   const passt = (r: number, test: (e: ReturnType<typeof inEbene>) => boolean): boolean => {
@@ -536,6 +552,11 @@ export function autoRichtung(s: InselStand, x: number, y: number, z: number, art
   };
   if (SITZMOEBEL.has(art)) return [0, 1, 2, 3].find((r) => passt(r, (e) => typeof e === 'number' && TISCHE.has(e)));
   if (art === 110) return [0, 1, 2, 3].find((r) => passt(r, (e) => typeof e === 'number' && istBlock(e)));
+  if (art === HECKE) {
+    const hecke = (e: ReturnType<typeof inEbene>): boolean => e === HECKE;
+    if (passt(1, hecke) || passt(3, hecke)) return 0; // Nachbar in x-Richtung: Hecke liegt längs x
+    if (passt(0, hecke) || passt(2, hecke)) return 1;
+  }
   return undefined;
 }
 

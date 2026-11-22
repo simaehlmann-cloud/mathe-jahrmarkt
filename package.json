@@ -1,7 +1,7 @@
 {
   "name": "mathe-jahrmarkt",
   "private": true,
-  "version": "0.16.0",
+  "version": "0.18.1",
   "description": "Mathe-Jahrmarkt – Fit für Klasse 5. Spielerische Vorbereitung auf den Übergang zur weiterführenden Schule.",
   "type": "module",
   "scripts": {
@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "store-check": "node scripts/store-check.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "verify": "npm run check && npm test && npm run build && npm run store-check",
+    "e2e:schule": "node scripts/e2e-schule.mjs",
+    "verify": "npm run check && npm run grenzen && npm test && npm run build && npm run store-check && npm run grenzen -- --bundle",
+    "grenzen": "node scripts/grenzen.mjs",
     "cap:sync": "npm run build && cap sync",
     "store-bilder": "node scripts/store-bilder.mjs",
     "store-videos": "node scripts/store-videos.mjs",

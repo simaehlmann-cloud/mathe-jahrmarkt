@@ -6,6 +6,7 @@
   import { neueKarten } from '../../domain/belohnungen';
   import Icon from './Icon.svelte';
   import { faellige } from '../../domain/fundbuero';
+  import { SCHULE } from '../../ausgabe';
 
   /** Kopfzeile mit Zurück, Titel, Talern, Ton und dem Menü hinter der eigenen Figur. */
   let { titel, zurueck, mitte }: { titel?: string; zurueck?: () => void; mitte?: Snippet } = $props();
@@ -55,17 +56,17 @@
     </div>
     {#if p}
       <!-- Wer spielt gerade? Figur und Name, ein Tipp öffnet den Spielerwechsel (seit 0.14) -->
-      <button class="spieler-knopf" onclick={() => { offen = false; app.wechsel = 'knopf'; }} aria-label="Spieler wechseln, jetzt spielt {p.name}">
+      <button class="spieler-knopf" onclick={() => { offen = false; app.wechsel = 'knopf'; }} aria-label={SCHULE ? `Abmelden, jetzt spielt ${p.name}` : `Spieler wechseln, jetzt spielt ${p.name}`}>
         <Figur figur={p.figur} groesse={34} aussehen={p.aussehen} />
         <span class="name">{p.name}</span>
-        <Icon name="wechseln" groesse={16} />
+        {#if !SCHULE}<Icon name="wechseln" groesse={16} />{/if}
       </button>
       <button class="menue-knopf" onclick={() => (offen = !offen)} aria-label={neu ? `Menü, ${neu} neue Sammelkarten` : 'Menü'} aria-expanded={offen} aria-haspopup="true">
         <Icon name="menue" groesse={20} />
         {#if neu}<span class="marke" aria-hidden="true"></span>{/if}
       </button>
     {:else}
-      <button class="rund schloss" onclick={() => app.zeige({ name: 'eltern' })} aria-label="Elternbereich"><Icon name="schloss" groesse={20} /></button>
+      <button class="rund schloss" onclick={() => app.zeige({ name: SCHULE ? 'lehrer' : 'eltern' })} aria-label={SCHULE ? 'Lehrerbereich' : 'Elternbereich'}><Icon name="schloss" groesse={20} /></button>
     {/if}
   </div>
   {#if offen && p}
@@ -84,7 +85,7 @@
       <button onclick={() => gehe({ name: 'profil' })}><Icon name="profil" groesse={22} />Mein Mathe-Profil</button>
       <button onclick={() => gehe({ name: 'album' })}><Icon name="album" groesse={22} />Sammelalbum{#if neu}<span class="punkt">{neu} neu</span>{/if}</button>
       <button onclick={() => gehe({ name: 'blitz' })}><Icon name="blitz" groesse={22} />Blitzrechnen</button>
-      <button onclick={() => gehe({ name: 'duell' })}><Icon name="duell" groesse={22} />Geschwister-Duell</button>
+      {#if !SCHULE}<button onclick={() => gehe({ name: 'duell' })}><Icon name="duell" groesse={22} />Geschwister-Duell</button>{/if}
       <button onclick={() => { app.rundgang = true; gehe({ name: 'jahrmarkt' }); }}><Icon name="karte" groesse={22} />Rundgang mit Flinka</button>
       <button onclick={() => gehe({ name: 'ueber' })}><Icon name="info" groesse={22} />Über Mathe-Jahrmarkt</button>
       <button onclick={() => gehe({ name: 'knobel' })}><Icon name="raetsel" groesse={22} />Knobelzelt</button>
@@ -92,8 +93,13 @@
       <button onclick={() => gehe({ name: 'bauplatz' })}><Icon name="block" groesse={22} />Bauplatz</button>
       <button onclick={() => gehe({ name: 'insel' })}><Icon name="insel" groesse={22} />Bauinsel</button>
       <button onclick={() => gehe({ name: 'check' })}><Icon name="check" groesse={22} />Jahrmarkt-Check</button>
-      <button onclick={() => gehe({ name: 'start' })}><Icon name="zurueck" groesse={22} />Startbildschirm · Spieler wechseln</button>
-      <button class="leise" onclick={() => gehe({ name: 'eltern' })}><Icon name="schloss" groesse={20} />Elternbereich</button>
+      {#if SCHULE}
+        <!-- Schulversion: kein Lehrerbereich im Menü der Kinder (er liegt auf dem Startbildschirm) -->
+        <button onclick={() => { offen = false; app.wechsel = 'knopf'; }}><Icon name="zurueck" groesse={22} />Abmelden</button>
+      {:else}
+        <button onclick={() => gehe({ name: 'start' })}><Icon name="zurueck" groesse={22} />Startbildschirm · Spieler wechseln</button>
+        <button class="leise" onclick={() => gehe({ name: 'eltern' })}><Icon name="schloss" groesse={20} />Elternbereich</button>
+      {/if}
     </nav>
   {/if}
 </header>

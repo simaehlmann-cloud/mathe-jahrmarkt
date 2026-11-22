@@ -20,6 +20,14 @@ jobs:
         run: npm run e2e
         env:
           CHROME_PFAD: /usr/bin/google-chrome
+      - name: Schulversion bauen und prüfen
+        run: npm run build && npm run store-check && npm run grenzen -- --bundle
+        env:
+          VITE_AUSGABE: schule
+      - name: Ablauftest der Schulversion im Browser
+        run: npm run e2e:schule
+        env:
+          CHROME_PFAD: /usr/bin/google-chrome
       - uses: actions/upload-artifact@v7
         if: always()
         with:

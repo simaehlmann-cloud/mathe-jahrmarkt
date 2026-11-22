@@ -2,7 +2,12 @@ import type { Stufe } from '../domain/buden';
 import { verdichten, type Ereignis } from '../domain/lernprofil/lernprofil';
 import { wechselNachPause } from '../domain/wechsel';
 import type { Aussehen } from '../domain/aussehen';
-import { MAX_PROFILE, fortschrittZurueckgesetzt, neuesProfil, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
+import { fortschrittZurueckgesetzt, neuesProfil, profilGrenze, type AbzeichenId, type FigurId, type Profil } from '../domain/profil';
+import { SCHULE } from '../ausgabe';
+import type { SchulDaten } from '../schule/domain/schuldaten';
+import type { SchulErweiterung } from './schulschnittstelle';
+import { WECHSEL_NACH_PAUSE_MS } from '../domain/wechsel';
+import { alleAenderungen, keineAenderung, type Aenderung } from '../services/aenderung';
 import { randomSeed } from '../domain/rng';
 import { auftraegeFuerTag, tagKennung } from '../domain/auftraege';
 import { WOCHENZIEL_BLOECKE, wochenzielBelohnung } from '../domain/belohnungen';
@@ -15,7 +20,7 @@ import { DOPPELDRUCK_MS, zurueckZiel } from './navigation';
 import { leereSpielzeit, mitNachschlag, pauseFaellig, zaehleSpielzeit } from '../domain/spielzeit';
 
 /** Hier zählt keine Spielzeit (kein Kind spielt gerade). */
-export const OHNE_SPIELZEIT = new Set<Bildschirm['name']>(['laden', 'start', 'eltern', 'ueber']);
+export const OHNE_SPIELZEIT = new Set<Bildschirm['name']>(['laden', 'start', 'eltern', 'lehrer', 'ueber']);
 /** Laufende Runden: der Pausenvorschlag wartet, bis die Runde vorbei ist. */
 export const RUNDE_LAEUFT = new Set<Bildschirm['name']>(['spiel', 'duell', 'blitz', 'check']);
 const SPIELZEIT_TAKT_MS = 30_000;
@@ -30,6 +35,8 @@ export type Bildschirm =
   | { name: 'andenken'; von?: 'insel' }
   | { name: 'figur'; von?: 'profil' }
   | { name: 'eltern' }
+  /** Schulversion: Lehrerbereich hinter der Lehrer-PIN (statt Elternbereich). */
+  | { name: 'lehrer' }
   | { name: 'bauplatz'; von?: 'insel' }
   | { name: 'check' }
   | { name: 'album' }
@@ -89,24 +96,57 @@ class AppZustand {
   get einstellungen(): Einstellungen {
     return this.bestand.einstellungen;
   }
+  /** In der Schulversion ist alles freigeschaltet (Einmalkauf über Apple School Manager, kein In-App-Kauf). */
   get paket(): boolean {
-    return this.bestand.paket.gekauft;
+    return SCHULE || this.bestand.paket.gekauft;
   }
 
+  /**
+   * Schulversion: Lehrer-PIN, solange der Lehrerbereich offen ist (zum Ver- und Entschlüsseln der Dateien).
+   * Steht nur im Arbeitsspeicher und wird beim Verlassen gelöscht.
+   */
+  lehrerPin: string | null = null;
+
+  /** Schulversion: ihre Umsetzung der Nahtstelle (src/app/schulschnittstelle.ts). In der Familien-App leer. */
+  schule: SchulErweiterung | null = null;
+
   async starte(kv?: KeyValue): Promise<void> {
-    const speicher = kv ?? (await preferencesKV());
-    const { bestand, wiederhergestellt } = await laden(speicher);
-    this.bestand = bestand;
-    this.ladefehler = wiederhergestellt;
-    this.plan = new Speicherplan(speicher, 400, () => this.melde('Speichern hat nicht geklappt. Der Fortschritt wird beim nächsten Mal erneut gesichert.'));
-    this.kauf = await erstelleKauf();
-    // Still im Hintergrund (ohne Anmeldefenster): ein inzwischen bezahlter, ausstehender Kauf oder ein Kauf mit derselben Apple-ID/Google-Konto.
-    if (this.kauf.art === 'store' && !this.bestand.paket.gekauft) {
-      void this.kauf.pruefen().then((ja) => {
-        if (ja) this.aendere((b) => ({ ...b, paket: { gekauft: true, seit: b.paket.seit ?? Date.now() } }));
-      });
+    const beiFehler = () => this.melde('Speichern hat nicht geklappt. Der Fortschritt wird beim nächsten Mal erneut gesichert.');
+    // __AUSGABE__ steht hier wörtlich (nicht SCHULE): Der Build der Familien-App lässt den Zweig samt Import weg.
+    if (__AUSGABE__ === 'schule' && !kv) {
+      // Schulversion: jedes Profil in einer eigenen Datei (bis zu 32 Profile), kein Kauf
+      const s = await import('../schule/app/start');
+      const { bestand, wiederhergestellt, ablage, erweiterung } = await s.schulStart();
+      this.bestand = bestand;
+      this.schule = erweiterung;
+      this.ladefehler = wiederhergestellt;
+      this.plan = new Speicherplan(ablage, 400, beiFehler);
+      this.bildschirm = { name: 'start' };
+      // Mit der App geöffnete .jahrmarkt-Dateien warten im Lehrerbereich auf die PIN
+      void s
+        .dateiOeffnenVorbereiten(
+          () => {
+            if (this.bildschirm.name !== 'lehrer') this.abmelden();
+            this.zeige({ name: 'lehrer' });
+          },
+          (text) => this.melde(text),
+        )
+        .catch(() => {});
+    } else {
+      const speicher = kv ?? (await preferencesKV());
+      const { bestand, wiederhergestellt } = await laden(speicher);
+      this.bestand = bestand;
+      this.ladefehler = wiederhergestellt;
+      this.plan = new Speicherplan(speicher, 400, beiFehler);
+      this.kauf = await erstelleKauf();
+      // Still im Hintergrund (ohne Anmeldefenster): ein inzwischen bezahlter, ausstehender Kauf oder ein Kauf mit derselben Apple-ID/Google-Konto.
+      if (this.kauf.art === 'store' && !this.bestand.paket.gekauft) {
+        void this.kauf.pruefen().then((ja) => {
+          if (ja) this.aendere((b) => ({ ...b, paket: { gekauft: true, seit: b.paket.seit ?? Date.now() } }));
+        });
+      }
+      this.bildschirm = this.profil ? { name: 'jahrmarkt' } : { name: 'start' };
     }
-    this.bildschirm = this.profil ? { name: 'jahrmarkt' } : { name: 'start' };
     // Beim Wechsel in den Hintergrund sofort sichern.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
@@ -115,13 +155,23 @@ class AppZustand {
         void this.plan?.sofort();
       } else {
         this.letzterTakt = Date.now();
-        // Nach einer längeren Pause kurz fragen, wer jetzt spielt (Geschwister an einem Gerät)
-        if (this.verstecktSeit && wechselNachPause(Date.now() - this.verstecktSeit, this.bestand.profile.length, this.bildschirm.name, !!this.profil)) this.wechsel = 'pause';
+        const pause = this.verstecktSeit ? Date.now() - this.verstecktSeit : 0;
+        if (SCHULE) {
+          // Schul-iPads wandern weiter: Nach einer längeren Pause meldet sich das Kind neu an,
+          // und ein offener Lehrerbereich schließt sich.
+          if (pause >= WECHSEL_NACH_PAUSE_MS && (this.profil || this.bildschirm.name === 'lehrer')) this.abmelden();
+        } else if (this.verstecktSeit && wechselNachPause(pause, this.bestand.profile.length, this.bildschirm.name, !!this.profil)) {
+          // Nach einer längeren Pause kurz fragen, wer jetzt spielt (Geschwister an einem Gerät)
+          this.wechsel = 'pause';
+        }
         this.verstecktSeit = 0;
       }
     });
     this.letzterTakt = Date.now();
-    setInterval(() => this.spielzeitTakt(), SPIELZEIT_TAKT_MS);
+    setInterval(() => {
+      this.spielzeitTakt();
+      this.inselTakt();
+    }, SPIELZEIT_TAKT_MS);
   }
 
   /** Zurück-Taste von Android. Die App schließt nie ungefragt. */
@@ -150,9 +200,29 @@ class AppZustand {
   }
 
   zeige(b: Bildschirm): void {
+    // Schulversion: Bauinsel und Bauplatz nur, wenn die Lehrkraft sie gerade freigibt
+    if (this.schule && (b.name === 'insel' || b.name === 'bauplatz') && this.profil) {
+      const z = this.schule.inselZugang(this.bestand, this.profil, Date.now());
+      if (!z.offen) {
+        this.melde(z.grund);
+        return;
+      }
+      const vonDraussen = this.bildschirm.name !== 'insel' && this.bildschirm.name !== 'bauplatz' && this.bildschirm.name !== 'andenken';
+      if (z.bisMs !== null && vonDraussen) this.melde(`Bauzeit: noch ${Math.max(1, Math.round((z.bisMs - Date.now()) / 60000))} Minuten.`);
+    }
     void this.sprache.stopp();
     this.spielzeitTakt();
     this.bildschirm = b;
+  }
+
+  /** Schulversion: Ist die Bauzeit um, geht es zurück auf den Jahrmarkt (Bauinsel speichert beim Verlassen). */
+  inselTakt(jetzt = Date.now()): void {
+    const p = this.profil;
+    if (!this.schule || !p || (this.bildschirm.name !== 'insel' && this.bildschirm.name !== 'bauplatz')) return;
+    const z = this.schule.inselZugang(this.bestand, p, jetzt);
+    if (z.offen) return;
+    this.melde('Die Bauzeit ist um. Spiel eine Runde an einer Bude, dann geht es weiter!');
+    this.bildschirm = { name: 'jahrmarkt' };
   }
 
   /** Spielzeit des aktiven Kindes weiterzählen und ggf. die Pause vorschlagen. */
@@ -174,31 +244,62 @@ class AppZustand {
     this.pauseVorschlag = false;
   }
 
-  /** „Pause machen“: alles sichern, zurück zum Startbildschirm. */
+  /** „Pause machen“: alles sichern, zurück zum Startbildschirm (Schulversion: abmelden). */
   async pauseMachen(): Promise<void> {
-    this.zeige({ name: 'start' });
+    if (SCHULE) this.abmelden();
+    else this.zeige({ name: 'start' });
     this.pauseVorschlag = false;
     await this.speichereSofort();
   }
 
-  aendere(fn: (b: Datenbestand) => Datenbestand): void {
+  /**
+   * Ändert den Bestand und merkt das Speichern vor. `aenderung` sagt der Ablage der Schulversion,
+   * welche Teile neu geschrieben werden müssen (Standard: alles).
+   */
+  aendere(fn: (b: Datenbestand) => Datenbestand, aenderung: Aenderung = alleAenderungen()): void {
     this.bestand = fn($state.snapshot(this.bestand) as Datenbestand);
-    this.plan?.vormerken($state.snapshot(this.bestand) as Datenbestand);
+    this.vormerken(aenderung);
   }
 
-  /** Ein bestimmtes Profil ändern (z. B. Taler fürs Geschwisterkind nach einem Duell). */
+  /**
+   * Ein bestimmtes Profil ändern (z. B. Taler fürs Geschwisterkind nach einem Duell).
+   * Kopiert nur dieses Profil statt des ganzen Bestands – wichtig bei 32 Profilen in der Schulversion.
+   */
   aendereProfilVon(id: string, fn: (p: Profil) => Profil): void {
-    this.aendere((b) => ({ ...b, profile: b.profile.map((p) => (p.id === id ? fn(p) : p)) }));
+    const i = this.bestand.profile.findIndex((p) => p.id === id);
+    if (i < 0) return;
+    this.bestand.profile[i] = fn($state.snapshot(this.bestand.profile[i]) as Profil);
+    this.vormerken({ ...keineAenderung(), profile: new Set([id]) });
   }
 
   aendereProfil(fn: (p: Profil) => Profil): void {
     const id = this.bestand.aktiv;
     if (!id) return;
-    this.aendere((b) => ({ ...b, profile: b.profile.map((p) => (p.id === id ? fn(p) : p)) }));
+    this.aendereProfilVon(id, fn);
+  }
+
+  /** Schulversion: Daten der Schule ändern (PIN, Klassen, Gerät …). `sammlung`: eingesammelte Ergebnisse geändert. */
+  aendereSchule(fn: (s: SchulDaten) => SchulDaten, sammlung = false): void {
+    this.aendere((b) => (b.schule ? { ...b, schule: fn(b.schule) } : b), { ...keineAenderung(), kopf: true, sammlung });
   }
 
   aendereEinstellungen(teil: Partial<Einstellungen>): void {
-    this.aendere((b) => ({ ...b, einstellungen: { ...b.einstellungen, ...teil } }));
+    this.aendere((b) => ({ ...b, einstellungen: { ...b.einstellungen, ...teil } }), { ...keineAenderung(), kopf: true });
+  }
+
+  /**
+   * Speichern vormerken. Kopiert wird erst beim Schreiben (höchstens alle 400 ms).
+   * Schulversion: unveränderte Profile werden nicht kopiert, die Ablage braucht von ihnen nur die Kennung.
+   */
+  private vormerken(aenderung: Aenderung): void {
+    this.plan?.vormerken((alle: Aenderung): Datenbestand => {
+      if (!SCHULE) return $state.snapshot(this.bestand) as Datenbestand;
+      const { profile, ...rest } = this.bestand;
+      return {
+        ...($state.snapshot(rest) as Omit<Datenbestand, 'profile'>),
+        profile: profile.map((p) => (alle.alle || alle.profile.has(p.id) ? ($state.snapshot(p) as Profil) : p)),
+      };
+    }, aenderung);
   }
 
   /** Tagesaufträge für heute bereitstellen (am neuen Tag neue). */
@@ -227,7 +328,7 @@ class AppZustand {
   }
 
   profilAnlegen(name: string, figur: FigurId, aussehen?: Aussehen): boolean {
-    if (this.bestand.profile.length >= MAX_PROFILE) return false;
+    if (this.bestand.profile.length >= profilGrenze(SCHULE)) return false;
     const neu = neuesProfil(`p${Date.now().toString(36)}${randomSeed().toString(36)}`, name, figur, Date.now());
     const p = aussehen ? { ...neu, aussehen: { ...aussehen, extra: aussehen.extra === 'strohhut' ? 'keins' as const : aussehen.extra } } : neu;
     if (!p.name) return false;
@@ -236,7 +337,7 @@ class AppZustand {
   }
 
   profilWaehlen(id: string, ziel: Bildschirm = { name: 'jahrmarkt' }): void {
-    this.aendere((b) => ({ ...b, aktiv: id }));
+    this.aendere((b) => ({ ...b, aktiv: id }), { ...keineAenderung(), kopf: true });
     // Der Pausenvorschlag gilt für das Kind, das gerade gespielt hat – der nächste Takt prüft neu
     this.pauseVorschlag = false;
     this.zeige(ziel);
@@ -247,6 +348,11 @@ class AppZustand {
    * gesichert (im Spiel: zum Weiterspielen gemerkt); danach geht es auf den Jahrmarkt.
    */
   wechsleZu(id: string): void {
+    // Schulversion: Wechseln heißt abmelden; das nächste Kind meldet sich mit seinem Bildpasswort an
+    if (SCHULE) {
+      this.abmelden();
+      return;
+    }
     const ziel = this.bestand.profile.find((p) => p.id === id);
     this.wechsel = null;
     if (!ziel || id === this.bestand.aktiv) return;
@@ -257,6 +363,28 @@ class AppZustand {
     this.karteOrt = null;
     this.profilWaehlen(id, { name: 'jahrmarkt' });
     this.melde(`Jetzt spielt ${ziel.name}.`);
+  }
+
+  /**
+   * Schulversion: Das Kind meldet sich ab (Knopf oben, „Pause machen“, längere Pause). Eine laufende Runde wird
+   * vorher gesichert, die Spielzeit gutgeschrieben; danach kommt der Startbildschirm für das nächste Kind.
+   * Schließt auch einen offenen Lehrerbereich.
+   */
+  abmelden(): void {
+    this.wechsel = null;
+    this.vorWechsel?.();
+    this.vorWechsel = null;
+    this.spielzeitTakt();
+    this.karteOrt = null;
+    this.letzteBude = null;
+    this.pauseVorschlag = false;
+    this.rundgang = false;
+    this.flinka = null;
+    this.lehrerPin = null;
+    // Meldungen aus dem Lehrerbereich oder vom vorigen Kind nicht stehen lassen
+    this.meldung = null;
+    if (this.bestand.aktiv !== undefined) this.aendere((b) => ({ ...b, aktiv: undefined }), { ...keineAenderung(), kopf: true });
+    this.zeige({ name: 'start' });
   }
 
   fortschrittZuruecksetzen(id: string): void {

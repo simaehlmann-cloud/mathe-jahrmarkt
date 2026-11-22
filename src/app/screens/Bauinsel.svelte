@@ -7,7 +7,7 @@
     STEG,
     SITZEN,
     LIEGEN,
-    SCHAUKELN,
+    AKTIONEN,
     INSEL_DAEMMERUNG_MS,
     INSEL_TAG_MS,
     dreheAn,
@@ -41,7 +41,7 @@
     zielAufFeld,
     type InselStand,
   } from '../../domain/insel';
-  import type { Seite } from '../grafik/InselWelt.svelte';
+  import type { Pose, Seite } from '../grafik/InselWelt.svelte';
   import Icon from '../components/Icon.svelte';
   import InselKarte from '../components/InselKarte.svelte';
   import Sprechblase from '../components/Sprechblase.svelte';
@@ -259,6 +259,7 @@
         void tick().then(() => kamera(true));
         return;
       }
+      if (streicheln(st, x, y)) return;
       if (z >= 0 && platzNehmen(st, x, y, z)) return;
       const ziel = zielAufFeld(st, x, y, seite === 'oben' ? z + 1 : undefined);
       if (!ziel) {
@@ -363,22 +364,36 @@
     app.spieleKlang('tipp');
   }
 
-  /** Figur sitzt, liegt oder schaukelt (nur zur Anzeige, wird nicht gespeichert). */
-  let pose = $state<{ x: number; y: number; z: number; typ: 'sitzen' | 'liegen' | 'schaukeln'; hoehe: number; richtung?: number } | null>(null);
-  /** Eine Runde schaukeln, dann steigt die Figur wieder ab. */
-  const SCHAUKEL_MS = 3600;
+  /** Figur sitzt, liegt, schaukelt, springt, rutscht oder buddelt (nur zur Anzeige, wird nicht gespeichert). */
+  let pose = $state<Pose | null>(null);
+  /** Spielgeräte: eine kurze Runde, dann hört die Figur von selbst auf (seit 0.18.1 nicht nur die Schaukel). */
   let schaukelUhr: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
-    if (pose?.typ !== 'schaukeln') return;
     const war = pose;
+    if (!war || war.typ === 'sitzen' || war.typ === 'liegen') return;
+    const dauer = Object.values(AKTIONEN).find((a) => a.typ === war.typ)?.ms ?? 3000;
     schaukelUhr = setTimeout(() => {
       if (pose === war) {
         pose = null;
         app.spieleKlang('pop');
       }
-    }, app.einstellungen.animationenReduziert ? 1200 : SCHAUKEL_MS);
+    }, app.einstellungen.animationenReduziert ? 1200 : dauer);
     return () => clearTimeout(schaukelUhr);
+    clearTimeout(streichelUhr);
   });
+  /** Angetipptes Tier: hüpft kurz und sagt etwas (seit 0.18.1). */
+  let gestreichelt = $state<{ nr: number; laut: string } | null>(null);
+  let streichelUhr: ReturnType<typeof setTimeout> | undefined;
+  function streicheln(st: InselStand, x: number, y: number): boolean {
+    const nr = st.tiere.findIndex((t) => t.x === x && t.y === y);
+    const t = st.tiere[nr];
+    if (!t) return false;
+    clearTimeout(streichelUhr);
+    gestreichelt = { nr, laut: tierArt(t.art)?.laut ?? '♥' };
+    app.spieleKlang('pop');
+    streichelUhr = setTimeout(() => (gestreichelt = null), 1600);
+    return true;
+  }
   // Beim Wechsel zu Bauen oder Abbauen steht die Figur wieder auf
   $effect(() => {
     if (modus !== 'laufen') pose = null;
@@ -393,13 +408,19 @@
     if (typeof e !== 'number') return false;
     const sitz = SITZEN[e];
     const lieg = LIEGEN[e];
-    const schaukel = SCHAUKELN[e];
-    if (sitz === undefined && lieg === undefined && schaukel === undefined) return false;
+    const aktion = AKTIONEN[e];
+    if (sitz === undefined && lieg === undefined && aktion === undefined) return false;
     let besterWeg: { x: number; y: number; z: number }[] | null = null;
-    for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]] as const) {
-      const weg = wegAufInsel(st, st.figur, { x: x + dx, y: y + dy, z });
-      if (weg.length && (!besterWeg || weg.length < besterWeg.length)) besterWeg = weg;
-    }
+    if (aktion?.hinein) {
+      // Sandkasten: hineingehen (man steht darin)
+      const ziel = zielAufFeld(st, x, y);
+      const weg = ziel ? wegAufInsel(st, st.figur, ziel) : [];
+      if (weg.length) besterWeg = weg;
+    } else
+      for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]] as const) {
+        const weg = wegAufInsel(st, st.figur, { x: x + dx, y: y + dy, z });
+        if (weg.length && (!besterWeg || weg.length < besterWeg.length)) besterWeg = weg;
+      }
     if (!besterWeg) {
       app.melde('Da kommst du nicht hin.');
       return true;
@@ -408,10 +429,10 @@
       app.melde(FREI_HINWEIS);
       return true;
     }
-    const typ = lieg !== undefined ? 'liegen' : schaukel !== undefined ? 'schaukeln' : 'sitzen';
+    const typ = lieg !== undefined ? 'liegen' : aktion !== undefined ? aktion.typ : 'sitzen';
     const richtung = richtungVon(st, x, y, z);
     nachLaufen = () => {
-      pose = { x, y, z, typ, hoehe: lieg ?? schaukel ?? sitz ?? 0.4, richtung };
+      pose = { x, y, z, typ, hoehe: lieg ?? aktion?.hoehe ?? sitz ?? 0.4, richtung };
       app.spieleKlang('pop');
     };
     laufe(besterWeg.slice(1));
@@ -620,6 +641,7 @@
     clearInterval(bummeln);
     clearInterval(wachUhr);
     clearTimeout(schaukelUhr);
+    clearTimeout(streichelUhr);
     sichern();
     if (wach !== gespeichertBei) wachSichern();
   });
@@ -631,7 +653,7 @@
     <div class="kompass" aria-hidden="true" style="--w: {kompass}deg"><span class="nadel"></span><b>N</b></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="feld" class:blende bind:this={feld} onpointerdown={ziehStart} onpointermove={ziehen} onpointercancel={selbstSchauen} ontouchstart={wischStart} ontouchmove={wischen} onwheel={selbstSchauen}>
-      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag && app.paket ? auftrag.grundstueck : null} frei={!app.paket} bauen={modus !== 'laufen'} drehMarken={modus === 'drehen'} {gleitPos} {funkeln} {pose} {licht} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
+      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag && app.paket ? auftrag.grundstueck : null} frei={!app.paket} bauen={modus !== 'laufen'} drehMarken={modus === 'drehen'} {gleitPos} {funkeln} {pose} {gestreichelt} {licht} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
     </div>
     </div>
     {#if karteOffen && stand}<InselKarte {stand} paket={app.paket} onwahl={zeigeStelle} onzu={() => (karteOffen = false)} />{/if}

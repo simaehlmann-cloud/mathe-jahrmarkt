@@ -37,7 +37,7 @@ export const ANBIETER = {
   ustId: 'DE430437820',
 } as const;
 
-const adresse = [`${ANBIETER.firma}`, `Inhaber: ${ANBIETER.inhaber}`, ANBIETER.strasse, ANBIETER.ort, ANBIETER.land];
+export const adresse = [`${ANBIETER.firma}`, `Inhaber: ${ANBIETER.inhaber}`, ANBIETER.strasse, ANBIETER.ort, ANBIETER.land];
 
 export const IMPRESSUM: Abschnitt[] = [
   { titel: 'Angaben gemäß § 5 DDG', absaetze: [adresse.join('\n')] },
@@ -67,7 +67,7 @@ export const IMPRESSUM: Abschnitt[] = [
   },
 ];
 
-export const DATENSCHUTZ: Abschnitt[] = [
+export const DATENSCHUTZ_FAMILIE: Abschnitt[] = [
   {
     titel: '1. Verantwortlicher',
     absaetze: [
@@ -159,3 +159,6 @@ export const DATENSCHUTZ: Abschnitt[] = [
     ],
   },
 ];
+
+/** Die Erklärung der Familien-App. Die Schulversion bringt ihre eigene mit (src/schule/rechtliches.ts, über `app.schule`). */
+export const DATENSCHUTZ: Abschnitt[] = DATENSCHUTZ_FAMILIE;

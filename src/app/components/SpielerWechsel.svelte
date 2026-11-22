@@ -1,6 +1,7 @@
 <script lang="ts">
   import Figur from '../grafik/Figur.svelte';
   import { app, RUNDE_LAEUFT } from '../zustand.svelte';
+  import { SCHULE } from '../../ausgabe';
 
   /**
    * Spieler wechseln (seit 0.14): alle Profile als Figuren, ein Tipp wechselt direkt.
@@ -35,7 +36,20 @@
 <div class="schleier" onclick={(e) => e.target === e.currentTarget && schliessen()}>
   <div class="karte" role="dialog" aria-modal="true" aria-labelledby="wechsel-titel">
     <div class="markise"></div>
-    {#if rueckfrage}
+    {#if SCHULE}
+      <!-- Schulversion: Abmelden statt Wechseln; das nächste Kind meldet sich mit seinem Bildpasswort an -->
+      <div class="inhalt">
+        <h2 id="wechsel-titel">Abmelden?</h2>
+        <p>
+          {runde ? (imSpiel ? 'Deine Runde wird gemerkt – du kannst sie später weiterspielen.' : 'Diese Runde zählt dann nicht.') : 'Dein Spielstand ist gespeichert.'}
+          Danach kann sich das nächste Kind anmelden.
+        </p>
+        <div class="knoepfe">
+          <button class="ticket hell" onclick={schliessen}>Weiterspielen</button>
+          <button class="ticket" onclick={() => app.abmelden()}>Abmelden</button>
+        </div>
+      </div>
+    {:else if rueckfrage}
       <div class="inhalt">
         <h2 id="wechsel-titel">Runde abbrechen und wechseln?</h2>
         <p>{imSpiel ? 'Deine Runde wird gemerkt – du kannst sie später weiterspielen.' : 'Diese Runde zählt dann nicht.'} Danach spielt {rueckfrage.name}.</p>

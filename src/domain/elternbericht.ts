@@ -18,7 +18,11 @@ export type Baustein =
   | { art: 'p'; text: string }
   | { art: 'liste'; punkte: string[] }
   | { art: 'balken'; zeilen: { name: string; anteil: number; text: string }[]; neutral?: boolean }
-  | { art: 'hinweis'; text: string };
+  | { art: 'hinweis'; text: string }
+  /** Tabelle (Schulversion: Klassenübersicht). `ampeln` färbt einzelne Zellen. */
+  | { art: 'tabelle'; spalten: string[]; zeilen: { zellen: string[]; ampeln?: (Ampel | null)[] }[] };
+
+export type Ampel = 'gruen' | 'gelb' | 'rot' | 'grau';
 
 const EINSCHAETZUNG_TEXT = { sicher: 'sicher', fastSicher: 'fast sicher', ueben: 'üben' } as const;
 const datum = (t: number): string => new Date(t).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DATENSCHUTZ, IMPRESSUM, STAND, type Abschnitt } from '../rechtliches';
+  import { app } from '../zustand.svelte';
 
   /** „Über Mathe-Jahrmarkt“ im Elternbereich: Version, Impressum, Datenschutz, Lizenzen. Alles offline. */
   interface Lizenz {
@@ -42,7 +43,7 @@
 {/snippet}
 
 <section>
-  <h2>Mathe-Jahrmarkt – Fit für Klasse 5</h2>
+  <h2>Mathe-Jahrmarkt – Fit für Klasse 5{__AUSGABE__ === 'schule' ? ' · Schulversion' : ''}</h2>
   <p>Version {__APP_VERSION__}</p>
   <p>
     Eine Lern-App für den Übergang von der Grundschule zur weiterführenden Schule, ausgerichtet am Kerncurriculum Mathematik für die Grundschule in
@@ -63,7 +64,7 @@
   {#if offen === 'datenschutz'}
     <div class="text">
       <p class="stand">Stand: {STAND}</p>
-      {@render abschnitte(DATENSCHUTZ)}
+      {@render abschnitte(app.schule?.datenschutz ?? DATENSCHUTZ)}
     </div>
   {/if}
   <button class="ticket hell aufklapp" aria-expanded={offen === 'lizenzen'} onclick={() => umschalten('lizenzen')}>Lizenzen der Open-Source-Bausteine</button>

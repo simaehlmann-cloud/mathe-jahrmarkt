@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ANBIETER, DATENSCHUTZ, IMPRESSUM } from '../src/app/rechtliches';
+import { ANBIETER, DATENSCHUTZ, IMPRESSUM, adresse } from '../src/app/rechtliches';
+import { datenschutzSchule } from '../src/schule/rechtliches';
+
+const DATENSCHUTZ_SCHULE = datenschutzSchule(ANBIETER, adresse);
 
 const html = (f: string) => readFileSync(new URL(`../docs/${f}`, import.meta.url), 'utf8');
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -28,6 +31,18 @@ describe('Impressum und Datenschutz', () => {
         expect(h, `${datei}: ${a.titel}`).toContain(esc(a.titel));
         for (const p of a.absaetze) expect(h, `${datei}: ${p.slice(0, 40)}`).toContain(esc(p).replace(/\n/g, '<br>'));
       }
+    }
+  });
+  it('Schulversion: Schule ist verantwortlich, kein Kauf, keine Verbindungen, Verschlüsselung und Löschen beschrieben', () => {
+    const t = JSON.stringify(DATENSCHUTZ_SCHULE);
+    for (const w of ['Art. 4 Nr. 7 DSGVO', 'Schule verantwortlich', 'Auftragsverarbeitung', 'Hashwert', 'AES-GCM', 'Apple School Manager', 'Art. 15 bis 21 DSGVO', 'keine Netzwerkverbindungen']) expect(t).toContain(w);
+    for (const w of ['StoreKit', 'Google', 'Zusatzpaket']) expect(t).not.toContain(w);
+  });
+  it.skipIf(__PLATTFORM__ !== 'alle')('die Seite der Schulversion in docs/schule/ ist auf dem Stand der App', () => {
+    const h = html('schule/datenschutz.html');
+    for (const a of DATENSCHUTZ_SCHULE) {
+      expect(h).toContain(esc(a.titel));
+      for (const p of a.absaetze) expect(h).toContain(esc(p).replace(/\n/g, '<br>'));
     }
   });
 });

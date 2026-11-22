@@ -17,6 +17,12 @@
   import Fundbuero from './screens/Fundbuero.svelte';
   import Duell from './screens/Duell.svelte';
   import UeberSeite from './screens/UeberSeite.svelte';
+  import { SCHULE } from '../ausgabe';
+
+  // Schulversion: eigene Bildschirme. __AUSGABE__ steht im Quelltext (nicht SCHULE), damit der Build der
+  // Familien-App den Zweig samt Import ganz weglässt.
+  const StartSchule = __AUSGABE__ === 'schule' ? import('../schule/app/StartSchule.svelte') : null;
+  const Lehrer = __AUSGABE__ === 'schule' ? import('../schule/app/Lehrer.svelte') : null;
   import { erstelleMusik } from '../services/musik';
   import Pausenvorschlag from './components/Pausenvorschlag.svelte';
   import SpielerWechsel from './components/SpielerWechsel.svelte';
@@ -50,7 +56,7 @@
   $effect(() => {
     const name = app.bildschirm.name;
     const e = app.einstellungen;
-    const spielen = e.musikAn && name !== 'laden' && name !== 'eltern' && (name !== 'spiel' || e.musikImSpiel);
+    const spielen = e.musikAn && name !== 'laden' && name !== 'eltern' && name !== 'lehrer' && (name !== 'spiel' || e.musikImSpiel);
     musik.stelle(spielen, e.lautMusik);
   });
 
@@ -70,7 +76,9 @@
   {#if b.name === 'laden'}
     <p class="laden">Der Jahrmarkt öffnet …</p>
   {:else if b.name === 'start'}
-    <Start />
+    {#if StartSchule}{#await StartSchule then m}<m.default />{/await}{:else}<Start />{/if}
+  {:else if b.name === 'lehrer'}
+    {#if Lehrer}{#await Lehrer then m}<m.default />{/await}{/if}
   {:else if b.name === 'jahrmarkt'}
     <Jahrmarkt />
   {:else if b.name === 'bude'}
@@ -84,7 +92,8 @@
   {:else if b.name === 'figur'}
     <FigurGestalten von={b.von} />
   {:else if b.name === 'eltern'}
-    <Eltern />
+    <!-- Schulversion: kein Elternbereich (Kauf, Profile), dort gibt es den Lehrerbereich -->
+    {#if !SCHULE}<Eltern />{/if}
   {:else if b.name === 'bauplatz'}
     <Bauplatz von={b.von} />
   {:else if b.name === 'check'}
@@ -115,7 +124,9 @@
 
   {#if app.ladefehler && b.name !== 'laden'}
     <div class="hinweis warnung" role="alert">
-      Die gespeicherten Daten waren nicht lesbar und wurden sicher beiseitegelegt. Im Elternbereich gibt es eine Sicherung zum Einspielen.
+      {SCHULE
+        ? 'Ein Teil der gespeicherten Daten war nicht lesbar und wurde sicher beiseitegelegt. Bitte im Lehrerbereich prüfen, ob alle Kinder da sind.'
+        : 'Die gespeicherten Daten waren nicht lesbar und wurden sicher beiseitegelegt. Im Elternbereich gibt es eine Sicherung zum Einspielen.'}
       <button class="rund" onclick={() => (app.ladefehler = false)} aria-label="Hinweis schließen">✕</button>
     </div>
   {/if}
