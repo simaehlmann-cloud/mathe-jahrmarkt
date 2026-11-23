@@ -15,8 +15,9 @@
     links = false,
     laeuft = false,
     sitzt = false,
+    jubelt = false,
     g = 58,
-  }: { figur: FigurId; aussehen: Aussehen; ansicht?: Ansicht; links?: boolean; laeuft?: boolean; sitzt?: boolean; g?: number } = $props();
+  }: { figur: FigurId; aussehen: Aussehen; ansicht?: Ansicht; links?: boolean; laeuft?: boolean; sitzt?: boolean; jubelt?: boolean; g?: number } = $props();
   const farben = $derived(koerperFarben(figur, aussehen.fell));
   const tuch = $derived(TUECHER.find((t) => t.id === aussehen.tuch)?.farbe ?? '#3c78d8');
   const TINTE = '#1f2a6b';
@@ -24,7 +25,7 @@
   const kopf = $derived(g * 0.62);
 </script>
 
-<g class="inselfigur" class:laeuft class:sitzt class:seite class:ruecken={ansicht === 'hinten'} transform={links ? 'scale(-1 1)' : undefined}>
+<g class="inselfigur" class:laeuft class:sitzt class:jubelt class:seite class:ruecken={ansicht === 'hinten'} transform={links ? 'scale(-1 1)' : undefined}>
   <g class="koerper">
     <svg x={seite ? -g * 0.29 : -g * 0.35} y={-g * 0.62} width={seite ? g * 0.58 : g * 0.7} height={g * 0.62} viewBox="0 0 60 70" overflow="visible">
       {#if !sitzt}<ellipse cx="30" cy="66" rx="20" ry="4.5" fill={TINTE} opacity="0.18" />{/if}
@@ -44,6 +45,13 @@
   .arm {
     transform-box: fill-box;
     transform-origin: 50% 8%;
+  }
+  /* Jubeln (seit 0.19): beide Arme hoch */
+  .jubelt .arm.hinten {
+    rotate: 155deg;
+  }
+  .jubelt .arm.vorne {
+    rotate: -155deg;
   }
   /* Sitzen: Beine verschwinden im Sitz */
   .sitzt .bein {

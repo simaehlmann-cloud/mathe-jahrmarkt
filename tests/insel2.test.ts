@@ -45,11 +45,17 @@ describe('Bauinsel: zweite Insel und Brücke', () => {
     expect(bebaubar(25, 3)).toBe(false);
     expect(LANDSCHAFT.art.length).toBe(BREITE * HOEHE);
   });
-  it('alle Grundstücke liegen ganz auf bebaubarem Land hinter der ersten Brücke und sind erreichbar', () => {
+  it('alle Grundstücke liegen ganz auf bebaubarem Land ihrer Auftragsinsel und sind von deren Steg aus erreichbar (0.19)', () => {
     for (const g of GRUNDSTUECKE) {
       for (let y = g.y0; y < g.y0 + g.n; y++) for (let x = g.x0; x < g.x0 + g.n; x++) expect(bebaubar(x, y), `${g.id} ${x},${y}`).toBe(true);
-      if (g.y0 < 40) expect(g.x0).toBeGreaterThan(BRUECKE.x1);
-      expect(wegAufInsel(leereInsel(), START, { x: g.x0 + 1, y: g.y0 + 1, z: LANDSCHAFT.hoehe[idx(g.x0 + 1, g.y0 + 1)] ?? 0 }).length).toBeGreaterThan(0);
+      const insel = inselVon(g.id)!;
+      expect(imBereich(insel, g.x0, g.y0) && imBereich(insel, g.x0 + g.n - 1, g.y0 + g.n - 1)).toBe(true);
+      const ziel = { x: g.x0 + 1, y: g.y0 + 1, z: 0 };
+      // zu Fuß nicht von der ersten Insel, aber vom Steg der Auftragsinsel
+      expect(wegAufInsel(leereInsel(), START, ziel)).toEqual([]);
+      expect(istBoden(leereInsel(), ankunftAuf(insel).x, ankunftAuf(insel).y, 0)).toBe(true);
+      expect(wegAufInsel(leereInsel(), ankunftAuf(insel), ziel).length).toBeGreaterThan(0);
+      expect(bereichVon(g.x0, g.y0)).toBe(insel);
     }
   });
   it('alte Spielstände (24 × 24) werden auf den breiten Plan umgerechnet', () => {
@@ -187,13 +193,13 @@ describe('Bauinsel: Bauaufträge auf dem Bauland (0.14)', () => {
     return r!.stand;
   };
 
-  it('es gibt 16 Aufträge, D und E liegen auf dem Bauland', () => {
+  it('es gibt 16 Aufträge; D und E sind 6 × 6 und liegen (seit 0.19) nicht mehr auf dem Bauland', () => {
     expect(INSEL_AUFTRAEGE).toHaveLength(16);
     expect(new Set(INSEL_AUFTRAEGE.map((a) => a.id)).size).toBe(16);
     for (const id of ['d', 'e']) {
       const g = grund(id);
       expect(g.n).toBe(6);
-      for (let y = g.y0; y < g.y0 + g.n; y++) for (let x = g.x0; x < g.x0 + g.n; x++) expect(aufBauland(x, y), `${id} ${x},${y}`).toBe(true);
+      for (let y = g.y0; y < g.y0 + g.n; y++) for (let x = g.x0; x < g.x0 + g.n; x++) expect(aufBauland(x, y), `${id} ${x},${y}`).toBe(false);
     }
   });
 
@@ -403,11 +409,11 @@ describe('Bauinsel 0.14: Drehen, Tag und Nacht', () => {
   });
 });
 
-import { BRUECKE4, FREIE_TEILE, aufWueste, imFreienTeil, teilFrei } from '../src/domain/insel';
+import { BRUECKE4, FREIE_TEILE, HAUPT_HOEHE, aufWueste, imFreienTeil, teilFrei } from '../src/domain/insel';
 describe('Bauinsel 0.14: Wüste und freie Version', () => {
   it('die Wüste ist über die vierte Brücke erreichbar, hat Kakteen und Palmen, Kakteen sind fest', () => {
     const s = leereInsel();
-    expect(HOEHE).toBe(76);
+    expect(HAUPT_HOEHE).toBe(76);
     expect(LANDSCHAFT.art[idx(BRUECKE4.x, BRUECKE4.y0)]).toBe('bruecke');
     const ziel = { x: 22, y: 68, z: LANDSCHAFT.hoehe[idx(22, 68)] ?? 0 };
     expect(aufWueste(22, 68)).toBe(true);
@@ -489,3 +495,53 @@ describe('Bauinsel 0.18.1: Spielgeräte und Tiere', () => {
   });
 });
 
+
+import { ANKUNFT_HAUPT, AUFTRAGSINSELN, HAUPTWELT, RUDERBOOT, WIESE, ankunftAuf, bereichVon, imBereich, inselVon, ruderbootAn } from '../src/domain/insel';
+describe('Bauinsel 0.19: größere erste Insel und Auftragsinseln', () => {
+  it('die Wiese auf der ersten Insel ist mindestens 14 × 14 Felder groß, baumfrei, bebaubar und zu Fuß erreichbar', () => {
+    expect(WIESE.x1 - WIESE.x0 + 1).toBeGreaterThanOrEqual(14);
+    expect(WIESE.y1 - WIESE.y0 + 1).toBeGreaterThanOrEqual(14);
+    for (let y = WIESE.y0; y <= WIESE.y1; y++)
+      for (let x = WIESE.x0; x <= WIESE.x1; x++) {
+        expect(bebaubar(x, y), `${x},${y}`).toBe(true);
+        expect(LANDSCHAFT.baum[idx(x, y)]).toBe(false);
+        expect(imFreienTeil(x, y), `frei ${x},${y}`).toBe(true);
+      }
+    expect(wegAufInsel(leereInsel(), START, { x: WIESE.x0, y: WIESE.y1, z: 0 }).length).toBeGreaterThan(10);
+  });
+  it('Steg, Boot und Ruderboot liegen am unteren Rand der Wiese; der Steg ist von START aus erreichbar', () => {
+    for (let y = STEG.y0; y <= STEG.y1; y++) expect(LANDSCHAFT.art[idx(STEG.x, y)]).toBe('bruecke');
+    expect(LANDSCHAFT.art[idx(BOOT.x, BOOT.y)]).toBe('wasser');
+    expect(LANDSCHAFT.art[idx(RUDERBOOT.x, RUDERBOOT.y)]).toBe('wasser');
+    expect(wegAufInsel(leereInsel(), START, ANKUNFT_HAUPT).length).toBeGreaterThan(0);
+    expect(imBereich(HAUPTWELT, RUDERBOOT.x, RUDERBOOT.y)).toBe(true);
+  });
+  it('jede Auftragsinsel liegt außerhalb der Hauptwelt, im Bauplan und hat Wasser am Ruderboot', () => {
+    for (const a of AUFTRAGSINSELN) {
+      expect(a.y0).toBeGreaterThanOrEqual(HAUPT_HOEHE);
+      expect(a.y1).toBeLessThanOrEqual(HOEHE);
+      expect(a.x1).toBeLessThanOrEqual(BREITE);
+      const r = ruderbootAn(a);
+      expect(LANDSCHAFT.art[idx(r.x, r.y)]).toBe('wasser');
+      expect(bereichVon(r.x, r.y)).toBe(a);
+      expect(grund(a.id)).toBeTruthy();
+    }
+    expect(bereichVon(START.x, START.y)).toBe(HAUPTWELT);
+  });
+  it('Spielstände aus 0.14–0.18 (76 Reihen) behalten alles, auch das auf den alten Bauplätzen Gebaute', () => {
+    const alt = Array.from({ length: BREITE * 76 }, () => [] as number[]);
+    alt[idx(8, 48)] = [1, 1, 2]; // alter Bauplatz D auf dem Bauland
+    alt[idx(31, 6)] = [3]; // alter Bauplatz A auf der zweiten Insel
+    const neu = pruefeInsel({ stapel: alt, inventar: {}, figur: { x: 11, y: 24, z: 0 }, erledigt: ['flaeche8', 'umfang'] });
+    expect(neu.stapel.length).toBe(BREITE * HOEHE);
+    expect(neu.stapel[idx(8, 48)]).toEqual([1, 1, 2]);
+    expect(neu.stapel[idx(31, 6)]).toEqual([3]);
+    expect(neu.erledigt).toEqual(['flaeche8', 'umfang']);
+    // Die Figur stand am alten Steg: Dort ist jetzt Wiese, sie bleibt stehen
+    expect(neu.figur).toEqual({ x: 11, y: 24, z: 0 });
+    // Der offene Auftrag beginnt neu auf seiner Auftragsinsel (dort ist noch nichts gebaut)
+    const g = grund(offenerInselAuftrag(neu)!.grundstueck);
+    expect(g.id).toBe('b');
+    expect(neu.stapel[idx(g.x0, g.y0)]).toEqual([]);
+  });
+});

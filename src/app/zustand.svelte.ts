@@ -18,6 +18,7 @@ import { erstelleSprache } from '../services/sprache';
 import { Speicherplan, laden, preferencesKV, type KeyValue } from '../services/speicher';
 import { DOPPELDRUCK_MS, zurueckZiel } from './navigation';
 import { leereSpielzeit, mitNachschlag, pauseFaellig, zaehleSpielzeit } from '../domain/spielzeit';
+import { START as INSEL_START } from '../domain/insel';
 
 /** Hier zählt keine Spielzeit (kein Kind spielt gerade). */
 export const OHNE_SPIELZEIT = new Set<Bildschirm['name']>(['laden', 'start', 'eltern', 'lehrer', 'ueber']);
@@ -197,6 +198,12 @@ class AppZustand {
       return;
     }
     this.zeige(ziel);
+  }
+
+  /** Bauinsel ließ sich nicht öffnen: Figur zurück zum Ankunftsplatz (das Gebaute bleibt). */
+  inselZumStart(): void {
+    if (!this.profil) return;
+    this.aendereProfil((q) => ({ ...q, insel: { ...q.insel, figur: { ...INSEL_START } } }));
   }
 
   zeige(b: Bildschirm): void {

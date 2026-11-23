@@ -105,7 +105,20 @@
   {:else if b.name === 'knobel'}
     <Knobelzelt />
   {:else if b.name === 'insel'}
-    <Bauinsel anreise={b.anreise} />
+    <!-- Seit 0.19: Geht beim Öffnen der Insel etwas schief, bleibt man nicht hängen, sondern bekommt einen Ausweg. -->
+    <svelte:boundary onerror={(e) => console.error('Bauinsel', e)}>
+      <Bauinsel anreise={b.anreise} />
+      {#snippet failed(_fehler, nochmal)}
+        <div class="inselfehler tafel" role="alert">
+          <h2>Die Insel hakt gerade.</h2>
+          <p>Deine Figur geht zurück zum Ankunftsplatz. Alles Gebaute bleibt.</p>
+          <div class="knoepfe">
+            <button class="ticket gelb" onclick={() => { app.inselZumStart(); nochmal(); }}>Noch einmal versuchen</button>
+            <button class="ticket hell" onclick={() => app.zeige({ name: 'jahrmarkt' })}>Zum Jahrmarkt</button>
+          </div>
+        </div>
+      {/snippet}
+    </svelte:boundary>
   {:else if b.name === 'fundbuero'}
     <Fundbuero />
   {:else if b.name === 'duell'}
@@ -136,6 +149,24 @@
 </main>
 
 <style>
+  .inselfehler {
+    margin: auto;
+    padding: 18px;
+    width: min(92%, 26rem);
+    display: grid;
+    gap: 12px;
+    text-align: center;
+  }
+  .inselfehler h2,
+  .inselfehler p {
+    margin: 0;
+  }
+  .inselfehler .knoepfe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
   .welt {
     position: relative;
     zoom: var(--z, 1);

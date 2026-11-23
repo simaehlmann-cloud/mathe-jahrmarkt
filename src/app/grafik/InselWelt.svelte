@@ -7,7 +7,8 @@
 
 <script lang="ts">
   import { BLOCKARTEN } from '../../domain/bau';
-  import { BOOT, BREITE, BRUECKE, GRUNDSTUECKE, HOEHE, LANDSCHAFT, LUFT, TUER_OBEN, drehbar, type InselStand } from '../../domain/insel';
+  import { untrack } from 'svelte';
+  import { AUFTRAGSINSELN, BOOT, BREITE, BRUECKE, GRUNDSTUECKE, HAUPTWELT, HOEHE, LANDSCHAFT, LUFT, RUDERBOOT, TUER_OBEN, drehbar, imBereich, ruderbootAn, type Bereich, type InselStand } from '../../domain/insel';
   import { dunkel, LAMPEN } from './nacht';
   import type { Aussehen } from '../../domain/aussehen';
   import type { FigurId } from '../../domain/profil';
@@ -40,8 +41,11 @@
     licht = 1,
     frei = false,
     drehMarken = false,
+    bereich = HAUPTWELT,
+    jubel = false,
     ontippe,
     onboot,
+    onruderboot,
     onschild,
   }: {
     stand: InselStand;
@@ -69,21 +73,41 @@
     frei?: boolean;
     /** Modus „Drehen“: über jedem drehbaren Möbel ein kleines ↻. */
     drehMarken?: boolean;
+    /**
+     * Gezeichneter Ausschnitt (seit 0.19): die Hauptwelt oder eine Auftragsinsel. Fest für die Lebensdauer
+     * der Ansicht – zum Wechseln wird die Ansicht neu angelegt.
+     */
+    bereich?: Bereich;
+    /** Bauauftrag geschafft (seit 0.19): Figur jubelt, Sterne steigen über dem Bauplatz auf. */
+    jubel?: boolean;
     ontippe: (x: number, y: number, z: number, seite: Seite) => void;
     /** Boot am Steg angetippt (zurück zum Jahrmarkt). */
     onboot?: () => void;
+    /** Ruderboot angetippt (zur Auftragsinsel oder zurück); ohne Rückruf kein Ruderboot. */
+    onruderboot?: () => void;
     /** Schild des Bauplatzes angetippt (Auftrag zeigen). */
     onschild?: () => void;
   } = $props();
 
+  /** Breite des ganzen Bauplans (für die Feldnummern); gezeichnet wird nur der Ausschnitt. */
   const W = BREITE;
   const H = HOEHE;
+  const B = untrack(() => bereich);
+  const BX = B.x0;
+  const BY = B.y0;
+  const BW = B.x1 - B.x0;
+  const BH = B.y1 - B.y0;
   /** Größere Seite: bestimmt die Bildfläche, damit jede Drehung hineinpasst. */
-  const N = Math.max(W, H);
+  const N = Math.max(BW, BH);
   const r = $derived(((drehung % 4) + 4) % 4);
-  /** Punkt (Plan-Koordinaten, stetig) → gedrehte Koordinaten. */
-  const dreh = (x: number, y: number): [number, number] =>
-    r === 1 ? [H - y, x] : r === 2 ? [W - x, H - y] : r === 3 ? [y, W - x] : [x, y];
+  /** Punkt (Plan-Koordinaten, stetig) → gedrehte Koordinaten im Ausschnitt. */
+  const dreh = (gx: number, gy: number): [number, number] => {
+    const x = gx - BX;
+    const y = gy - BY;
+    return r === 1 ? [BH - y, x] : r === 2 ? [BW - x, BH - y] : r === 3 ? [y, BW - x] : [x, y];
+  };
+  /** Auftragsinsel, die gerade gezeigt wird (oder keine). */
+  const auftragsinsel = AUFTRAGSINSELN.find((a) => a.x0 === BX && a.y0 === BY);
   const P = (x: number, y: number, z: number): string => {
     const [a, b] = dreh(x, y);
     return `${(a - b) * A},${((a + b) * A) / 2 - z * C}`;
@@ -151,22 +175,23 @@
   const schnitt = $derived(istInnen ? `${fx},${fy},${fz}` : '');
 
   /**
-   * Gemerkte Bilder je Drehung: Solange sich nichts anderes ändert, ist eine schon berechnete Ansicht beim
-   * nächsten Drehen sofort da (die Insel hat über 3 000 Felder).
+   * Seit 0.19 wird nur noch die aktuelle Drehung im Speicher gehalten (vorher alle vier): Auf älteren iPads
+   * mit wenig Arbeitsspeicher wurde die App sonst beim Öffnen der Insel vom System neu gestartet.
    */
-  let gemerkt: { stapel: unknown; richtungen: unknown; schluessel: string; jeDrehung: Map<number, Teil[][]> } | null = null;
   const reihen = $derived.by(() => {
-    const schluesselJetzt = `${schnitt}|${tuerAuf}|${schaukelFeld}|${lichtStufe}|${frei}|${drehMarken}`;
-    if (!gemerkt || gemerkt.stapel !== stapel || gemerkt.richtungen !== richtungen || gemerkt.schluessel !== schluesselJetzt)
-      gemerkt = { stapel, richtungen, schluessel: schluesselJetzt, jeDrehung: new Map() };
-    const fertig = gemerkt.jeDrehung.get(r);
-    if (fertig) return fertig;
-    const neu = berechneReihen();
-    gemerkt.jeDrehung.set(r, neu);
-    return neu;
+    void stapel;
+    void richtungen;
+    void schnitt;
+    void tuerAuf;
+    void schaukelFeld;
+    void lichtStufe;
+    void frei;
+    void drehMarken;
+    void r;
+    return berechneReihen();
   });
   function berechneReihen(): Teil[][] {
-    const liste: Teil[][] = Array.from({ length: W + H + 1 }, () => []);
+    const liste: Teil[][] = Array.from({ length: BW + BH + 1 }, () => []);
     const [sx = 0, sy = 0, sz = 0] = schnitt ? schnitt.split(',').map(Number) : [];
     /** Teil in Ebene z (absolut) auf einem Nachbarfeld. */
     const teilBei = (nx: number, ny: number, nz: number): number => {
@@ -193,8 +218,8 @@
     const f = { x: sx, y: sy, z: sz };
     const fReihe = reihe(f.x, f.y);
     const land = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < W && y < H && LANDSCHAFT.art[y * W + x] !== 'wasser';
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
+    for (let y = BY; y < BY + BH; y++)
+      for (let x = BX; x < BX + BW; x++) {
         const i = y * W + x;
         const h = LANDSCHAFT.hoehe[i] ?? 0;
         const art = LANDSCHAFT.art[i] ?? 'gras';
@@ -365,22 +390,36 @@
   const oben = 9 * C + 20;
   /** Nur der Bauplatz des offenen Auftrags wird markiert: Umriss auf dem Boden und ein Holzschild davor. */
   const umrisse = $derived(
-    GRUNDSTUECKE.filter((g) => g.id === grundstueck).map((g) => {
+    GRUNDSTUECKE.filter((g) => g.id === grundstueck && imBereich(B, g.x0, g.y0)).map((g) => {
       // Schild an der vorderen Ecke (nach der Drehung die unterste Ecke im Bild)
       const ecken: [number, number][] = [[g.x0, g.y0], [g.x0 + g.n, g.y0], [g.x0 + g.n, g.y0 + g.n], [g.x0, g.y0 + g.n]];
       const vorne = ecken.map(([x, y]) => P(x, y, 0).split(',').map(Number) as [number, number]).reduce((a, b) => (b[1] > a[1] ? b : a));
       return { id: g.id, name: g.name, punkte: ecken.map(([x, y]) => P(x, y, 0.02)).join(' '), schild: vorne };
     }),
   );
+  /** Jubel-Sterne über dem Bauplatz: Versatz und Größe. */
+  const STERNE: [number, number, number][] = [[-50, 0, 9], [40, -8, 11], [-20, -20, 8], [10, 6, 12], [60, 10, 8], [-64, -14, 7], [24, -30, 9], [-36, 14, 10], [0, -40, 8]];
   const FUNKEN: [number, number][] = [[-18, -50], [16, -44], [-12, -18], [20, -14], [0, -66], [-24, -32], [24, -30]];
-  /** Boot am Ende des Stegs. */
-  const bootReihe = $derived(reihe(BOOT.x, BOOT.y));
+  /** Boot am Ende des Stegs (nur in der Hauptwelt). */
+  const mitBoot = imBereich(B, BOOT.x, BOOT.y);
+  const bootReihe = $derived(mitBoot ? reihe(BOOT.x, BOOT.y) : -1);
   const bootPunkt = $derived(punktVon(BOOT.x, BOOT.y, -0.2));
+  /** Ruderboot: in der Hauptwelt neben dem Steg, auf einer Auftragsinsel an ihrem Steg. */
+  const ruderOrt = auftragsinsel ? ruderbootAn(auftragsinsel) : RUDERBOOT;
+  const ruderReihe = $derived(onruderboot ? reihe(ruderOrt.x, ruderOrt.y) : -1);
+  const ruderPunkt = $derived(punktVon(ruderOrt.x, ruderOrt.y, -0.2));
+  /** Mitte des markierten Bauplatzes (für die Jubel-Sterne), sonst die Figur. */
+  const jubelPunkt = $derived.by(() => {
+    const g = GRUNDSTUECKE.find((q) => q.id === grundstueck && imBereich(B, q.x0, q.y0));
+    return g ? punktVon(g.x0 + g.n / 2 - 0.5, g.y0 + g.n / 2 - 0.5, 1.5) : figurPunkt;
+  });
   /** Tiere je Reihe. */
   const tiere = $derived(stand.tiere);
+
   const tierReihen = $derived.by(() => {
     const m = new Map<number, { art: number; px: number; py: number; schluessel: string; nr: number }[]>();
     tiere.forEach((t, k) => {
+      if (!imBereich(B, t.x, t.y)) return;
       const [a, b] = dreh(t.x + 0.5, t.y + 0.5);
       const rr = reihe(t.x, t.y);
       const l = m.get(rr) ?? [];
@@ -389,6 +428,18 @@
     });
     return m;
   });
+  /**
+   * Ein einziger Klick-Empfänger für alle Flächen (seit 0.19, spart Speicher bei tausenden Flächen):
+   * Feld und Ebene stehen am Teil (data-feld), die Seite an der Fläche (data-seite).
+   */
+  function geklickt(e: MouseEvent) {
+    const ziel = e.target as Element | null;
+    const flaeche = ziel?.closest?.('polygon[data-seite]');
+    const teil = flaeche?.closest('g.teil');
+    if (!flaeche || !teil || !teil.classList.contains('tippbar')) return;
+    const [x = 0, y = 0, z = 0] = (teil.getAttribute('data-feld') ?? '').split(',').map(Number);
+    ontippe(x, y, z, (flaeche.getAttribute('data-seite') ?? 'oben') as Seite);
+  }
   /** Mittelpunkt der Figur in Bildschirmkoordinaten (für die Kamera). */
   export function figurBildpunkt(): [number, number] {
     return [(figurPunkt[0] + breite + 10) * massstab, (figurPunkt[1] + oben) * massstab];
@@ -399,14 +450,14 @@
     const py = sy / massstab - oben;
     const a = (2 * py) / A / 2 + px / A / 2;
     const b = (2 * py) / A / 2 - px / A / 2;
-    // gedrehte Koordinaten (a, b) zurück in den Plan
-    const [x, y] = r === 1 ? [b, H - a] : r === 2 ? [W - a, H - b] : r === 3 ? [W - b, a] : [a, b];
-    return { x: x - 0.5, y: y - 0.5 };
+    // gedrehte Koordinaten (a, b) zurück in den Ausschnitt, dann in den ganzen Plan
+    const [x, y] = r === 1 ? [b, BH - a] : r === 2 ? [BW - a, BH - b] : r === 3 ? [BW - b, a] : [a, b];
+    return { x: x + BX - 0.5, y: y + BY - 0.5 };
   }
   /** Winkel (Grad, im Uhrzeigersinn von oben), in den auf dem Bildschirm „Norden“ des Plans zeigt (für den Kompass). */
   export function nordWinkel(): number {
-    const [x0, y0] = punktVon(W / 2, H / 2, 0);
-    const [x1, y1] = punktVon(W / 2, H / 2 - 1, 0);
+    const [x0, y0] = punktVon(BX + BW / 2, BY + BH / 2, 0);
+    const [x1, y1] = punktVon(BX + BW / 2, BY + BH / 2 - 1, 0);
     return (Math.atan2(x1 - x0, -(y1 - y0)) * 180) / Math.PI;
   }
   /** Bildschirmkoordinaten einer stetigen Plan-Position (Kamera folgt der Figur Bild für Bild). */
@@ -418,7 +469,9 @@
 
 
 
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <svg
+  onclick={geklickt}
   viewBox="{-breite - 10} {-oben} {2 * breite + 20} {oben + N * A + 20}"
   width={(2 * breite + 20) * massstab}
   height={(oben + N * A + 20) * massstab}
@@ -430,7 +483,7 @@
     <radialGradient id="schein"><stop offset="0" stop-color="#ffe57a" stop-opacity="0.75" /><stop offset="1" stop-color="#ffe57a" stop-opacity="0" /></radialGradient>
   </defs>
   <!-- Meer rund um die Inseln -->
-  <polygon points="{P(-3, -3, -0.6)} {P(W + 3, -3, -0.6)} {P(W + 3, H + 3, -0.6)} {P(-3, H + 3, -0.6)}" fill="url(#meer)" />
+  <polygon points="{P(BX - 3, BY - 3, -0.6)} {P(BX + BW + 3, BY - 3, -0.6)} {P(BX + BW + 3, BY + BH + 3, -0.6)} {P(BX - 3, BY + BH + 3, -0.6)}" fill="url(#meer)" />
   {#each reihen as teile, rr (rr)}
     <g>
       {#each teile as t (t.schluessel)}
@@ -441,7 +494,6 @@
           opacity={t.durchsichtig ? 0.3 : 1}
           data-feld="{t.x},{t.y},{t.z}"
         >
-          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
           {#each t.flaechen as f, k (k)}<polygon
               points={f.punkte}
               fill={f.farbe}
@@ -449,7 +501,6 @@
               stroke-width={t.z < 0 ? 0.4 : 1.2}
               stroke-linejoin="round"
               data-seite={f.seite ?? 'oben'}
-              onclick={() => t.tippbar && ontippe(t.x, t.y, t.z, f.seite ?? 'oben')}
             />{/each}
           {#if t.extra === 'fenster' || t.extra === 'tuer' || t.extra === 'tueroben'}
             <TeilExtra flaechen={t.flaechen} art={t.extra} {nacht} />
@@ -513,6 +564,23 @@
           </g>
         </g>
       {/if}
+      {#if rr === ruderReihe && onruderboot}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <g class="boot" transform="translate({ruderPunkt[0]} {ruderPunkt[1]})" onclick={onruderboot} data-ruderboot="1" style={lichtStufe < 1 ? `filter: brightness(${(0.5 + 0.5 * lichtStufe).toFixed(2)})` : undefined}>
+          <g class="schaukeln">
+            <path d="M-24 -4 Q0 -10 24 -4 L17 7 Q0 11 -17 7 Z" fill="#b5834f" stroke="#1f2a6b" stroke-width="2" stroke-linejoin="round" />
+            <path d="M-18 -3 Q0 -7 18 -3" fill="none" stroke="#8a5a2b" stroke-width="2" />
+            <line x1="-30" y1="6" x2="-8" y2="-6" stroke="#87521f" stroke-width="3" stroke-linecap="round" />
+            <line x1="30" y1="6" x2="8" y2="-6" stroke="#87521f" stroke-width="3" stroke-linecap="round" />
+            <ellipse cx="-31" cy="7" rx="5" ry="2.5" fill="#d9a066" stroke="#1f2a6b" stroke-width="1" />
+            <ellipse cx="31" cy="7" rx="5" ry="2.5" fill="#d9a066" stroke="#1f2a6b" stroke-width="1" />
+          </g>
+          <g transform="translate(34 -22)">
+            <rect x="-30" y="-14" width="60" height="18" rx="5" fill="#fffdf7" stroke="#1f2a6b" stroke-width="1.5" />
+            <text x="0" y="0" text-anchor="middle" font-size="11" font-weight="900" fill="#1f2a6b">{auftragsinsel ? 'Zurück' : 'Bauauftrag'}</text>
+          </g>
+        </g>
+      {/if}
       {#each tierReihen.get(rr) ?? [] as t (t.schluessel)}
         <g class="tier" style="transform: translate({t.px}px, {t.py}px){lichtStufe < 1 ? `; filter: brightness(${(0.55 + 0.45 * lichtStufe).toFixed(2)})` : ''}" pointer-events="none">
           {#if gestreichelt?.nr === t.nr}
@@ -551,6 +619,9 @@
                 <circle cx={sx} cy={sy} r="2.2" fill={d('#e8cf86')} stroke={d('#b8994e')} stroke-width="0.6" style="animation-delay: {k * 180}ms" />
               {/each}
             </g>
+          {:else if jubel && !pose}
+            <!-- Bauauftrag geschafft: zweimal hüpfen, Arme hoch -->
+            <g class="hopst"><InselFigur {figur} {aussehen} jubelt ansicht="vorne" /></g>
           {:else}
             <g class:sitzt={pose?.typ === 'sitzen'} transform={liegen ? `rotate(${liegen.winkel.toFixed(1)}) scale(${liegen.skala.toFixed(2)})` : undefined}>
               <InselFigur {figur} {aussehen} laeuft={laeuft && !pose} sitzt={pose?.typ === 'sitzen'} ansicht={pose ? 'vorne' : blick.ansicht} links={!pose && blick.links} />
@@ -580,6 +651,13 @@
       <text x="0" y="-50" text-anchor="middle" font-size="18" font-weight="900" fill="#1f2a6b">{u.name}</text>
     </g>
   {/each}
+  {#if jubel}
+    <g class="jubelsterne" transform="translate({jubelPunkt[0]} {jubelPunkt[1]})" pointer-events="none" aria-hidden="true">
+      {#each STERNE as [sx, sy, gr], k (k)}
+        <path d="M{sx} {sy - gr} L{sx + gr * 0.3} {sy - gr * 0.3} L{sx + gr} {sy} L{sx + gr * 0.3} {sy + gr * 0.3} L{sx} {sy + gr} L{sx - gr * 0.3} {sy + gr * 0.3} L{sx - gr} {sy} L{sx - gr * 0.3} {sy - gr * 0.3} Z" fill={k % 3 === 0 ? '#ffc62b' : k % 3 === 1 ? '#ffe57a' : '#ff9ec7'} stroke="#1f2a6b" stroke-width="1" style="animation-delay: {k * 110}ms" />
+      {/each}
+    </g>
+  {/if}
 </svg>
 
 <style>
@@ -600,6 +678,39 @@
   @keyframes hupfer {
     40% {
       translate: 0 -4px;
+    }
+  }
+  /* Bauauftrag geschafft: zweimal hüpfen, Sterne steigen auf (seit 0.19) */
+  .hopst {
+    animation: hopsen 0.55s cubic-bezier(0.3, 0, 0.4, 1) 2;
+  }
+  @keyframes hopsen {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    45% {
+      translate: 0 -26px;
+    }
+  }
+  .jubelsterne path {
+    opacity: 0;
+    animation: steigen 1.8s ease-out forwards;
+  }
+  @keyframes steigen {
+    0% {
+      opacity: 0;
+      translate: 0 10px;
+      scale: 0.4;
+    }
+    20% {
+      opacity: 1;
+      scale: 1;
+    }
+    100% {
+      opacity: 0;
+      translate: 0 -110px;
+      scale: 1.1;
     }
   }
   /* Sitzen: etwas tiefer in den Sitz */

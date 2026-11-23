@@ -968,8 +968,20 @@ try {
       // Teleporter in der Leiste
       await page.getByRole('button', { name: 'Teleporter zur Bauinsel' }).click();
       await page.locator('[data-feld="12,19,-1"]').first().waitFor({ state: 'attached', timeout: 30000 });
+      // Seit 0.19 erklärt Flinka einmal die Auftragsinseln und das Ruderboot
+      await page.locator('.flinka-hinweis').waitFor({ timeout: 4000 }).catch(() => {});
+      pruefe((await page.getByText(/Ruderboot/).count()) >= 1, `${name}: Flinka erklärt Ruderboot und Auftragsinseln`);
+      for (let i = 0; i < 5 && (await page.locator('.flinka-hinweis').count()); i++) await page.locator('.flinka-hinweis').getByRole('button', { name: /Weiter|Los geht/ }).click();
       await page.waitForTimeout(300);
       await foto('81-teleport-ankunft');
+      // Seit 0.19: Auf der Hauptinsel gibt es keine Bauplätze mehr, das Ruderboot am Steg fährt zur Auftragsinsel
+      pruefe((await page.locator('[data-schild]').count()) === 0, `${name}: kein Bauplatz mehr auf den Inseln zum freien Bauen`);
+      await page.locator('[data-ruderboot]').dispatchEvent('click');
+      await page.getByRole('status', { name: 'Fahrt zur Auftragsinsel' }).waitFor({ timeout: 30000 }).catch(() => {});
+      await page.getByRole('region', { name: 'Bauauftrag' }).waitFor({ timeout: 30000 });
+      pruefe((await page.locator('[data-boot]').count()) === 0 && (await page.locator('[data-ruderboot]').count()) === 1, `${name}: Ruderboot bringt zur eigenen Auftragsinsel (eigene Ansicht)`);
+      pruefe((await page.getByRole('button', { name: 'Hinlaufen' }).count()) === 1, `${name}: auf der Auftragsinsel heißt es „Hinlaufen“`);
+      await page.getByRole('button', { name: 'Bauauftrag schließen' }).click();
       // Bauplatz-Schild des offenen Auftrags öffnet den Auftrag
       await page.locator('[data-schild]').first().dispatchEvent('click');
       await page.getByRole('region', { name: 'Bauauftrag' }).waitFor();
@@ -986,6 +998,10 @@ try {
       await page.getByRole('button', { name: 'Bauauftrag schließen' }).click();
       await page.getByRole('region', { name: 'Bauauftrag' }).waitFor({ state: 'detached' });
       pruefe(true, `${name}: Bauauftrag lässt sich mit ✕ schließen`);
+      // Mit dem Ruderboot zurück zur ersten Insel
+      await page.locator('[data-ruderboot]').dispatchEvent('click');
+      await page.locator('[data-boot]').waitFor({ state: 'attached', timeout: 30000 });
+      pruefe((await page.locator('[data-schild]').count()) === 0, `${name}: Ruderboot fährt zurück zur ersten Insel`);
       // Drehen: Die Ansicht dreht sich um die Figur (sie bleibt in der Bildmitte)
       for (let d = 0; d < 2; d++) {
         await page.getByRole('button', { name: 'Ansicht drehen' }).click();

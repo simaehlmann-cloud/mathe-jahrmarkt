@@ -23,6 +23,13 @@
     START,
     inEbene,
     GRUNDSTUECKE,
+    AUFTRAGSINSELN,
+    AUFTRAGSINSEL_GROESSE,
+    HAUPTWELT,
+    ANKUNFT_HAUPT,
+    ankunftAuf,
+    bereichVon,
+    inselVon,
     INSEL_AUFTRAEGE,
     INSEL_AUFTRAG_BLOECKE,
     INSEL_AUFTRAG_TALER,
@@ -48,6 +55,7 @@
   import Kopfzeile from '../components/Kopfzeile.svelte';
   import TeilVorschau from '../grafik/TeilVorschau.svelte';
   import InselWelt from '../grafik/InselWelt.svelte';
+  import InselFigur from '../grafik/InselFigur.svelte';
   import { app } from '../zustand.svelte';
 
   /**
@@ -71,6 +79,19 @@
   });
   let auftrag = $derived(stand ? offenerInselAuftrag(stand) : undefined);
   let auftragOffen = $state(false);
+  /**
+   * Welcher Ausschnitt wird gezeigt? Das ergibt sich aus dem Platz der Figur: Hauptwelt oder (seit 0.19)
+   * eine der kleinen Auftragsinseln, die jeweils eine eigene, kleine Ansicht haben.
+   */
+  let bereich = $derived(stand ? bereichVon(stand.figur.x, stand.figur.y) : HAUPTWELT);
+  let aufAuftragsinsel = $derived(bereich !== HAUPTWELT);
+  /** Steht die Figur auf der Insel des offenen Auftrags? */
+  let amAuftrag = $derived(!!auftrag && aufAuftragsinsel && inselVon(auftrag.grundstueck) === bereich);
+  /** Bauauftrag geschafft: Figur jubelt, Sterne steigen auf (seit 0.19). */
+  let jubel = $state(false);
+  let jubelUhr: ReturnType<typeof setTimeout> | undefined;
+  /** Fahrt mit dem Ruderboot: kurzes Bild auf dem Wasser, dann ist man drüben. */
+  let ruderfahrt = $state<{ zurInsel: boolean } | null>(null);
   const SCHRITT_MS = 200;
 
   /** Alles Speichern gilt nur für das Kind, dessen Insel gerade offen ist (nicht nach einem Spielerwechsel). */
@@ -95,7 +116,20 @@
     if (fertig) {
       app.aendereProfil((r) => ({ ...r, insel: fertig.stand, taler: r.taler + INSEL_AUFTRAG_TALER, bau: { ...r.bau, bloecke: bloecke + INSEL_AUFTRAG_BLOECKE } }));
       app.spieleKlang('jubel');
-      app.melde(`Bauauftrag geschafft: ${fertig.auftrag.titel}! +${INSEL_AUFTRAG_TALER} Taler, +${INSEL_AUFTRAG_BLOECKE} Blöcke`);
+      app.melde(`Bauauftrag geschafft! +${INSEL_AUFTRAG_TALER} Taler, +${INSEL_AUFTRAG_BLOECKE} Blöcke`);
+      // Jubeln: Figur hüpft zweimal mit den Armen nach oben, über dem Bauplatz steigen Sterne auf
+      pose = null;
+      clearTimeout(jubelUhr);
+      jubel = false;
+      void tick().then(() => {
+        if (zerstoert) return;
+        jubel = true;
+        jubelUhr = setTimeout(() => (jubel = false), app.einstellungen.animationenReduziert ? 1200 : 2400);
+      });
+      // Liegt der nächste Auftrag auf einer anderen Insel, sagt Flinka, wie es weitergeht
+      const naechster = offenerInselAuftrag(fertig.stand);
+      if (naechster && naechster.grundstueck !== fertig.auftrag.grundstueck)
+        setTimeout(() => !zerstoert && app.melde('Der nächste Bauauftrag wartet auf einer neuen Insel. Fahr mit dem Ruderboot zurück zum Steg!'), 3200);
       return;
     }
     app.aendereProfil((r) => ({ ...r, insel: neu, bau: { ...r.bau, bloecke } }));
@@ -181,19 +215,37 @@
   }
 
   /* ---------- Flinka erklärt Neues (einmal je Kind) ---------- */
-  const HINWEISE: { id: string; nur: 'frei' | 'paket'; saetze: string[] }[] = [
-    { id: 'insel-frei', nur: 'frei', saetze: ['Die erste Insel gehört dir! Bau los – Blöcke bekommst du beim Rechnen.', 'Im Andenkenstand gibt es Türen, Fenster, Möbel und Blumen für dein Haus.'] },
+  /** `auch`: Hinweise, die damit schon mit erklärt sind (werden gleich mit als gesehen gemerkt). */
+  const HINWEISE: { id: string; nur: 'frei' | 'paket'; saetze: string[]; auch?: string[] }[] = [
+    {
+      id: 'insel-frei',
+      nur: 'frei',
+      saetze: ['Die erste Insel gehört dir! Bau los – Blöcke bekommst du beim Rechnen.', 'Unten wartet eine große Wiese ohne Bäume – Platz für große Bauwerke.', 'Im Andenkenstand gibt es Türen, Fenster, Möbel und Blumen für dein Haus.'],
+      auch: ['insel-019f'],
+    },
+    { id: 'insel-019f', nur: 'frei', saetze: ['Deine Insel ist gewachsen: Unten wartet eine große Wiese ohne Bäume – Platz für große Bauwerke!'] },
     {
       id: 'insel-014',
       nur: 'paket',
       saetze: ['Neu auf der Insel: Mit „Drehen“ drehst du Möbel. Stühle schauen sogar von selbst zum Tisch.', 'Ganz im Süden, hinter dem Bauland, wartet jetzt eine Wüste mit Kakteen und einer Oase!', 'Unten bei den Knöpfen gibt es eine Karte mit allen Inseln.'],
+    },
+    {
+      id: 'insel-019',
+      nur: 'paket',
+      saetze: [
+        'Neu: Jeder Bauauftrag hat jetzt eine eigene kleine Insel. Unten am Steg liegt ein Ruderboot – tipp es an, dann fährst du hin!',
+        'Deine erste Insel ist gewachsen: Unten wartet eine große Wiese ohne Bäume.',
+        'Was du auf den alten Bauplätzen gebaut hast, bleibt einfach stehen.',
+      ],
     },
   ];
   let hinweis = $state<{ id: string; saetze: string[] } | null>(null);
   function hinweisFertig() {
     const h = hinweis;
     hinweis = null;
-    if (h) app.aendereProfil((q) => (q.gesehen.hinweise.includes(h.id) ? q : { ...q, gesehen: { ...q.gesehen, hinweise: [...q.gesehen.hinweise, h.id] } }));
+    if (!h) return;
+    const ids = [h.id, ...(HINWEISE.find((x) => x.id === h.id)?.auch ?? [])];
+    app.aendereProfil((q) => (ids.every((id) => q.gesehen.hinweise.includes(id)) ? q : { ...q, gesehen: { ...q.gesehen, hinweise: [...q.gesehen.hinweise, ...ids.filter((id) => !q.gesehen.hinweise.includes(id))] } }));
   }
   /** Kamera ohne eigene Animation genau auf einen Punkt setzen (beim Laufen in jedem Bild). */
   function kameraAuf(pos: { x: number; y: number; z: number }) {
@@ -496,12 +548,17 @@
   const inventar = $derived(p ? [...EINRICHTUNG, ...TIERE].filter((e) => (p.insel.inventar[String(e.id)] ?? 0) > 0) : []);
   const istMoebel = $derived(art >= 100);
 
-  /** Zum Rand des Grundstücks des aktuellen Auftrags laufen. */
+  /** Zum Rand des Grundstücks des aktuellen Auftrags laufen (liegt es auf einer anderen Insel: zum Ruderboot). */
   function zumGrundstueck() {
     const st = stand;
     if (!st || !auftrag) return;
     const g = GRUNDSTUECKE.find((x) => x.id === auftrag.grundstueck);
     if (!g) return;
+    if (!amAuftrag) {
+      auftragOffen = false;
+      zumRuderboot();
+      return;
+    }
     modus = 'laufen';
     // Ein freies Feld direkt vor dem Grundstück (unten Mitte), notfalls ein anderes Randfeld
     const kandidaten: [number, number][] = [[g.x0 + 1, g.y0 + g.n], [g.x0 - 1, g.y0 + 1], [g.x0 + g.n, g.y0 + 1], [g.x0 + 1, g.y0 - 1], [g.x0 + 1, g.y0 + 1]];
@@ -536,6 +593,72 @@
   }
   /** Wird nach dem Ende eines Wegs einmal ausgeführt. */
   let nachLaufen: (() => void) | null = null;
+
+  /* ---------- Ruderboot zu den Auftragsinseln (seit 0.19) ---------- */
+
+  /** Zum Ruderboot laufen und hinüberrudern: von der ersten Insel zum offenen Auftrag, von dort zurück. */
+  function zumRuderboot() {
+    const st = stand;
+    if (!st || laeuft || ruderfahrt) return;
+    if (!aufAuftragsinsel && !auftrag) {
+      app.melde('Alle Bauaufträge sind geschafft! Weitere Aufträge gibt es auf dem Bauplatz.');
+      return;
+    }
+    modus = 'laufen';
+    pose = null;
+    app.spieleKlang('tipp');
+    const insel = aufAuftragsinsel ? AUFTRAGSINSELN.find((a) => a === bereich) : undefined;
+    const steg = insel ? ankunftAuf(insel) : ANKUNFT_HAUPT;
+    const ziel = zielAufFeld(st, steg.x, steg.y);
+    const weg = ziel ? wegAufInsel(st, st.figur, ziel) : [];
+    // Zugebaut oder schon am Steg? Dann geht es trotzdem los.
+    if (weg.length <= 1) {
+      rudern();
+      return;
+    }
+    nachLaufen = rudern;
+    laufe(weg.slice(1));
+  }
+  /** Maßstab der Hauptwelt, solange man auf einer Auftragsinsel ist. */
+  let hauptMassstab = 1;
+  /** Maßstab, bei dem eine Auftragsinsel (12 × 12 Felder) gut ins Feld passt. */
+  function inselMassstab(): number {
+    if (!feld) return 1.4;
+    const breite = 2 * AUFTRAGSINSEL_GROESSE * 22 + 20;
+    const hoehe = 9 * 25 + 40 + AUFTRAGSINSEL_GROESSE * 22;
+    const m = 0.95 * Math.min(feld.clientWidth / breite, feld.clientHeight / hoehe);
+    return Math.round(Math.max(1, Math.min(1.8, m)) * 10) / 10;
+  }
+  function rudern() {
+    const zurInsel = !aufAuftragsinsel;
+    const ziel = zurInsel ? (auftrag ? inselVon(auftrag.grundstueck) : undefined) : undefined;
+    if (zurInsel && !ziel) return;
+    const ankunft = ziel ? ankunftAuf(ziel) : { ...ANKUNFT_HAUPT };
+    const fertig = () => {
+      if (zerstoert) return;
+      lokalFigur = ankunft;
+      lokalTiere = null;
+      sichern();
+      ruderfahrt = null;
+      // Die kleine Auftragsinsel füllt das Bild; zurück gilt wieder der Maßstab von vorher
+      if (zurInsel) {
+        hauptMassstab = massstab;
+        massstab = inselMassstab();
+      } else massstab = hauptMassstab;
+      void tick().then(() => {
+        kamera(false);
+        if (welt) kompass = welt.nordWinkel();
+      });
+      if (zurInsel && auftrag) setTimeout(() => !zerstoert && (auftragOffen = true), 300);
+    };
+    if (app.einstellungen.animationenReduziert) {
+      fertig();
+      return;
+    }
+    ruderfahrt = { zurInsel };
+    app.spieleKlang('pop');
+    setTimeout(fertig, 1700);
+  }
 
   /* ---------- Tag und Nacht ---------- */
   /** Gespielte Zeit seit dem letzten Schlafen (ms); läuft nur, solange die Insel offen und sichtbar ist. */
@@ -603,13 +726,19 @@
     // Freie Version: Wer (z. B. nach einer Rückgabe des Kaufs) außerhalb der ersten Insel steht, kommt zurück zum Ankunftsplatz
     const st0 = stand;
     if (!app.paket && st0 && !imFreienTeil(st0.figur.x, st0.figur.y)) lokalFigur = { ...START };
-    void tick().then(() => kamera(false));
+    // Steht die Figur auf einer Auftragsinsel, füllt diese das Bild
+    void tick().then(() => {
+      if (aufAuftragsinsel) massstab = inselMassstab();
+      void tick().then(() => kamera(false));
+    });
     gespeichertBei = wach;
     letzterWachTakt = Date.now();
     wachUhr = setInterval(wachTakt, 5000);
     const q0 = app.profil;
     const neu = q0 && HINWEISE.find((h) => (h.nur === 'paket') === app.paket && !q0.gesehen.hinweise.includes(h.id));
-    if (neu) setTimeout(() => !zerstoert && (hinweis = { id: neu.id, saetze: neu.saetze }), 700);
+    // Ein Kind ohne fertige Bauaufträge hat auf den alten Bauplätzen nichts gebaut: dann ohne den letzten Satz
+    const saetze = neu?.id === 'insel-019' && q0 && q0.insel.erledigt.length === 0 ? neu.saetze.slice(0, 2) : neu?.saetze;
+    if (neu && saetze) setTimeout(() => !zerstoert && (hinweis = { id: neu.id, saetze }), 700);
     if (licht === 0) {
       nachtGemeldet = true;
       setTimeout(() => app.melde('Auf der Insel ist Nacht. Leg dich in ein Bett und schlaf eine Runde – dann wird es wieder Tag.'), 600);
@@ -642,6 +771,7 @@
     clearInterval(wachUhr);
     clearTimeout(schaukelUhr);
     clearTimeout(streichelUhr);
+    clearTimeout(jubelUhr);
     sichern();
     if (wach !== gespeichertBei) wachSichern();
   });
@@ -653,8 +783,35 @@
     <div class="kompass" aria-hidden="true" style="--w: {kompass}deg"><span class="nadel"></span><b>N</b></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="feld" class:blende bind:this={feld} onpointerdown={ziehStart} onpointermove={ziehen} onpointercancel={selbstSchauen} ontouchstart={wischStart} ontouchmove={wischen} onwheel={selbstSchauen}>
-      {#if stand}<InselWelt bind:this={welt} {stand} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag && app.paket ? auftrag.grundstueck : null} frei={!app.paket} bauen={modus !== 'laufen'} drehMarken={modus === 'drehen'} {gleitPos} {funkeln} {pose} {gestreichelt} {licht} ontippe={tippe} onboot={zumBoot} onschild={() => (auftragOffen = true)} />{/if}
+      {#if stand}
+        <div class="mitte">
+        {#key bereich}
+          <InselWelt bind:this={welt} {stand} {bereich} {drehung} {massstab} figur={p.figur} aussehen={p.aussehen} {laeuft} {markiert} grundstueck={auftrag && app.paket ? auftrag.grundstueck : null} frei={!app.paket} bauen={modus !== 'laufen'} drehMarken={modus === 'drehen'} {gleitPos} {funkeln} {pose} {gestreichelt} {licht} {jubel} ontippe={tippe} onboot={zumBoot} onruderboot={app.paket ? zumRuderboot : undefined} onschild={() => (auftragOffen = true)} />
+        {/key}
+        </div>
+      {/if}
     </div>
+    {#if ruderfahrt}
+      <div class="ruderfahrt" role="status" aria-label={ruderfahrt.zurInsel ? 'Fahrt zur Auftragsinsel' : 'Fahrt zurück zur ersten Insel'}>
+        <svg viewBox="0 0 400 300" aria-hidden="true">
+          <rect width="400" height="150" fill="#bfe8ff" />
+          <circle cx="330" cy="60" r="22" fill="#ffe57a" />
+          <rect y="150" width="400" height="150" fill="#5fb7e6" />
+          {#if ruderfahrt.zurInsel}<path d="M318 151 q34 -30 82 -24 L400 151 Z" fill="#8bd17a" stroke="#1f2a6b" stroke-width="2" />{:else}<path d="M0 151 q44 -32 96 -20 L96 151 Z" fill="#8bd17a" stroke="#1f2a6b" stroke-width="2" />{/if}
+          <g class="wellen" fill="none" stroke="#fffdf7" stroke-width="2.5" stroke-linecap="round" opacity="0.8">
+            <path d="M20 180 q10 -6 20 0 q10 6 20 0" /><path d="M150 236 q10 -6 20 0 q10 6 20 0" /><path d="M280 190 q10 -6 20 0 q10 6 20 0" /><path d="M70 270 q10 -6 20 0 q10 6 20 0" /><path d="M300 262 q10 -6 20 0 q10 6 20 0" />
+          </g>
+          <g class="fahrt" class:zurueck={!ruderfahrt.zurInsel}>
+            <g transform="translate(0 206)">
+              <g class="ruder"><line x1="-34" y1="10" x2="-4" y2="-8" stroke="#87521f" stroke-width="4" stroke-linecap="round" /></g>
+              <InselFigur figur={p.figur} aussehen={p.aussehen} sitzt ansicht="seite" links={!ruderfahrt.zurInsel} g={50} />
+              <path d="M-36 -4 Q0 -10 36 -4 L26 12 Q0 17 -26 12 Z" fill="#b5834f" stroke="#1f2a6b" stroke-width="2.4" stroke-linejoin="round" />
+            </g>
+          </g>
+        </svg>
+        <p>{ruderfahrt.zurInsel ? 'Ab zur Auftragsinsel!' : 'Zurück zur ersten Insel!'}</p>
+      </div>
+    {/if}
     </div>
     {#if karteOffen && stand}<InselKarte {stand} paket={app.paket} onwahl={zeigeStelle} onzu={() => (karteOffen = false)} />{/if}
     {#if hinweis}<div class="flinka-hinweis"><Sprechblase saetze={hinweis.saetze} onfertig={hinweisFertig} /></div>{/if}
@@ -667,12 +824,12 @@
         {#if auftrag}
           {@const g = GRUNDSTUECKE.find((x) => x.id === auftrag.grundstueck)}
           {@const nr = INSEL_AUFTRAEGE.indexOf(auftrag) + 1}
-          <p class="sogehts">So geht's: Lies den Auftrag und bau genau das auf dem markierten Bauplatz. Ist alles richtig, gibt es Taler und Blöcke. <span class="nr">Auftrag {nr} von {INSEL_AUFTRAEGE.length}</span></p>
+          <p class="sogehts">So geht's: {amAuftrag ? 'Lies' : 'Fahr mit dem Ruderboot zur Auftragsinsel, lies'} den Auftrag und bau genau das auf dem markierten Bauplatz. Ist alles richtig, gibt es Taler und Blöcke. <span class="nr">Auftrag {nr} von {INSEL_AUFTRAEGE.length}</span></p>
           <p>{auftrag.text}</p>
           <p class="tipp">Tipp: {auftrag.tipp}</p>
-          <p class="klein">{g?.name ?? 'Der Bauplatz'} liegt {g?.wo ?? 'auf einer Insel'} und hat ein Schild. Belohnung: {INSEL_AUFTRAG_TALER} Taler und {INSEL_AUFTRAG_BLOECKE} Blöcke.</p>
+          <p class="klein">{g?.name ?? 'Der Bauplatz'} liegt {amAuftrag ? 'hier auf dieser Insel' : (g?.wo ?? 'auf einer Insel')} und hat ein Schild. Belohnung: {INSEL_AUFTRAG_TALER} Taler und {INSEL_AUFTRAG_BLOECKE} Blöcke.</p>
           <div class="knoepfe">
-            <button class="ticket gelb" onclick={zumGrundstueck}>Hinlaufen</button>
+            <button class="ticket gelb" onclick={zumGrundstueck}>{amAuftrag ? 'Hinlaufen' : 'Mit dem Ruderboot hin'}</button>
             <button class="ticket hell" onclick={() => (auftragOffen = false)}>Schließen</button>
             <button class="ticket hell" onclick={() => app.zeige({ name: 'bauplatz', von: 'insel' })}>Bauplatz-Aufträge</button>
           </div>
@@ -720,7 +877,7 @@
         <button class="rund" onclick={() => { massstab = Math.max(0.6, massstab - 0.2); void tick().then(() => kamera()); }} aria-label="Kleiner">−</button>
         <button class="rund" onclick={() => { massstab = Math.min(1.8, massstab + 0.2); void tick().then(() => kamera()); }} aria-label="Größer">+</button>
         <button class="rund" onclick={() => kamera(true)} aria-label="Wo bin ich?">◎</button>
-        <button class="rund" onclick={() => (karteOffen = true)} aria-label="Übersicht aller Inseln"><Icon name="karte" groesse={22} /></button>
+        {#if !aufAuftragsinsel}<button class="rund" onclick={() => (karteOffen = true)} aria-label="Übersicht aller Inseln"><Icon name="karte" groesse={22} /></button>{/if}
         {#if app.paket}<button class="ticket hell auftraege" onclick={() => (auftragOffen = !auftragOffen)} aria-expanded={auftragOffen}>Bauauftrag</button>{/if}
       </div>
     </div>
@@ -790,6 +947,82 @@
     background: #3c8fc2;
     scrollbar-width: none;
     overscroll-behavior: contain;
+  }
+  /* Kleine Ansichten (Auftragsinseln) stehen mittig im Feld */
+  .mitte {
+    min-width: 100%;
+    min-height: 100%;
+    width: max-content;
+    display: grid;
+    place-items: center;
+  }
+  /* Fahrt mit dem Ruderboot (seit 0.19) */
+  .ruderfahrt {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    background: #bfe8ff;
+  }
+  .ruderfahrt svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* Himmel oben, Wasser unten: auch die Ränder neben dem Bild passen dazu */
+    background: linear-gradient(#bfe8ff 50%, #5fb7e6 50%);
+  }
+  .ruderfahrt p {
+    margin: 0;
+    padding: 10px;
+    text-align: center;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: var(--tinte);
+    background: var(--papier);
+    border-top: 3px solid var(--tinte);
+  }
+  .ruderfahrt .fahrt {
+    animation: rudernHin 1.7s ease-in-out forwards;
+  }
+  .ruderfahrt .fahrt.zurueck {
+    animation-name: rudernZurueck;
+  }
+  @keyframes rudernHin {
+    from {
+      translate: -60px 0;
+    }
+    to {
+      translate: 330px 0;
+    }
+  }
+  @keyframes rudernZurueck {
+    from {
+      translate: 460px 0;
+    }
+    to {
+      translate: 70px 0;
+    }
+  }
+  .ruderfahrt .ruder {
+    animation: ruderschlag 0.5s ease-in-out infinite alternate;
+    transform-origin: -4px -8px;
+  }
+  @keyframes ruderschlag {
+    from {
+      rotate: -18deg;
+    }
+    to {
+      rotate: 22deg;
+    }
+  }
+  .ruderfahrt .wellen {
+    animation: wellen 1.2s ease-in-out infinite alternate;
+  }
+  @keyframes wellen {
+    to {
+      translate: 14px 0;
+    }
   }
   .werkzeug {
     position: relative;

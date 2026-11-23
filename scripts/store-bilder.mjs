@@ -22,15 +22,30 @@ const TAG = '2026-06-16';
 
 /** Bildtexte: Reihenfolge = Reihenfolge im Store. */
 export const BILDER = [
-  ['1-jahrmarkt', '30 Buden für den Weg in Klasse 5'],
+  ['1-jahrmarkt', 'Ein Jahrmarkt voller Mathe für Klasse 4 und 5'],
   ['2-dartbude', 'Einmaleins mit Pfeil und Ballon'],
   ['3-hilfe', 'Fehler? Die Hilfe zeigt, wie es geht'],
   ['4-uhr', 'Uhr, Geld und Längen zum Anfassen'],
   ['5-knobelzelt', 'Knobeln in kleinen Schritten'],
-  ['6-bauinsel', 'Mit verdienten Blöcken bauen'],
-  ['7-eltern', 'Für Eltern: sehen, was schon sitzt'],
-  ['8-pause', 'Kurz üben, dann Pause. Ohne Werbung.'],
+  ['6-lageplan', 'Auf einen Blick: wie weit du schon bist'],
+  ['7-bauinsel', 'Mit verdienten Blöcken bauen'],
+  ['8-eltern', 'Für Eltern: sehen, was schon sitzt'],
+  ['9-pause', 'Kurz üben, dann Pause. Ohne Werbung.'],
 ];
+
+/** Weltpunkt (Jahrmarkt-Koordinaten) in die Bildmitte holen und dort antippen; die Figur läuft hin. */
+export async function gehZu(page, wx, wy) {
+  const punkt = await page.evaluate(([wx, wy]) => {
+    const k = document.querySelector('.karte');
+    const m = document.querySelector('.huelle').offsetWidth / 1640;
+    k.scrollTo({ left: wx * m - k.clientWidth / 2, top: wy * m - k.clientHeight / 2 });
+    const r = k.getBoundingClientRect();
+    return { x: r.left + wx * m - k.scrollLeft, y: r.top + wy * m - k.scrollTop };
+  }, [wx, wy]);
+  await page.waitForTimeout(300);
+  await page.mouse.click(punkt.x, punkt.y);
+  await page.waitForTimeout(4800);
+}
 
 async function rohaufnahmen(geraet, viewport, dsf) {
   const ctx = await b.newContext({ viewport, deviceScaleFactor: dsf, hasTouch: true });
@@ -56,7 +71,14 @@ async function rohaufnahmen(geraet, viewport, dsf) {
     await f.getByRole('button', { name: 'Weiter' }).click();
   }
   await page.waitForTimeout(1200);
+  // Die Figur auf den Platz am Spiegelzelt laufen lassen: dort Buden, Brunnen, Zuckerwatte und Kettenkarussell im Bild
+  await gehZu(page, 1130, 2110);
   await foto('1-jahrmarkt');
+  await page.getByRole('button', { name: 'Lageplan', exact: true }).click();
+  await page.getByRole('group', { name: 'Lageplan des Jahrmarkts' }).waitFor();
+  await page.waitForTimeout(500);
+  await foto('6-lageplan');
+  await page.getByRole('button', { name: 'Lageplan schließen' }).click();
 
   // Dartbude, Silber, mitten in der Runde – danach eine absichtlich falsche Antwort für die Hilfe
   await page.getByRole('button', { name: 'Dartbude öffnen' }).click();
@@ -123,7 +145,7 @@ async function rohaufnahmen(geraet, viewport, dsf) {
   await page.getByRole('radio', { name: 'Laufen', exact: true }).click();
   await flaeche(12, 20, -1);
   await page.waitForTimeout(2500);
-  await foto('6-bauinsel');
+  await foto('7-bauinsel');
   await zumJahrmarkt();
 
   // Elternbereich: Wochenbericht
@@ -134,7 +156,7 @@ async function rohaufnahmen(geraet, viewport, dsf) {
   await page.getByRole('button', { name: 'Öffnen' }).click();
   await page.getByRole('heading', { name: /Die letzten 7 Tage/ }).waitFor();
   await page.waitForTimeout(400);
-  await foto('7-eltern');
+  await foto('8-eltern');
 
   // Pausen-Erinnerung: heutige Spielzeit auf 21 Minuten setzen, dann einen Zähltakt abwarten
   await zumJahrmarkt();
@@ -150,7 +172,7 @@ async function rohaufnahmen(geraet, viewport, dsf) {
   await page.clock.runFor(31000);
   await page.getByRole('alertdialog', { name: 'Pausenzeit!' }).waitFor();
   await page.waitForTimeout(600);
-  await foto('8-pause');
+  await foto('9-pause');
   await ctx.close();
 }
 
@@ -216,11 +238,12 @@ for (const [i, [name, text]] of BILDER.entries()) {
   await rahmen(`${ROH}/telefon-${name}.png`, text, 1206, 2622, `${AUS}/iphone-${n}.png`);
   await rahmen(`${ROH}/telefon-${name}.png`, text, 1320, 2868, `${AUS}/iphone-gross-${n}.png`);
   await rahmen(`${ROH}/ipad-${name}.png`, text, 2064, 2752, `${AUS}/ipad-${n}.png`);
+  if (process.env.NUR_APPLE) continue;
   await rahmen(`${ROH}/telefon-${name}.png`, text, 1080, 1920, `${AUS}/play-telefon-${n}.png`);
   await rahmen(`${ROH}/ipad-${name}.png`, text, 1440, 2560, `${AUS}/play-tablet-${n}.png`);
 }
-await vorstellungsgrafik(`${AUS}/play-vorstellungsgrafik.png`);
-{
+if (!process.env.NUR_APPLE) await vorstellungsgrafik(`${AUS}/play-vorstellungsgrafik.png`);
+if (!process.env.NUR_APPLE) {
   // Google-Symbol: das iOS-Symbol, verkleinert (Google rundet selbst ab)
   const p = await b.newPage({ viewport: { width: 512, height: 512 } });
   await p.setContent(`<body style="margin:0"><img style="width:512px;height:512px;display:block" src="${bildUrl('ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png')}">`);

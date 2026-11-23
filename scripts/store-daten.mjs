@@ -34,7 +34,7 @@ export async function beispielprofil(page, url, extra = {}) {
     p.taler = 86;
     p.bau.bloecke = 140;
     p.gesehen.gassen = ['zahlengasse', 'groessenmarkt', 'spiegelzelt', 'musterbahn', 'forschergasse'];
-    p.gesehen.hinweise = ['auftraege', 'rundgang'];
+    p.gesehen.hinweise = ['auftraege', 'rundgang', 'insel-frei', 'insel-014', 'insel-019', 'insel-019f'];
     // Drei Wochen Spielverlauf für Bericht und Lernprofil
     const jetzt = Date.now();
     const K = ['kopfrechnen', 'stellenwert', 'halbschriftlich', 'groessen', 'raum', 'muster', 'zahlverstaendnis', 'operationsverstaendnis'];

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BREITE, HOEHE, LANDSCHAFT, imFreienTeil, type InselStand } from '../../domain/insel';
+  import { BREITE, HAUPT_HOEHE as HOEHE, LANDSCHAFT, imFreienTeil, type InselStand } from '../../domain/insel';
 
   /**
    * Übersicht (seit 0.14): alle Inseln von oben als kleine Karte. Gebautes ist braun, die Figur ein roter Punkt.

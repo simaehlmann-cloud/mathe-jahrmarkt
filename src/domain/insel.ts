@@ -15,11 +15,14 @@ export const INSEL = 24;
 export const BREITE = 44;
 /**
  * Höhe des Bauplans: oben die beiden ersten Inseln, darunter (seit 0.11.1) Steg und Strandinsel,
- * darunter (seit 0.12) das große, flache Bauland und ganz unten (seit 0.14) die Wüsteninsel.
+ * darunter (seit 0.12) das große, flache Bauland, darunter (seit 0.14) die Wüsteninsel und ganz unten
+ * (seit 0.19) die kleinen Auftragsinseln. Die liegen außerhalb der Hauptwelt und haben je eine eigene Ansicht.
  */
-export const HOEHE = 76;
-/** Frühere Höhen (0.10/0.11.0: 24 Reihen, 0.11.1: 40 Reihen, 0.12/0.13: 58 Reihen), für das Umrechnen alter Spielstände. */
-const FRUEHERE_HOEHEN = [INSEL, 40, 58];
+export const HOEHE = 100;
+/** Reihen der Hauptwelt (alle Inseln, zu denen man laufen kann); darunter liegen die Auftragsinseln. */
+export const HAUPT_HOEHE = 76;
+/** Frühere Höhen (0.10/0.11.0: 24 Reihen, 0.11.1: 40 Reihen, 0.12/0.13: 58 Reihen, 0.14–0.18: 76 Reihen), für das Umrechnen alter Spielstände. */
+const FRUEHERE_HOEHEN = [INSEL, 40, 58, 76];
 /** Bis zu dieser Höhe darf auf der Insel gebaut werden (höher als auf dem Bauplatz). */
 export const INSEL_MAX = Math.max(MAX_HOEHE, 12);
 
@@ -192,9 +195,71 @@ const abstand3 = (x: number, y: number): number => Math.hypot((x + 0.5 - INSEL3.
 export const aufInsel3 = (x: number, y: number): boolean => abstand3(x, y) < 1;
 /** Zweite Brücke: von der zweiten Insel nach Süden zur Strandinsel (zwei Felder breit). */
 export const BRUECKE2 = { x: 34, y0: 21, y1: 23 } as const;
-/** Bootssteg am Strand der ersten Insel; am Ende liegt das Boot zurück zum Jahrmarkt. */
-export const STEG = { x: 11, y0: 24, y1: 25 } as const;
-export const BOOT = { x: 11, y: 26 } as const;
+/**
+ * Seit 0.19 ist die erste Insel nach unten größer: eine Wiese ohne Bäume zum freien Bauen (WIESE).
+ * Der Bootssteg liegt jetzt an ihrem unteren Rand; am Ende das Boot zum Jahrmarkt, daneben das Ruderboot
+ * zu den Auftragsinseln.
+ */
+export const ERWEITERUNG = { x0: 0, x1: 20, y0: INSEL, y1: 36 } as const;
+/** Baumfreie Wiese (14 × 14 Felder) auf der ersten Insel. */
+export const WIESE = { x0: 2, x1: 17, y0: 23, y1: 36 } as const;
+export const aufErweiterung = (x: number, y: number): boolean => {
+  const { x0, x1, y0, y1 } = ERWEITERUNG;
+  if (x < x0 || x > x1 || y < y0 || y > y1) return false;
+  // untere rechte Ecke abgerundet (Radius 3); links ist der Rand des Bauplans, oben die alte Insel
+  const r = 3;
+  if (x > x1 - r && y > y1 - r) return Math.hypot(x - (x1 - r), y - (y1 - r)) <= r;
+  return true;
+};
+export const STEG = { x: 11, y0: 37, y1: 38 } as const;
+export const BOOT = { x: 11, y: 39 } as const;
+/** Ruderboot zu den Auftragsinseln, rechts neben dem Ende des Stegs. */
+export const RUDERBOOT = { x: 13, y: 38 } as const;
+
+/** Ausschnitt des Bauplans, der in einer Ansicht gezeichnet wird (x1, y1 ausschließlich). */
+export interface Bereich {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+/** Die Hauptwelt: alle Inseln, zwischen denen man laufen kann. */
+export const HAUPTWELT: Bereich = { x0: 0, y0: 0, x1: BREITE, y1: HAUPT_HOEHE };
+
+/**
+ * Auftragsinseln (seit 0.19): Jeder Bauplatz liegt auf einer eigenen kleinen Insel unterhalb der Hauptwelt,
+ * 12 × 12 Felder mit Wasser drumherum. Land: Spalten 1–10, Reihen 1–9; Steg (5–6, 10), Ruderboot (7, 10).
+ * Hin und zurück geht es mit dem Ruderboot – zu Fuß kommt man nicht hinüber.
+ */
+export const AUFTRAGSINSEL_GROESSE = 12;
+export interface Auftragsinsel extends Bereich {
+  id: string;
+}
+const auftragsinsel = (id: string, x0: number, y0: number): Auftragsinsel => ({ id, x0, y0, x1: x0 + AUFTRAGSINSEL_GROESSE, y1: y0 + AUFTRAGSINSEL_GROESSE });
+export const AUFTRAGSINSELN: readonly Auftragsinsel[] = [
+  auftragsinsel('a', 0, HAUPT_HOEHE),
+  auftragsinsel('b', 12, HAUPT_HOEHE),
+  auftragsinsel('c', 24, HAUPT_HOEHE),
+  auftragsinsel('d', 0, HAUPT_HOEHE + 12),
+  auftragsinsel('e', 12, HAUPT_HOEHE + 12),
+];
+/** Landfeld einer Auftragsinsel? (lokale Koordinaten, Ecken abgerundet) */
+const landAufAuftragsinsel = (lx: number, ly: number): boolean => {
+  if (lx < 1 || lx > 10 || ly < 1 || ly > 9) return false;
+  const r = 2;
+  const cx = lx < 1 + r ? 1 + r : lx > 10 - r ? 10 - r : lx;
+  const cy = ly < 1 + r ? 1 + r : ly > 9 - r ? 9 - r : ly;
+  return Math.hypot(lx - cx, ly - cy) <= r;
+};
+/** Ankunft auf der Auftragsinsel: Ende des Stegs. */
+export const ankunftAuf = (a: Auftragsinsel): { x: number; y: number; z: number } => ({ x: a.x0 + 5, y: a.y0 + 10, z: 0 });
+/** Ruderboot an der Auftragsinsel (zurück zur ersten Insel). */
+export const ruderbootAn = (a: Auftragsinsel): { x: number; y: number } => ({ x: a.x0 + 7, y: a.y0 + 10 });
+/** Ankunft auf der ersten Insel, wenn man vom Ruderboot zurückkommt. */
+export const ANKUNFT_HAUPT = { x: STEG.x + 1, y: STEG.y1, z: 0 } as const;
+export const imBereich = (b: Bereich, x: number, y: number): boolean => x >= b.x0 && y >= b.y0 && x < b.x1 && y < b.y1;
+/** In welcher Ansicht liegt ein Feld: Hauptwelt oder eine Auftragsinsel? */
+export const bereichVon = (x: number, y: number): Bereich => AUFTRAGSINSELN.find((a) => imBereich(a, x, y)) ?? HAUPTWELT;
 /** Dritte Brücke: von der Strandinsel nach Süden ins Bauland. */
 export const BRUECKE3 = { x: 34, y0: 39, y1: 41 } as const;
 /** Bauland (seit 0.12): große, flache Wiese zum freien Bauen, Ecken abgerundet. */
@@ -238,8 +303,15 @@ export const LANDSCHAFT: Landschaft = (() => {
       if ((x === 11 || x === 12) && y >= 9) art[i] = 'weg';
       if (y === 9 && x >= 6 && x <= 15) art[i] = 'weg';
       if ((y === BRUECKE.y || y === BRUECKE.y + 1) && x >= 13) art[i] = 'weg';
-      // Strand am unteren Rand
-      if (y >= INSEL - 1) art[i] = 'sand';
+      // Strand am unteren Rand (seit 0.19 nur noch rechts der Erweiterung)
+      if (y >= INSEL - 1 && x > ERWEITERUNG.x1) art[i] = 'sand';
+    }
+  // Erweiterung der ersten Insel (seit 0.19): Wiese mit Sandrand
+  for (let y = ERWEITERUNG.y0; y <= ERWEITERUNG.y1; y++)
+    for (let x = ERWEITERUNG.x0; x <= ERWEITERUNG.x1; x++) {
+      if (!aufErweiterung(x, y)) continue;
+      const rand = !aufErweiterung(x + 1, y) || !aufErweiterung(x, y + 1);
+      art[idx(x, y)] = rand ? 'sand' : 'gras';
     }
   // Brücke (zwei Felder breit)
   for (let x = BRUECKE.x0; x <= BRUECKE.x1; x++) for (const y of [BRUECKE.y, BRUECKE.y + 1]) art[idx(x, y)] = 'bruecke';
@@ -310,10 +382,24 @@ export const LANDSCHAFT: Landschaft = (() => {
   }
   // Bootssteg auf der ersten Insel (unten am Strand)
   for (let y = STEG.y0; y <= STEG.y1; y++) for (const x of [STEG.x, STEG.x + 1]) art[idx(x, y)] = 'bruecke';
+  // Auftragsinseln: Wiese mit Sandrand, Steg und zwei Bäume am Rand (nicht auf dem Bauplatz)
+  for (const a of AUFTRAGSINSELN) {
+    for (let ly = 0; ly < AUFTRAGSINSEL_GROESSE; ly++)
+      for (let lx = 0; lx < AUFTRAGSINSEL_GROESSE; lx++) {
+        if (!landAufAuftragsinsel(lx, ly)) continue;
+        const rand = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx = 0, dy = 0]) => !landAufAuftragsinsel(lx + dx, ly + dy));
+        art[idx(a.x0 + lx, a.y0 + ly)] = rand ? 'sand' : 'gras';
+      }
+    art[idx(a.x0 + 5, a.y0 + 10)] = 'bruecke';
+    art[idx(a.x0 + 6, a.y0 + 10)] = 'bruecke';
+    baum[idx(a.x0 + 2, a.y0 + 2)] = true;
+    baum[idx(a.x0 + 9, a.y0 + 8)] = true;
+  }
   // Bäume (fest), nicht auf Weg, Wasser oder Bauplätzen
   for (const [x, y] of [[1, 9], [2, 14], [1, 19], [7, 1], [10, 2], [14, 1], [22, 14], [21, 16], [22, 20], [8, 22], [16, 22], [3, 22], [20, 9], [6, 7], [8, 14],
     [33, 4], [41, 11], [36, 20], [30, 19], [42, 15], [29, 8],
     [25, 28], [29, 26], [38, 26], [32, 33], [36, 36], [42, 34], [26, 35],
+    [19, 26], [19, 31],
     [5, 45], [6, 53], [39, 46], [38, 54], [21, 55]] as [number, number][]) baum[idx(x, y)] = true;
   // Leichte Erhebung am Steg: Treppenstufen auf den Hügel bei (6..7, 4)
   hoehe[idx(7, 4)] = 1;
@@ -479,11 +565,11 @@ export function setzeAn(s: InselStand, x: number, y: number, z: number, art: num
 /* ---------- Freie Version (seit 0.14) ---------- */
 
 /**
- * Ohne Zusatzpaket gehört die erste Insel (mit Steg) zum Ausprobieren dazu: dort laufen und mit allen Blöcken bauen.
+ * Ohne Zusatzpaket gehört die erste Insel (mit Wiese und Steg, seit 0.19 größer) zum Ausprobieren dazu: dort laufen und mit allen Blöcken bauen.
  * Die anderen Inseln, die Bauaufträge, die übrige Einrichtung und die Tiere gehören zum Zusatzpaket.
  */
 export const imFreienTeil = (x: number, y: number): boolean =>
-  (x >= 0 && y >= 0 && x < INSEL && y < INSEL) || (x >= STEG.x && x <= STEG.x + 1 && y >= STEG.y0 && y <= STEG.y1);
+  (x >= 0 && y >= 0 && x < INSEL && y < INSEL) || aufErweiterung(x, y) || (x >= STEG.x && x <= STEG.x + 1 && y >= STEG.y0 && y <= STEG.y1);
 /** Grundausstattung ohne Zusatzpaket: Tür, Fenster, Treppe, Zaun, Gartentor, Bett, Tisch, Stuhl und Blumen. */
 export const FREIE_TEILE: ReadonlySet<number> = new Set([101, 102, 103, 105, 110, 112, 115, 117, 120, 121, 122]);
 export const teilFrei = (art: number, paket: boolean): boolean => paket || FREIE_TEILE.has(art);
@@ -662,16 +748,17 @@ export interface Grundstueck {
   wo: string;
 }
 /**
- * Bauplätze: A und B (4 × 4) auf der zweiten Insel, C (4 × 4, seit 0.11.1) auf der Strandinsel,
- * D und E (6 × 6, seit 0.14) am linken und rechten Rand des Baulands. Was dort schon frei gebaut wurde, zählt mit.
+ * Bauplätze A–E, seit 0.19 je auf einer eigenen Auftragsinsel (vorher auf der zweiten Insel, der Strandinsel und dem
+ * Bauland – was dort gebaut wurde, bleibt als normales Land stehen). A, B, C sind 4 × 4, D und E 6 × 6 groß.
  */
-export const GRUNDSTUECKE: readonly Grundstueck[] = [
-  { id: 'a', name: 'Bauplatz A', x0: 30, y0: 5, n: 4, wo: 'auf der zweiten Insel hinter der Brücke' },
-  { id: 'b', name: 'Bauplatz B', x0: 36, y0: 13, n: 4, wo: 'auf der zweiten Insel, rechts vom Weg' },
-  { id: 'c', name: 'Bauplatz C', x0: 30, y0: 26, n: 4, wo: 'auf der Strandinsel, über die zweite Brücke nach unten' },
-  { id: 'd', name: 'Bauplatz D', x0: 6, y0: 46, n: 6, wo: 'auf dem Bauland ganz links, über die dritte Brücke' },
-  { id: 'e', name: 'Bauplatz E', x0: 32, y0: 49, n: 6, wo: 'auf dem Bauland rechts unten, über die dritte Brücke' },
-];
+const NAMEN: Record<string, [string, number]> = { a: ['Bauplatz A', 4], b: ['Bauplatz B', 4], c: ['Bauplatz C', 4], d: ['Bauplatz D', 6], e: ['Bauplatz E', 6] };
+export const GRUNDSTUECKE: readonly Grundstueck[] = AUFTRAGSINSELN.map((a) => {
+  const [name, n] = NAMEN[a.id] ?? ['Bauplatz', 4];
+  const rand = n === 6 ? 3 : 4;
+  return { id: a.id, name, x0: a.x0 + rand, y0: a.y0 + (n === 6 ? 2 : 3), n, wo: 'auf einer eigenen kleinen Insel – fahr mit dem Ruderboot am Steg hinüber' };
+});
+/** Die Auftragsinsel eines Bauplatzes. */
+export const inselVon = (grundstueck: string): Auftragsinsel | undefined => AUFTRAGSINSELN.find((a) => a.id === grundstueck);
 export const imGrundstueck = (g: Grundstueck, x: number, y: number): boolean => x >= g.x0 && y >= g.y0 && x < g.x0 + g.n && y < g.y0 + g.n;
 
 export interface InselAuftrag {
