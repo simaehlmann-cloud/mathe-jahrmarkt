@@ -19,6 +19,7 @@
     "cap:sync": "npm run build && cap sync",
     "store-bilder": "node scripts/store-bilder.mjs",
     "store-videos": "node scripts/store-videos.mjs",
+    "store-schule": "node scripts/store-schule.mjs",
     "rechtliches": "node scripts/rechtliches-seiten.mjs"
   },
   "dependencies": {
