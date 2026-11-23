@@ -80,6 +80,9 @@ jobs:
         run: |
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = de.maehlmann.mathejahrmarkt;/PRODUCT_BUNDLE_IDENTIFIER = de.maehlmann.mathejahrmarkt.schule;/' ios/App/App.xcodeproj/project.pbxproj
           grep -q "de.maehlmann.mathejahrmarkt.schule;" ios/App/App.xcodeproj/project.pbxproj || { echo "::error::App-Kennung ließ sich nicht setzen"; exit 1; }
+          # Nur iPad (Schul-iPads): keine iPhone-Bildschirmfotos im App Store nötig
+          sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 2;/' ios/App/App.xcodeproj/project.pbxproj
+          ! grep -q 'TARGETED_DEVICE_FAMILY = "1,2";' ios/App/App.xcodeproj/project.pbxproj || { echo "::error::Gerätefamilie ließ sich nicht auf iPad setzen"; exit 1; }
           cp ios-schule/AppIcon-512@2x.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
       - name: .jahrmarkt-Dateien mit der App öffnen (Dokumenttyp, nur in der Schulversion)
         run: python3 ios-schule/dokumenttyp.py ios/App/App/Info.plist && plutil -lint ios/App/App/Info.plist
