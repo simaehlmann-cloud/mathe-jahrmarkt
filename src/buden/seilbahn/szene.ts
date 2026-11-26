@@ -21,7 +21,9 @@ export async function erstelleSeilbahnSzene(host: HTMLElement, k: SzenenKontext)
   const seil = new Container();
   const gondel = new Container();
   const unten = new Container();
-  b.app.stage.addChild(himmel, seil, gondel, unten);
+  /** Markierungen nach einer falschen Antwort (gewählte Stelle rot, richtige grün). */
+  const hinweise = new Container();
+  b.app.stage.addChild(himmel, seil, gondel, unten, hinweise);
 
   let aufgabe: Aufgabe | undefined;
   let strahl: Strahl = { start: 0, ende: 1000, schritt: 50, beschriftung: 100 };
@@ -62,22 +64,31 @@ export async function erstelleSeilbahnSzene(host: HTMLElement, k: SzenenKontext)
     const { links, rechts, seilY, s, w } = masse();
     const g = new Graphics();
     g.moveTo(links, seilY).lineTo(rechts, seilY).stroke({ width: 4, color: 0x4a5394 });
-    const klein = w < 480;
+    // Erst alle Zahlen setzen und messen: Passen sie nicht nebeneinander, stehen sie abwechselnd hoch und tief,
+    // und wenn auch das nicht reicht, werden sie kleiner (z. B. 87 000 bis 88 000 in 100er-Schritten)
+    const schrift = Math.round(15 * Math.max(s, 0.95));
+    const marken: { t: Text; x: number; nr: number }[] = [];
     for (let i = 0; i <= ABSCHNITTE; i++) {
       const wert = wertAnStrich(strahl, i);
       const lang = istBeschriftet(strahl, wert);
       const x = xVon(i);
       g.moveTo(x, seilY - (lang ? 14 : 8)).lineTo(x, seilY + (lang ? 14 : 8)).stroke({ width: lang ? 3 : 2, color: TINTE });
       if (lang) {
-        // Bei engen Bildschirmen große Zahlen abwechselnd hoch und tief, damit sie sich nicht berühren
-        const text = zahlText(wert);
-        const t = new Text({ text, style: { fontFamily: SCHRIFT, fontWeight: '900', fontSize: Math.round((klein ? 13 : 15) * Math.max(s, 0.95)), fill: TINTE } });
+        const t = new Text({ text: zahlText(wert), style: { fontFamily: SCHRIFT, fontWeight: '900', fontSize: schrift, fill: TINTE } });
         // Zahlen über dem Seil, damit die Gondel sie nicht verdeckt
         t.anchor.set(0.5, 1);
-        const versetzt = klein && text.length > 4 && (wert - strahl.start) / strahl.beschriftung % 2 === 1;
-        t.position.set(x, seilY - 18 - (versetzt ? 16 * s : 0));
-        seil.addChild(t);
+        marken.push({ t, x, nr: marken.length });
       }
+    }
+    const abstand = marken.length > 1 ? Math.abs((marken[1]?.x ?? 0) - (marken[0]?.x ?? 0)) : w;
+    const breiteste = Math.max(0, ...marken.map((m) => m.t.width));
+    const versetzen = breiteste > abstand - 8;
+    const passt = versetzen ? (2 * abstand - 8) / Math.max(1, breiteste) : 1;
+    for (const m of marken) {
+      if (passt < 1) m.t.scale.set(Math.max(0.55, passt));
+      const hoch = versetzen && m.nr % 2 === 1;
+      m.t.position.set(m.x, seilY - 18 - (hoch ? schrift + 4 : 0));
+      seil.addChild(m.t);
     }
     seil.addChildAt(g, 0);
   }
@@ -213,6 +224,7 @@ export async function erstelleSeilbahnSzene(host: HTMLElement, k: SzenenKontext)
     strahl = a.strahl;
     bewegt = false;
     unten.removeChildren().forEach((c) => c.destroy({ children: true }));
+    hinweise.removeChildren().forEach((c) => c.destroy({ children: true }));
     halteKnopf = undefined;
     hinweis = undefined;
     zeichneHimmel();
@@ -228,6 +240,30 @@ export async function erstelleSeilbahnSzene(host: HTMLElement, k: SzenenKontext)
       gondelNach(Math.round((a.antwort - strahl.start) / strahl.schritt));
       baueSchilder(a);
     }
+  }
+
+  /** Fähnchen mit Zahl an einer Stelle des Seils; liegt die Zahl außerhalb, zeigt ein Pfeil die Richtung. */
+  function markiere(wert: number, farbe: number, ebene = 0) {
+    const { links, rechts, seilY, s } = masse();
+    const i = (wert - strahl.start) / strahl.schritt;
+    const drin = i >= 0 && i <= ABSCHNITTE;
+    const x = drin ? links + ((rechts - links) * i) / ABSCHNITTE : i < 0 ? links : rechts;
+    const c = new Container();
+    const g = new Graphics();
+    const oben = seilY - (64 + ebene * 24) * Math.max(1, s);
+    if (drin) g.moveTo(0, seilY + 16).lineTo(0, oben + 6).stroke({ width: 4, color: farbe });
+    else g.poly(i < 0 ? [-26, oben + 12, -10, oben + 2, -10, oben + 22] : [26, oben + 12, 10, oben + 2, 10, oben + 22]).fill({ color: farbe }).stroke({ width: 2, color: TINTE });
+    const t = new Text({
+      text: drin ? zahlText(wert) : `${zahlText(wert)} liegt weiter ${i < 0 ? 'links' : 'rechts'}`,
+      style: { fontFamily: SCHRIFT, fontWeight: '900', fontSize: Math.round(17 * Math.max(s, 0.95)), fill: farbe, stroke: { color: 0xffffff, width: 5 } },
+    });
+    t.anchor.set(drin ? 0.5 : i < 0 ? 0 : 1, 1);
+    t.position.set(drin ? 0 : i < 0 ? -10 : 10, oben + 4);
+    // Am Rand nicht aus dem Bild ragen
+    const halb = drin ? t.width / 2 : 0;
+    c.position.set(Math.max(halb + 4, Math.min(masse().w - halb - 4, x)), 0);
+    c.addChild(g, t);
+    hinweise.addChild(c);
   }
 
   const abmelden = b.beiGroesse(() => {
@@ -258,11 +294,27 @@ export async function erstelleSeilbahnSzene(host: HTMLElement, k: SzenenKontext)
       }, kurven.raus);
       zeigeHalten(false);
     },
-    async daneben() {
+    async daneben(wert) {
       k.klang('fehler');
       await b.tween(500, (x) => {
         if (!gondel.destroyed) gondel.rotation = Math.sin(x * Math.PI * 6) * 0.2 * (1 - x);
       }, kurven.linear);
+      const a = aufgabe;
+      if (!a || a.art !== 'zahlenstrahl' || gondel.destroyed) return;
+      // Die gewählte Zahl rot an ihrer Stelle am Seil (oder ein Pfeil, wenn sie außerhalb liegt)
+      markiere(wert, 0xe23a4e);
+      if (a.form === 'ziehen') {
+        // Die Gondel rollt zur richtigen Stelle; dort steht die gesuchte Zahl grün
+        const von = gondel.x;
+        const ziel = Math.round((a.antwort - strahl.start) / strahl.schritt);
+        const nach = xVon(Math.max(0, Math.min(ABSCHNITTE, ziel)));
+        await b.tween(Math.min(1400, 300 + Math.abs(nach - von) * 3), (x) => {
+          if (!gondel.destroyed) gondel.x = von + (nach - von) * x;
+        }, kurven.raus);
+        strich = ziel;
+      } else await b.tween(250, () => {}, kurven.linear);
+      markiere(a.antwort, 0x2f9e5a, 1);
+      await b.tween(900, () => {}, kurven.linear);
     },
     sperre(x) {
       gesperrt = x;

@@ -35,8 +35,8 @@ export function svelteSzene(komponente: Component<{ kontext: SzenenKontext }, Sv
 
 /** Auswahl-Bude: nur ein Bild-Baustein, Knöpfe und Ablauf kommen von der gemeinsamen Bühne. */
 export function auswahlSzene(
-  bild: Component<{ aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null }>,
-  optionen: { spalten?: number; hintergrund?: string } = {},
+  bild: Component<{ aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean }>,
+  optionen: { spalten?: number; hintergrund?: string; dauer?: { richtig: number; falsch: number } } = {},
 ) {
   return async (host: HTMLElement, kontext: SzenenKontext): Promise<BudeSzene> => {
     const { default: AuswahlBuehne } = await import('./AuswahlBuehne.svelte');

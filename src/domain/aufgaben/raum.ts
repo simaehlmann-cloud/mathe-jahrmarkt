@@ -64,10 +64,14 @@ export function baueSpiegel(stufe: Stufe, rng: Rng, form?: string): AuswahlAufga
 
 type Zelle = [number, number];
 /** Würfel abrollen: welche Würfelfläche (0–5) jede Zelle wird; ungültig, wenn eine Fläche doppelt vorkommt. */
-export function falte(netz: readonly Zelle[]): number[] | undefined {
+/**
+ * Würfelseite (0–5) jedes Feldes, wenn man das Netz um das erste Feld herum faltet.
+ * Bei ungültigen Netzen kommen Seiten doppelt vor (Felder landen übereinander).
+ */
+export function flaechen(netz: readonly Zelle[]): number[] {
   const flaeche = new Map<string, number>();
   const start = netz[0];
-  if (!start) return undefined;
+  if (!start) return [];
   type Lage = { B: number; T: number; N: number; S: number; E: number; W: number };
   const besucht = new Set<string>();
   const schritt = (z: Zelle, l: Lage) => {
@@ -85,8 +89,12 @@ export function falte(netz: readonly Zelle[]): number[] | undefined {
     for (const [n, nl] of nb) if (netz.some(([a, b]) => a === n[0] && b === n[1])) schritt(n, nl);
   };
   schritt(start, { B: 0, T: 1, N: 2, S: 3, E: 4, W: 5 });
-  const werte = netz.map((z) => flaeche.get(z.join(',')) ?? -1);
-  return new Set(werte).size === 6 && werte.every((w) => w >= 0) ? werte : undefined;
+  return netz.map((z) => flaeche.get(z.join(',')) ?? -1);
+}
+
+export function falte(netz: readonly Zelle[]): number[] | undefined {
+  const werte = flaechen(netz);
+  return werte.length === 6 && new Set(werte).size === 6 && werte.every((w) => w >= 0) ? werte : undefined;
 }
 export const gegenueber = (f: number): number => (f % 2 === 0 ? f + 1 : f - 1);
 

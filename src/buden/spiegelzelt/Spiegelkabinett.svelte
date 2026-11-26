@@ -5,7 +5,7 @@
   import type { SzenenKontext } from '../typen';
   import BildSpiegel from './BildSpiegel.svelte';
 
-  /** Spiegelkabinett: Kästchen antippen zum Färben, dann „Fertig“. */
+  /** Spiegelkabinett: Kästchen antippen zum Färben, dann „Fertig“. Danach klappt die gegebene Seite zur Probe um. */
   let { kontext }: { kontext: SzenenKontext } = $props();
   let a = $state<Aufgabe | undefined>();
   let gefaerbt = $state(new Set<string>());
@@ -20,12 +20,12 @@
   export async function treffer() {
     zustand = 'richtig';
     kontext.klang('jubel');
-    await warte(800);
+    await warte(kontext.reduziert ? 800 : 1700);
   }
   export async function daneben() {
     zustand = 'falsch';
     kontext.klang('fehler');
-    await warte(600);
+    await warte(kontext.reduziert ? 1200 : 2400);
   }
   export function sperre(x: boolean) {
     gesperrt = x;
@@ -47,7 +47,7 @@
 
 {#if a}
   <div class="kabinett" class:falsch={zustand === 'falsch'}>
-    <div class="spiegel"><BildSpiegel aufgabe={a} {zustand} gewaehlt={null} {gefaerbt} ontipp={tippe} /></div>
+    <div class="spiegel"><BildSpiegel aufgabe={a} {zustand} gewaehlt={null} {gefaerbt} ontipp={tippe} falten={zustand !== ''} reduziert={kontext.reduziert} /></div>
     <button class="ticket gruen" onclick={fertig} disabled={gesperrt}>Fertig</button>
     <p class="tipp">Tippe die Kästchen an, die gespiegelt gefärbt sein müssen.</p>
   </div>

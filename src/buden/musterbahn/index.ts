@@ -14,6 +14,7 @@ export const zahlenfolgenzug = auswahlBude({
   baue: baueFolge,
   probe: (rng) => baueFolge('bronze', rng, 'plusminus'),
   bild: BildFolge,
+  dauer: { richtig: 1900, falsch: 1400 },
   ladetext: 'Der Zug rollt ein …',
   anleitung: 'Finde die Regel des Zuges und setze die fehlende Zahl ein.',
 });
@@ -41,6 +42,7 @@ export const murmellabor = auswahlBude({
   baue: baueMurmeln,
   probe: (rng) => baueMurmeln('bronze', rng, 'moeglich'),
   bild: BildMurmeln,
+  dauer: { richtig: 2600, falsch: 2900 },
   ladetext: 'Die Murmeln rollen in die Tüte …',
   anleitung: 'Du ziehst blind eine Murmel. Was ist sicher, möglich oder unmöglich?',
 });

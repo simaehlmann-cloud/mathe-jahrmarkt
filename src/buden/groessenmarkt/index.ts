@@ -24,6 +24,7 @@ export const schaetzbude = auswahlBude({
   baue: baueSchaetzen,
   probe: (rng) => baueSchaetzen('bronze', rng),
   bild: BildSchaetzen,
+  dauer: { richtig: 1800, falsch: 2400 },
   ladetext: 'Das Maßband wird ausgerollt …',
   anleitung: 'Wie groß, wie schwer, wie lange ungefähr? Wähle die passende Angabe.',
 });

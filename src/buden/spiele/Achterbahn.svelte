@@ -2,10 +2,12 @@
   import type { Aufgabe } from '../../domain/aufgaben/typen';
   import { warte } from '../gemeinsam/svelteSzene';
   import type { SzenenKontext } from '../typen';
+  import { BODEN, BREITE, HOEHE, bogen, profilFuer, punktBei, strecke, stueckPfad, stuetzen, tempo } from './achterbahnStrecke';
 
   /**
    * Achterbahn-Architekt: Schienenstücke aus dem Lager legen, bis die Bahn genau das Ziel erreicht.
-   * Die Bahn wächst maßstäblich mit (Schätzen hilft), die Länge in Zahlen rechnet das Kind selbst.
+   * Die Bahn wächst maßstäblich entlang einer echten Strecke mit Anstieg, Gefälle und Hügeln
+   * (Bogenlänge im Verhältnis der Meter). Bei der Testfahrt fährt der Wagen so weit, wie Schiene liegt.
    * Bei der Rundbahn (Umfang) läuft die Schiene um das Rechteck.
    */
   let { kontext }: { kontext: SzenenKontext } = $props();
@@ -26,21 +28,68 @@
   const laenge = (v: number): string => (cm ? (v >= 100 ? `${v / 100} m` : `${v} cm`) : `${v} m`);
   // Anteil der Strecke für die Zeichnung (über das Ziel hinaus bis 130 %)
   const anteil = (v: number): number => Math.min(1.3, v / Math.max(1, ziel));
+  // Gezeichnete Strecke (Form fest je Aufgabe) und Bogenlänge der fertigen bzw. neuen Stücke
+  const st = $derived(strecke(profilFuer(ziel, gebaut)));
+  const sEnde = $derived(Math.min(st.laengeGesamt, bogen(st, gebaut + summe, ziel)));
+  const zielPunkt = $derived(punktBei(st, st.laengeZiel));
+  /** Position des ersten Wagens auf der Schiene (Bogenlänge). */
+  let wagenS = $state(6);
+  let ruckeln = $state(0);
+  let fahrt = 0;
+
+  /** Wagen bis `bis` fahren lassen; bergab schneller. Ohne Bewegung (reduziert) springt er hin. */
+  function fahre(bis: number): Promise<void> {
+    const nr = ++fahrt;
+    if (kontext.reduziert) {
+      wagenS = bis;
+      return warte(300);
+    }
+    return new Promise((fertig) => {
+      let vorher = performance.now();
+      const schritt = (jetzt: number) => {
+        if (nr !== fahrt) return fertig();
+        const dt = Math.min(50, jetzt - vorher);
+        vorher = jetzt;
+        wagenS = Math.min(bis, wagenS + tempo(st, wagenS) * dt * 1.6);
+        if (wagenS >= bis) fertig();
+        else requestAnimationFrame(schritt);
+      };
+      requestAnimationFrame(schritt);
+    });
+  }
+  async function wackle() {
+    if (kontext.reduziert) return;
+    for (const r of [-4, 4, -3, 3, 0]) {
+      ruckeln = r;
+      await warte(70);
+    }
+  }
 
   export function zeige(neu: Aufgabe) {
     a = neu;
     gelegt = [];
     zustand = '';
+    fahrt++;
+    wagenS = 6;
+    ruckeln = 0;
   }
   export async function treffer() {
     zustand = 'richtig';
     kontext.klang('jubel');
-    await warte(kontext.reduziert ? 500 : 1400);
+    if (rechteck) await warte(kontext.reduziert ? 500 : 1400);
+    else {
+      await fahre(st.laengeZiel);
+      await warte(400);
+    }
   }
   export async function daneben() {
     zustand = 'falsch';
     kontext.klang('fehler');
-    await warte(800);
+    if (rechteck) return warte(800);
+    // Zu kurz: Der Wagen bleibt am Ende der Schiene stehen. Zu lang: Er hält am Ziel, der Rest ragt rot hinaus.
+    await fahre(Math.min(sEnde, st.laengeZiel));
+    await wackle();
+    await warte(900);
   }
   export function sperre(x: boolean) {
     gesperrt = x;
@@ -49,12 +98,14 @@
     if (gesperrt || gelegt.length >= 40) return;
     gelegt = [...gelegt, v];
     zustand = '';
+    wagenS = 6;
     kontext.klang('pop');
   }
   function weg(i: number) {
     if (gesperrt) return;
     gelegt = gelegt.filter((_, j) => j !== i);
     zustand = '';
+    wagenS = 6;
   }
   function testfahrt() {
     if (!gesperrt && gelegt.length) kontext.onAntwort(summe);
@@ -80,18 +131,61 @@
         {#if zustand === 'richtig'}<circle r="12" fill="#e23a4e" stroke="#1f2a6b" stroke-width="3" class="wagen-rund" />{/if}
       </svg>
     {:else}
-      <div class="strecke" role="img" aria-label="Bahn: gebaut {laenge(gebaut)}, Ziel {laenge(ziel)}">
-        <div class="ziel" style="left: 100%"><span>Ziel {laenge(ziel)}</span></div>
+      {@const w1 = punktBei(st, wagenS)}
+      {@const w2 = punktBei(st, Math.max(0, wagenS - 22))}
+      <svg class="bahn" viewBox="0 0 {BREITE} {HOEHE}" role="img" aria-label="Achterbahn: gebaut {laenge(gebaut + summe)}, Ziel {laenge(ziel)}">
+        <rect x="0" y={BODEN} width={BREITE} height={HOEHE - BODEN} fill="#8fd18a" />
+        <!-- So soll die Bahn verlaufen: gestrichelt bis zum Ziel -->
+        <path d={stueckPfad(st, 0, st.laengeZiel)} fill="none" stroke="#9aa0b8" stroke-width="3" stroke-dasharray="6 6" />
+        {#each stuetzen(st, 0, Math.min(sEnde, st.laengeGesamt)) as q, i (i)}
+          <line x1={q.x} y1={q.y + 4} x2={q.x} y2={BODEN} stroke="#8a90a8" stroke-width="3" stroke-linecap="round" />
+        {/each}
+        <!-- Startbahnhof -->
+        <rect x="6" y="148" width="44" height="22" fill="#fffdf7" stroke="#1f2a6b" stroke-width="2.5" />
+        <path d="M2 150 L28 134 L54 150 Z" fill="#3c78d8" stroke="#1f2a6b" stroke-width="2.5" stroke-linejoin="round" />
+        <text x="28" y="128" text-anchor="middle" font-size="12" font-weight="900" fill="#1f2a6b" class="schrift-rand">Start</text>
+        <rect x="0" y="170" width="60" height={BODEN - 170} fill="#c8a06a" stroke="#1f2a6b" stroke-width="2" />
+        <!-- Zielbahnhof mit Fahne -->
+        <rect x={zielPunkt.x - 20} y={zielPunkt.y} width="40" height={BODEN - zielPunkt.y} fill="#c8a06a" stroke="#1f2a6b" stroke-width="2" />
+        <line x1={zielPunkt.x} y1={zielPunkt.y - 2} x2={zielPunkt.x} y2={zielPunkt.y - 58} stroke="#1f2a6b" stroke-width="3" />
+        <path d="M{zielPunkt.x} {zielPunkt.y - 58} l26 8 l-26 8 Z" fill="#e23a4e" stroke="#1f2a6b" stroke-width="2" stroke-linejoin="round" />
+        <text x={zielPunkt.x} y={zielPunkt.y - 64} text-anchor="middle" font-size="14" font-weight="900" fill="#e23a4e" class="schrift-rand">Ziel {laenge(ziel)}</text>
         {#each fertigeTeile as t, i (i)}
-          {@const start = fertigeTeile.slice(0, i).reduce((x, y) => x + y, 0)}
-          <div class="teil fertig" style="left: {anteil(start) * 100}%; width: {(anteil(start + t) - anteil(start)) * 100}%"><span class:unten={i % 2 === 1}>{laenge(t)}</span></div>
+          {@const von = bogen(st, fertigeTeile.slice(0, i).reduce((x, y) => x + y, 0), ziel)}
+          {@const bis = von + bogen(st, t, ziel)}
+          {@const mitte = punktBei(st, (von + bis) / 2)}
+          {@const r = ((mitte.winkel - 90) * Math.PI) / 180}
+          {@const seite = i % 2 ? -1 : 1}
+          <path d={stueckPfad(st, von, bis)} fill="none" stroke="#87521f" stroke-width="9" />
+          <path d={stueckPfad(st, von, bis)} fill="none" stroke="#f3dcb4" stroke-width="2" stroke-dasharray="3 5" />
+          <text x={mitte.x + Math.cos(r) * 20 * seite} y={mitte.y + Math.sin(r) * 20 * seite + 5} text-anchor="middle" font-size="14" font-weight="900" fill="#1f2a6b" class="schrift-rand">{laenge(t)}</text>
         {/each}
         {#each gelegt as v, i (i)}
-          {@const start = gebaut + gelegt.slice(0, i).reduce((s, x) => s + x, 0)}
-          <div class="teil neu" style="left: {anteil(start) * 100}%; width: {(anteil(start + v) - anteil(start)) * 100}%; --f: {FARBEN[i % FARBEN.length]}"></div>
+          {@const von = bogen(st, gebaut + gelegt.slice(0, i).reduce((x, y) => x + y, 0), ziel)}
+          {@const bis = von + bogen(st, v, ziel)}
+          <path d={stueckPfad(st, von, bis)} fill="none" stroke={FARBEN[i % FARBEN.length]} stroke-width="9" />
+          <path d={stueckPfad(st, von, bis)} fill="none" stroke="#fffdf7" stroke-width="2" stroke-dasharray="3 5" />
         {/each}
-        {#if zustand === 'richtig'}<div class="wagen" aria-hidden="true">🎢</div>{/if}
-      </div>
+        {#if zustand === 'falsch' && sEnde > st.laengeZiel + 0.5}
+          <!-- Zu lang: Der Teil hinter dem Ziel leuchtet rot -->
+          <path d={stueckPfad(st, st.laengeZiel, sEnde)} fill="none" stroke="#e23a4e" stroke-width="16" stroke-opacity="0.5" />
+          <text x={(zielPunkt.x + punktBei(st, sEnde).x) / 2} y={zielPunkt.y + 20} text-anchor="middle" font-size="13" font-weight="900" fill="#e23a4e" class="schrift-rand">zu lang</text>
+        {:else if zustand === 'falsch' && sEnde < st.laengeZiel - 0.5}
+          {@const e = punktBei(st, sEnde)}
+          <path d={stueckPfad(st, sEnde, st.laengeZiel)} fill="none" stroke="#e23a4e" stroke-width="5" stroke-dasharray="6 6" />
+          <text x={(e.x + zielPunkt.x) / 2} y={Math.max(e.y, zielPunkt.y) + 24} text-anchor="middle" font-size="13" font-weight="900" fill="#e23a4e" class="schrift-rand">zu kurz</text>
+        {/if}
+        <!-- Zwei Wagen -->
+        <g transform="translate({w2.x} {w2.y}) rotate({w2.winkel})">
+          <rect x="-9" y="-13" width="18" height="10" rx="3" fill="#3c78d8" stroke="#1f2a6b" stroke-width="2" />
+          <circle cx="-5" cy="-3" r="2.6" fill="#1f2a6b" /><circle cx="5" cy="-3" r="2.6" fill="#1f2a6b" />
+        </g>
+        <g transform="translate({w1.x + ruckeln} {w1.y}) rotate({w1.winkel})">
+          <rect x="-10" y="-14" width="20" height="11" rx="4" fill="#ffc62b" stroke="#1f2a6b" stroke-width="2" />
+          <circle cx="-5" cy="-3" r="2.6" fill="#1f2a6b" /><circle cx="5" cy="-3" r="2.6" fill="#1f2a6b" />
+          <circle cx="2" cy="-17" r="4" fill="#f6c9a0" stroke="#1f2a6b" stroke-width="1.5" />
+        </g>
+      </svg>
     {/if}
 
     <div class="gelegt" aria-label="Gelegte Schienen: {gelegt.length ? gelegt.map(laenge).join(', ') : 'keine'}">
@@ -118,65 +212,19 @@
     padding: 14px 18px;
     background: linear-gradient(#cfeefe, #eaf7ff 60%, #cde9c1 60%);
   }
-  .strecke {
-    position: relative;
-    width: min(100% - 50px, 30rem);
-    height: 64px;
-    margin: 30px 40px 6px 0;
-    border-bottom: 6px solid #1f2a6b;
+  .bahn {
+    width: min(100%, 34rem);
+    height: auto;
+    max-height: 44vh;
   }
-  .ziel {
-    position: absolute;
-    bottom: -6px;
-    height: 96px;
-    border-left: 4px dashed #e23a4e;
+  .schrift-rand {
+    paint-order: stroke;
+    stroke: #fffdf7;
+    stroke-width: 4px;
+    stroke-linejoin: round;
   }
-  .ziel span {
-    position: absolute;
-    top: -24px;
-    left: -40px;
-    white-space: nowrap;
-    font-weight: 900;
-    color: #e23a4e;
-  }
-  .teil {
-    position: absolute;
-    bottom: 0;
-    height: 22px;
-    border: 3px solid #1f2a6b;
-    border-radius: 4px;
-    background: repeating-linear-gradient(90deg, #b9763f 0 8px, #87521f 8px 10px);
-  }
-  .teil.fertig span {
-    position: absolute;
-    left: 2px;
-    top: -26px;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-  .teil.fertig span.unten {
-    top: 26px;
-  }
-  .teil.neu {
-    background: var(--f);
-  }
-  .falsch .strecke,
   .falsch .rund {
     animation: wackeln 0.4s;
-  }
-  .wagen {
-    position: absolute;
-    bottom: 18px;
-    font-size: 2rem;
-    animation: fahrt 1.2s ease-in-out forwards;
-  }
-  @keyframes fahrt {
-    from {
-      left: 0;
-    }
-    to {
-      left: calc(100% - 30px);
-    }
   }
   .rund {
     width: min(100%, 24rem);

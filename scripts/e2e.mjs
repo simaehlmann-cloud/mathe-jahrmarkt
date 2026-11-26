@@ -391,8 +391,12 @@ try {
         await page.waitForTimeout(1000);
         id = await page.locator('.schild').getAttribute('data-aufgabe');
         await falsch();
-        await page.waitForTimeout(1600);
-        hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+        // Das Spiegelkabinett klappt seit 0.20 zur Probe um: bis zu 4 s auf die Hilfe warten
+        hilfe = await page
+          .getByText('Schauen wir genau hin')
+          .waitFor({ timeout: 4000 })
+          .then(() => true)
+          .catch(() => false);
         if (!hilfe) await abwarten(id);
       }
       if (hilfe) {
@@ -452,8 +456,12 @@ try {
         const k = knoepfe[probeFalsch % Math.max(1, knoepfe.length)] ?? knoepfe[0];
         if (!k) continue;
         await k.click();
-        await page.waitForTimeout(1500);
-        hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+        // Seit 0.20 führen manche Bilder die Antwort vor (Würfel falten, Roboter fährt …): bis zu 4 s auf die Hilfe warten
+        hilfe = await page
+          .getByText('Schauen wir genau hin')
+          .waitFor({ timeout: 4000 })
+          .then(() => true)
+          .catch(() => false);
         // Falsche Probe wird wiederholt: dann den nächsten Knopf versuchen
         if (!hilfe && (await page.getByText('Probewurf').isVisible())) probeFalsch++;
       }
@@ -769,8 +777,12 @@ try {
           const anzahl = await k.count();
           if (!anzahl) continue;
           await k.nth(n % anzahl).dispatchEvent('click');
-          await page.waitForTimeout(1500);
-          hilfe = await page.getByText('Schauen wir genau hin').isVisible();
+          // Achterbahn und Riesenrad führen die Antwort seit 0.20 vor: bis zu 4 s auf die Hilfe warten
+          hilfe = await page
+            .getByText('Schauen wir genau hin')
+            .waitFor({ timeout: 4000 })
+            .then(() => true)
+            .catch(() => false);
           if (!hilfe && (await page.getByText('Probewurf').isVisible())) n++;
         }
         if (hilfe) {

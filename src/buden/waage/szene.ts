@@ -207,6 +207,25 @@ export async function erstelleWaageSzene(host: HTMLElement, k: SzenenKontext): P
     oben.addChild(t);
   }
 
+  /** Nach dem Prüfen: unter jedem Sack der ausgerechnete Wert, damit man sieht, warum die Waage so steht. */
+  function zeigeWerte(x?: number) {
+    const a = aufgabe;
+    if (!a) return;
+    const { s } = masse();
+    for (const [schale, t] of [[schaleL, a.links], [schaleR, a.rechts]] as const) {
+      if (!t.op) continue;
+      const wert = termWert(t, x);
+      const c = new Container();
+      const text = new Text({ text: `= ${zahlText(wert)}`, style: { fontFamily: SCHRIFT, fontWeight: '900', fontSize: Math.round(20 * s), fill: TINTE } });
+      text.anchor.set(0.5);
+      const bw = text.width + 18;
+      const bh = text.height + 6;
+      c.addChild(new Graphics().roundRect(-bw / 2, -bh / 2, bw, bh, 10).fill({ color: 0xfff4c2 }).stroke({ width: 2.5, color: TINTE }), text);
+      c.position.set(0, 76 * s + 34 * s);
+      schale.addChild(c);
+    }
+  }
+
   /** Gewicht oder Zeichen auflegen und die Waage die echte Beziehung zeigen lassen. */
   async function pruefen(wert: number) {
     const a = aufgabe;
@@ -230,10 +249,12 @@ export async function erstelleWaageSzene(host: HTMLElement, k: SzenenKontext): P
       zeichen(RELATION[wert] ?? '', 0xffffff);
       zeichneKeil(false);
       await neige(neigungFuer(termWert(a.links), termWert(a.rechts)));
+      zeigeWerte();
     } else {
       gelegt = wert;
       belade();
       await neige(neigungFuer(termWert(a.links, wert), termWert(a.rechts, wert)));
+      zeigeWerte(wert);
     }
   }
 
@@ -258,6 +279,8 @@ export async function erstelleWaageSzene(host: HTMLElement, k: SzenenKontext): P
       await pruefen(wert);
       if (aufgabe?.form !== 'vergleichen') zeichen('≠', 0xe23a4e);
       k.klang('fehler');
+      // Etwas länger stehen lassen, damit die beiden Werte gelesen werden können
+      await b.tween(k.reduziert ? 300 : 1100, () => {}, kurven.linear);
     },
     sperre(x) {
       gesperrt = x;

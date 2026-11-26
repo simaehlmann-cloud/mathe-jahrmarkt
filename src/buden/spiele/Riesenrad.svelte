@@ -8,13 +8,16 @@
 
   /**
    * Riesenrad-Techniker: erst rechnen, dann prüft die Fahrt. Bei richtiger Antwort dreht sich das Rad
-   * (bei der Division mit Rest erscheinen die besetzten Gondeln).
+   * (bei der Division mit Rest steigen die Kinder ein; bei einer falschen Zahl sieht man,
+   * wer keinen Platz mehr hat oder welche Gondeln leer bleiben).
    */
   let { kontext }: { kontext: SzenenKontext } = $props();
   let a = $state<Aufgabe | undefined>();
   let wert = $state('');
   let gesperrt = $state(true);
   let zustand = $state<'' | 'richtig' | 'falsch'>('');
+  /** Falsche Antwort: Das Bild zeigt, was mit so vielen Gondeln passiert. */
+  let falschWert = $state<number | null>(null);
   const d = $derived(a?.art === 'auswahl' ? a.daten : {});
 
   export function zeige(neu: Aufgabe) {
@@ -27,10 +30,11 @@
     kontext.klang('jubel');
     await warte(kontext.reduziert ? 500 : 1400);
   }
-  export async function daneben() {
+  export async function daneben(w: number) {
+    falschWert = w;
     zustand = 'falsch';
     kontext.klang('fehler');
-    await warte(700);
+    await warte(d.verdeckt === true && !kontext.reduziert ? 2000 : 700);
     wert = '';
   }
   export function sperre(x: boolean) {
@@ -40,7 +44,7 @@
 
 {#if a}
   <div class="rad spielflaeche" class:richtig={zustand === 'richtig'} class:falsch={zustand === 'falsch'}>
-    <div class="bild"><BildRiesenrad aufgabe={a} {zustand} gewaehlt={zustand === 'richtig' ? a.antwort : null} /></div>
+    <div class="bild"><BildRiesenrad aufgabe={a} {zustand} gewaehlt={zustand === 'richtig' ? a.antwort : zustand === 'falsch' ? falschWert : null} /></div>
     <Eingabe {wert} einheit={String(d.einheit ?? '')} {zustand} />
     <Tastenfeld bind:wert gesperrt={gesperrt} maxStellen={4} okText="Los!" onok={() => kontext.onAntwort(Number(wert))} />
   </div>

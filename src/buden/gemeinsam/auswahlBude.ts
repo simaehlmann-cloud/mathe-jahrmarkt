@@ -21,12 +21,14 @@ export function auswahlBude(o: {
   anleitung: string;
   spalten?: number;
   hintergrund?: string;
+  /** Anzeigedauer nach der Antwort in ms (für Buden, deren Bild die Antwort vorführt). */
+  dauer?: { richtig: number; falsch: number };
   /** Eigene Spiel-Bühne statt Bild und Antwortknöpfen (Münzen legen, Uhr stellen …). */
   spiel?: Component<{ kontext: SzenenKontext }, SvelteSzenenExporte>;
 }): BudeDefinition {
   return {
     id: o.id,
-    erstelleSzene: o.spiel ? svelteSzene(o.spiel) : auswahlSzene(o.bild, { spalten: o.spalten ?? 2, hintergrund: o.hintergrund ?? '#fff8e6' }),
+    erstelleSzene: o.spiel ? svelteSzene(o.spiel) : auswahlSzene(o.bild, { spalten: o.spalten ?? 2, hintergrund: o.hintergrund ?? '#fff8e6', ...(o.dauer ? { dauer: o.dauer } : {}) }),
     erzeuge: (stufe, rng) => o.baue(stufe, rng),
     aehnlich: (vorher, rng) => {
       if (vorher.art !== 'auswahl') throw new Error(`Keine Aufgabe dieser Bude: ${vorher.text}`);

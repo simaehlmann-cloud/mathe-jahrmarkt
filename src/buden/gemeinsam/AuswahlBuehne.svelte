@@ -9,13 +9,21 @@
    * Gemeinsame Bühne für Auswahl-Buden: oben das Bild der Bude, unten die Antwortknöpfe.
    * Das Bild bekommt Aufgabe und Ergebnis (`zustand`), um selbst zu reagieren (z. B. Uhr dreht, Murmel rollt).
    */
-  type BildProps = { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null };
+  type BildProps = { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean };
   let {
     kontext,
     bild,
     spalten = 2,
     hintergrund = '#fff8e6',
-  }: { kontext: SzenenKontext; bild: Component<BildProps>; spalten?: number; hintergrund?: string } = $props();
+    dauer = { richtig: 800, falsch: 700 },
+  }: {
+    kontext: SzenenKontext;
+    bild: Component<BildProps>;
+    spalten?: number;
+    hintergrund?: string;
+    /** Wie lange das Bild nach der Antwort zu sehen ist (Buden mit eigener Animation brauchen länger). */
+    dauer?: { richtig: number; falsch: number };
+  } = $props();
 
   let a = $state<Aufgabe | undefined>();
   let gesperrt = $state(true);
@@ -31,13 +39,13 @@
     gewaehlt = wert;
     zustand = 'richtig';
     kontext.klang('richtig');
-    await warte(800);
+    await warte(kontext.reduziert ? Math.min(800, dauer.richtig) : dauer.richtig);
   }
   export async function daneben(wert: number) {
     gewaehlt = wert;
     zustand = 'falsch';
     kontext.klang('fehler');
-    await warte(700);
+    await warte(kontext.reduziert ? Math.min(1200, dauer.falsch) : dauer.falsch);
   }
   export function sperre(x: boolean) {
     gesperrt = x;
@@ -47,7 +55,7 @@
 
 {#if a}
   <div class="buehne-dom" style="background: {hintergrund}">
-    <div class="bild"><Bild aufgabe={a} {zustand} {gewaehlt} /></div>
+    <div class="bild"><Bild aufgabe={a} {zustand} {gewaehlt} reduziert={kontext.reduziert} /></div>
     <Wahlknoepfe aufgabe={a} {gesperrt} markiert={gewaehlt} richtig={zustand === 'richtig'} {spalten} onwahl={(w) => !gesperrt && kontext.onAntwort(w)} />
   </div>
 {/if}
