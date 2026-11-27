@@ -23,6 +23,12 @@ name: iOS TestFlight Schule
 
 on:
   workflow_dispatch:
+    inputs:
+      xcode:
+        description: 'Xcode-Version (27 = iOS-27-SDK, ab April 2027 Pflicht; 26 nur als Notlösung)'
+        type: choice
+        options: ['27', '26']
+        default: '27'
 
 concurrency:
   group: ios-testflight-schule
@@ -30,7 +36,9 @@ concurrency:
 
 jobs:
   testflight:
-    runs-on: macos-latest
+    # Xcode 27 läuft auf einem eigenen Runner-Abbild von GitHub (Label „xcode-27“, seit 15.10.2026 allgemein verfügbar).
+    # „macos-latest“ bringt nur Xcode 26 mit; Apple verlangt ab April 2027 das iOS-27-SDK (Hinweis ITMS-90725).
+    runs-on: ${{ inputs.xcode == '26' && 'macos-latest' || 'xcode-27' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -38,11 +46,16 @@ jobs:
         with:
           xcode-version: latest-stable
       - name: Xcode-Version prüfen
-        # Apple nimmt seit 28.04.2026 nur noch Builds mit Xcode 26 / iOS-26-SDK an.
+        # Gewählte Hauptversion (27 bzw. 26) muss wirklich aktiv sein, sonst warnt Apple beim Hochladen (ITMS-90725).
+        env:
+          SOLL: ${{ inputs.xcode || '27' }}
         run: |
           xcodebuild -version
+          echo "iOS-SDK: $(xcrun --sdk iphoneos --show-sdk-version)"
           MAJOR=$(xcodebuild -version | head -1 | sed -E 's/Xcode ([0-9]+).*/\1/')
-          [ "$MAJOR" -ge 26 ] || { echo "::error::Xcode 26 oder neuer nötig, gefunden: $MAJOR"; exit 1; }
+          SDK=$(xcrun --sdk iphoneos --show-sdk-version | cut -d. -f1)
+          [ "$MAJOR" -ge "$SOLL" ] || { echo "::error::Xcode $SOLL oder neuer nötig, gefunden: $MAJOR"; exit 1; }
+          [ "$SDK" -ge "$SOLL" ] || { echo "::error::iOS-SDK $SOLL oder neuer nötig, gefunden: $SDK"; exit 1; }
       - uses: actions/setup-node@v7
         with:
           node-version: 22
