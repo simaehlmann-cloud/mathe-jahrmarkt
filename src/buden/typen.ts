@@ -26,7 +26,7 @@ export interface BudeSzene {
 }
 
 /** Bild einer Auswahl-Bude; dieselbe Darstellung dient auch in der Hilfe. */
-export type BildKomponente = Component<{ aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean }>;
+export type BildKomponente = Component<{ aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean; buehne?: boolean }>;
 
 export interface HilfeProps {
   aufgabe: Aufgabe;
