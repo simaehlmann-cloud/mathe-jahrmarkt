@@ -9,14 +9,22 @@
     zustand,
     gewaehlt,
     reduziert = false,
-  }: { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean } = $props();
+    buehne = false,
+  }: {
+    aufgabe: Aufgabe;
+    zustand: '' | 'richtig' | 'falsch';
+    gewaehlt: number | null;
+    reduziert?: boolean;
+    /** Nur auf der Bühne fährt der Zug ab; in der Hilfe bleibt er stehen. */
+    buehne?: boolean;
+  } = $props();
   const d = $derived(aufgabe.art === 'auswahl' ? aufgabe.daten : {});
   const folge = $derived((d.folge as number[] | undefined) ?? []);
   const luecke = $derived(Number(d.luecke ?? -1));
   const FARBEN = ['#e23a4e', '#3c78d8', '#3fae6a', '#f2a31b', '#7b5ea7'];
 </script>
 
-<div class="gleis"><div class="zug" class:abfahrt={zustand === 'richtig' && !reduziert} role="img" aria-label="Zug mit den Zahlen {folge.map((z, i) => (i === luecke ? 'Lücke' : z)).join(', ')}">
+<div class="gleis"><div class="zug" class:abfahrt={zustand === 'richtig' && buehne && !reduziert} role="img" aria-label="Zug mit den Zahlen {folge.map((z, i) => (i === luecke ? 'Lücke' : z)).join(', ')}">
   <div class="lok" aria-hidden="true">
     <svg viewBox="0 0 60 50" width="60" height="50"
       ><rect x="4" y="16" width="40" height="24" rx="4" fill="#232a5c" /><rect x="30" y="4" width="16" height="16" rx="2" fill="#232a5c" /><rect x="8" y="6" width="8" height="12" fill="#232a5c" /><rect x="33" y="7" width="10" height="9" rx="2" fill="#bfe3ff" /><path d="M44 24 L58 40 L44 40Z" fill="#e23a4e" /><circle cx="14" cy="42" r="6" fill="#fff" stroke="#232a5c" stroke-width="3" /><circle cx="34" cy="42" r="6" fill="#fff" stroke="#232a5c" stroke-width="3" /></svg
