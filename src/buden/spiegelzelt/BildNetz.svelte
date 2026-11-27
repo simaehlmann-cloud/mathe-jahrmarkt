@@ -43,7 +43,9 @@
     const w = flaechen(netz);
     return new Set(w.flatMap((f, i) => (w.filter((g) => g === f).length > 1 ? [i] : [])));
   });
+  /** Gefaltet wird nur mit Übergang; zurück ins flache Netz (neue Aufgabe) sofort, sonst entfaltet sich das neue Netz sichtbar aus dem alten Würfel. */
   const gefaltet = $derived(zustand !== '');
+  // Neue Aufgabe: sofort flach (ohne Übergang), sonst würde sich das neue Netz sichtbar aus dem alten Würfel entfalten
   const gewaehlterBuchstabe = $derived(gewaehlt !== null && aufgabe.art === 'auswahl' ? B.indexOf(aufgabe.labels?.[gewaehlt] ?? '') : -1);
 
   function farbe(i: number): string {
@@ -75,7 +77,7 @@
   <div
     class="feld"
     style="left: {eltern < 0 ? x * K : (x - ex) * K}px; top: {eltern < 0 ? y * K : (y - ey) * K}px; width: {K}px; height: {K}px; background: {farbe(i)};
-      transform-origin: {k?.ursprung ?? 'center'}; transform: {gefaltet && k ? k.drehung : 'none'}; transition-duration: {reduziert ? 0 : 0.9}s; transition-delay: {reduziert ? 0 : 0.15}s"
+      transform-origin: {k?.ursprung ?? 'center'}; transform: {gefaltet && k ? k.drehung : 'none'}; transition-duration: {reduziert || !gefaltet ? 0 : 0.9}s; transition-delay: {reduziert || !gefaltet ? 0 : 0.15}s"
   >
     {#if buchstaben}<span>{B[i]}</span>{/if}
     {#each baum[i] ?? [] as kind (kind)}{@render feld(kind, i)}{/each}
@@ -85,7 +87,7 @@
 <div class="buehne" role="img" aria-label={gefaltet ? (doppelt.size ? 'Gefaltetes Netz: Felder liegen übereinander' : 'Gefaltetes Netz: ein Würfel') : 'Würfelnetz aus 6 Quadraten'} style="width: {breite * K + 20}px; height: {hoehe * K + 20}px">
   <div
     class="welt"
-    style="width: {breite * K}px; height: {hoehe * K}px; transform-origin: {start[0] * K + K / 2}px {start[1] * K + K / 2}px; transition-duration: {reduziert ? 0 : 0.9}s;
+    style="width: {breite * K}px; height: {hoehe * K}px; transform-origin: {start[0] * K + K / 2}px {start[1] * K + K / 2}px; transition-duration: {reduziert || !gefaltet ? 0 : 0.9}s;
       transform: {gefaltet ? `translate(${(breite * K) / 2 - start[0] * K - K / 2}px, ${(hoehe * K) / 2 - start[1] * K - K / 2}px) scale(1.6) rotateX(-28deg) rotateY(-32deg)` : 'none'}"
   >
     <div class="dreh" class:an={gefaltet && !reduziert} style="width: {breite * K}px; height: {hoehe * K}px; transform-origin: {start[0] * K + K / 2}px {start[1] * K + K / 2}px -{K / 2}px">
@@ -124,7 +126,8 @@
   .feld {
     position: absolute;
     box-sizing: border-box;
-    border: 3px solid #1f2a6b;
+    /* Rand als Schatten innen: Ein echter Rahmen würde jedes angehängte Feld um seine Breite verschieben */
+    box-shadow: inset 0 0 0 3px #1f2a6b;
     transform-style: preserve-3d;
     transition-property: transform, background-color;
     transition-timing-function: ease-in-out;
