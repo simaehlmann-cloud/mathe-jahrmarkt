@@ -1,94 +1,28 @@
 # Mathe-Jahrmarkt – Fit für Klasse 5
 
-Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die Mathematik der weiterführenden Schule vorbereitet. Grundlage ist das Kerncurriculum Mathematik Grundschule Niedersachsen (in Kraft seit August 2025). Ein einmaliges Zusatzpaket (3,99 €) schaltet Silber- und Gold-Stufen, den Jahrmarkt-Check, das ausführliche Lernprofil, den Sternenmarkt und die Bauinsel frei.
+Kostenlose App für iOS und Android, die Kinder in Klasse 4 spielerisch auf die Mathematik der weiterführenden Schule vorbereitet. Grundlage ist das Kerncurriculum Mathematik Grundschule Niedersachsen (in Kraft seit August 2025). Ein einmaliges Zusatzpaket (3,99 €) schaltet Silber- und Gold-Stufen, den Jahrmarkt-Check, das ausführliche Lernprofil und den Abendmarkt frei.
 
 Konzept und Architektur: Dokument „Fit für Klasse 5 – Konzept und Architektur“ im claude.ai-Projekt.
 
-## Schulversion (seit 0.17.0, erweitert in 0.18.0)
+## Stand dieser Version (0.3.0)
 
-Aus demselben Code entsteht eine zweite App: **Mathe-Jahrmarkt Schule** (App-Kennung `de.maehlmann.mathejahrmarkt.schule`), ein Einmalkauf für schuleigene iPads über Apple School Manager (Bildungsrabatt ab 20 Lizenzen). Apple School Manager kann keine In-App-Käufe verteilen, deshalb ist dort alles freigeschaltet. Gebaut wird sie mit `VITE_AUSGABE=schule` (`src/ausgabe.ts`); der Workflow „iOS TestFlight Schule“ setzt App-Kennung, Symbol und Dateityp (`ios-schule/`).
-
-### Trennung im Repo
-
-Fehler der einen Ausgabe sollen die andere nicht treffen:
-
-- **Aller Code der Schulversion liegt unter `src/schule/`** (Domäne, Dienste, Bildschirme, Datenschutz, Hilfe) und ihre Tests unter `tests/schule/`.
-- Die gemeinsame App kennt nur die **Nahtstelle** `src/app/schulschnittstelle.ts`. Die Schulversion meldet beim Start ihre Umsetzung an (`app.schule`) und ihre Datenprüfung bei `services/datenbestand.ts` (`setzeSchulPruefung`). In der Familien-App bleibt beides leer.
-- Geladen wird die Schulversion nur über dynamische Importe in Zweigen `__AUSGABE__ === 'schule'` (`App.svelte`, `zustand.svelte.ts`). Der Build der Familien-App lässt diese Zweige samt Code weg.
-- **`npm run grenzen`** prüft, dass außerhalb von `src/schule/` nichts zur Laufzeit aus der Schulversion importiert; **`npm run grenzen -- --bundle`** prüft nach dem Bauen, dass das Bundle der Familien-App keinen Schulcode enthält (und das der Schulversion schon). Beides läuft in `npm run verify` und in den Workflows. `tests/grenze.test.ts` prüft die Familien-App ohne angemeldete Schulversion.
-- Eigene Ablauftests: `npm run e2e` (Familien-App) und `npm run e2e:schule` (Schulversion, zwei „iPads“).
-
-### Funktionen
-
-| Bereich | Schulversion |
-| --- | --- |
-| Start | Klasse wählen, eigene Eintrittskarte antippen, **Bildpasswort** aus drei Jahrmarkt-Bildern; je Klasse auch **ohne Passwort** (nur bestätigen); beim ersten Anmelden gestaltet das Kind seine Figur |
-| Profile | bis zu **32 je iPad**, jedes Profil in einer eigenen Datei mit zwei Fächern (`src/schule/dienste/ablage.ts`) |
-| Abmelden | Knopf oben, Menü, „Pause machen“, automatisch nach 5 Minuten im Hintergrund und bei jedem Neustart; kein Geschwister-Duell; Bestenliste nur in der Klasse und nur auf Wunsch |
-| Bauinsel | Lehrkraft wählt: immer offen, **nach jeder Runde 10 Minuten** (Standard) oder geschlossen; ist die Zeit um, geht es zurück auf den Jahrmarkt |
-| Lehrerbereich | hinter einer **Lehrer-PIN** (Hash, wachsende Wartezeit, Wiederherstellungscode), schließt nach 5 Minuten ohne Eingabe |
-| Klassen | anlegen, Namensliste einfügen, Passwörter zeigen/neu, **Kärtchen als PDF**, ändern, zurücksetzen, löschen |
-| Auswertung | **Klassenübersicht** (Medaillen, Zeit, Treffer, Ampel je Kompetenzbereich, Entwicklung im Jahrmarkt-Check, Fehlermuster, Buden) und **Einzelbericht** (mit allen Checks), beides als PDF; „Gezielt üben lassen“ macht daraus Aufträge |
-| Aufträge | an die Klasse oder einzelne Kinder: Bude (mit oder ohne Stufe) oder Jahrmarkt-Check; blaues Fähnchen, Ansage von Flinka, Stand je Kind |
-| Daten austauschen | **Klassenliste verteilen** (mit Aufträgen und Einstellungen) und **Ergebnisse einsammeln**, verschlüsselt mit der Lehrer-PIN; `.jahrmarkt`-Dateien öffnen sich per AirDrop direkt in der App |
-| Hilfe | Kurzanleitung und **Elternbrief** (beides als PDF) |
-| Neues Schuljahr | iPad leeren; PIN und Einstellungen bleiben |
-| Datenschutz | eigene Erklärung (`src/schule/rechtliches.ts`, Seite `docs/schule/datenschutz.html`) |
-
-Prüfen: `VITE_AUSGABE=schule npm run build && npm run store-check && npm run grenzen -- --bundle && npm run e2e:schule`.
-
-## Stand dieser Version (0.13.0)
-
-Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar. Neu in 0.4.0: Einmaleins-Turbo und Dosenwerfen, Profil anlegen in zwei Schritten, Start ohne Ton mit Schaltern oben. Neu in 0.5.0: begehbarer Jahrmarkt. Neu in 0.6.0: Zahlenstrahl-Seilbahn, Waage, Rechendomino. Neu in 0.6.1: Gleichgewichts-Waage statt Überschlag, Fortschritt je Profil zurücksetzen. Neu in 0.7.0: Rechen-Werkstatt, Fehlerdetektiv, Zahlenrätsel-Tresor – die Zahlengasse ist komplett. Neu in 0.8.0: alle übrigen 18 Buden – Größenmarkt, Spiegelzelt, Musterbahn, Forschergasse und Sternenmarkt; Rechendomino mit Ziehen und Schlangenfigur. Damit sind alle 27 Buden spielbar. Neu in 0.9.0 (Zielgruppe Anfang Klasse 5): älterer Ton mit Menschen- und Roboterfiguren und Rängen, Menü hinter der eigenen Figur, acht Buden als echte Spiele, Tagesaufträge, Jahrmarkt-Check, Bauplatz mit Blöcken und Bauaufträgen. Neu in 0.10.0: Gassen-Begrüßung passend zur ersten Bude, Auftragsfähnchen, Weiterspielen nach einer Pause, vier klar unterscheidbare Stimmen, Wochenziel, Frischmacher, Blitzrechnen, Knobelzelt mit Rätsel der Woche, Gassenfeiern und Sommerfest, Sammelalbum, Bauinsel, neue Musik und Klänge, Tablet-Ansicht, echter Kauf über App Store und Google Play, Eltern-Bericht als PDF. Neu in 0.11.0: drei neue Buden (Würfelbauer, Lageplan, Glücksrad – jetzt 30), weniger Wiederholungen, Medaillen an den Buden, drehendes Riesenrad mit Fahrt, Flinka gibt Tipps, Fundbüro, Geschwister-Duell, Forscheraufgaben, Sammelkarten mit Mathe-Fakten, Tageszeit und Jahreszeiten auf der Karte, größere Bauinsel mit Brücke, Fähre, Tieren und Bauaufträgen, Impressum, Datenschutz und Lizenzen in der App und im Netz. Neu in 0.11.1: Figur und Kamera laufen auf der Bauinsel flüssig, dritte Insel (Strandinsel) mit zweiter Brücke, Teleporter und Wegweiser zur Fähre, Boot am Steg zurück, Bauplatz-Schilder, Startbildschirm mit Eintrittskarten, Impressum und Datenschutz ohne Elternsperre. Neu in 0.12.0: Bauland als vierte Insel, Bauen bis 12 hoch, acht neue Baumaterialien, 24 neue Einrichtungsteile mit Spielplatz und vier neue Tiere, echte Türen und Fenster, Figur sitzt und liegt, Vorschaubilder im Laden, Zurück aus Laden und Bauplatz auf die Insel, ✕ am Bauauftrag, kürzere Hilfe nach Fehlern (zwei Schritte, dann ähnliche Aufgabe), Flinka-Tipps schließbar und kürzer, Figur gestalten im Menü, Gerätekennung der Stimme im Elternbereich. Neu in 0.12.1: Figur liegt richtig im Bett und steht beim nächsten Antippen auf, Ansicht dreht sich um die Figur, Bauplatz-Schild beim Bauen durchsichtig und nicht antippbar, Stimmen richtig zugeordnet (Google „deb“ ist eine Männerstimme), Standard ist „Mann 1“, allgemeiner Eintrag „Gerätestandard“ wird ausgeblendet. Neu in 0.13.0: Flinka neu gezeichnet (Kapuzenpulli mit Blitz, Kappe verkehrt herum, Turnschuhe – frecher, für Ende Klasse 4 / Anfang Klasse 5) und neues App-Symbol (Flinka vor dem Riesenrad bei Nacht), Spielzeit-Erinnerung (Standard 20 Minuten, im Elternbereich einstellbar, nie mitten in einer Runde, Rechnen, Bauen und Insel zählen zusammen), „Fertig für heute“ nach den Tagesaufträgen, ruhiger Punkt statt roter Zahl am Menü, kein „Frag deine Eltern“ an gesperrten Stellen, Versprechen im Elternbereich, Elternsperre schwerer (keine glatten Zehner, Wartezeit nach drei Fehlversuchen), Abendstimmung als Dämmerung statt grauem Schleier, Startbildschirm-Titel unter der Wimpelkette, Karte lässt sich über die untere Leiste hinaus schieben, Rechentrick „mal 11“ mit Übertrag, kleinerer Spielstand (1 500 Einzelaufgaben je Kind, ältere als Wochenwerte), Kauf-Prüfung beim Start ohne Apple-ID-Fenster, Apple-Datenschutzmanifest, iOS-Projekt mit allen Plugins. Neu in 0.13.2: Die iOS-Version nennt nirgends Google Play oder Android (Apple-Richtlinie 2.3.10). Die Workflows setzen dafür `VITE_PLATTFORM` (`ios` bzw. `android`); ohne Angabe gilt `alle` (Browser, Tests, Seiten in `docs/`). `npm run store-check` bricht ab, wenn im iOS-Build doch noch „Google Play“ steht. Neu in 0.15.0: Jahrmarkt neu angelegt – Plätze mit verschiedenen Budenformen, geschwungene Wege, Sternenmarkt auf dem Hügel, Karussells und Attraktionen, Essbuden für ein paar Taler, Lageplan. Neu in 0.15.1: Antippen der Wiese führt die Figur genau zur angetippten Stelle (mit Kreis als Ziel), Attraktionen stehen frei auf Grasstreifen zwischen den Plätzen, Essbuden mit festem Stehplatz, Achterbahn mit Bahnhof, Brunnen-Spruch zur Parabel. Neu in 0.15.2: Schiebt das Kind die Karte, während die Figur läuft, folgt die Kamera nicht mehr (auf Jahrmarkt und Bauinsel; auch wenn iOS das Schieben übernimmt); ein neues Ziel oder „Wo bin ich?“ holt sie zurück. Gegen Flackern auf iOS wird die Jahrmarkt-Welt mit `zoom` statt `transform: scale` verkleinert (keine riesige Grafikebene), und während des Schiebens ruhen die Bewegungen. Sprüche an Autoscooter, Kinderkarussell und Schiffschaukel als Mathe-Fakten statt Fragen. Neu in 0.15.3: kein Nachfedern mehr am Kartenrand und in der ganzen App (`overscroll-behavior: none`, iOS `scrollEnabled: false`), Rand und Fläche unter der Leiste abends/nachts genauso dunkel wie die Welt, Dämmerung ohne Mischmodus. Neu in 0.16.0: Tippen auf dem Jahrmarkt über zwei Messpunkte in der Welt umgerechnet (stimmt auch in Safari/WebKit, das Positionen in gezoomten Flächen anders angibt), Zielkreis gleitet vom Finger zum Ziel; Rundgang mit Flinka (`Rundgang.svelte`, einmal je Kind und über das Menü); neues Profil nur über die Elternsperre, Wechseln bleibt frei. Store-Material: `npm run store-bilder` (mit `NUR_APPLE=1` nur App-Store-Formate, 9 Motive inkl. Lageplan), `npm run store-videos`; YouTube-Werbevideo mit `node scripts/youtube-video.mjs` (Musik aus `scripts/musik.py`, englische Untertitel) und `node scripts/youtube-thumbnail.mjs`, Ergebnis in `youtube/`. Gemeinsame Filmbausteine in `scripts/film.mjs`. Neu in 0.19.0: Bauaufträge auf eigenen kleinen Auftragsinseln (eigene Ansicht, Ruderboot am Steg; was auf den alten Bauplätzen A–E steht, bleibt als normales Land), Jubel bei geschafftem Bauauftrag (Figur hüpft mit erhobenen Armen, Sterne über dem Bauplatz), erste Insel nach unten um eine baumfreie Wiese (16 × 14 Felder) vergrößert, Steg und Boot an ihrem Rand; weniger Arbeitsspeicher auf der Insel (nur die aktuelle Drehung wird gehalten, ein Klick-Empfänger statt tausender), damit ältere iPads die App beim Öffnen der Insel nicht neu starten; Ausweg, falls die Insel sich nicht öffnen lässt.
+Fahrplan-Schritte 1 und 2 sind umgesetzt: das Grundgerüst und die Dartbude als Musterbude. Neu in 0.2.0: Figuren-Baukasten, eigenes Aussehen für alle 27 Buden, Test-APK für Android. Neu in 0.3.0: Musik, App-Symbol und Startbild, Zurück-Taste unter Android, bessere Stimme, Spielknopf immer sichtbar.
 
 | Bereich | Stand |
 | --- | --- |
-| Jahrmarkt-Welt | begehbare Karte: Kind tippt auf eine Bude, die eigene Figur läuft über die Wege hin und geht hinein; seit 0.15 Plätze statt Reihen (jede Gasse ein eigener Platz mit eigener Budenform: Hütten, Marktstände, Zelte, Wagen, Pavillons), ein geschwungener Hauptweg, Sternenmarkt auf einem Hügel hinter dem Tor mit Treppe, Attraktionen zum Antippen (Schiffschaukel, Achterbahn, Ketten- und Kinderkarussell, Autoscooter, Brunnen, Fernrohr – mit Mathe-Spruch), Essbuden (Popcorn 2, Eis 3, Zuckerwatte 3, Crêpes 4 Taler – die Figur hüpft und sagt „Lecker“), Lageplan mit allen Buden, Medaillen und Aufträgen (Antippen läuft hin); alle 30 Buden an ihrem Platz mit Medaille (B/S/G), Schild je Platz, Riesenrad dreht sich (je mehr Gondeln leuchten, desto schneller) und lädt zur Fahrt mit Übersicht aller Buden, Flinka am Eingang gibt Tipps, Tageszeit (abends Lichterketten) und Jahreszeiten, Fähre zur Bauinsel, Sternenmarkt hinter dem Zaun |
+| Jahrmarkt-Welt | Riesenrad als Fortschritt, fünf Gassen, Zahlengasse begehbar, die anderen „wird aufgebaut“ |
 | Geschichte | Flinka mit Intro, Gassen-Begrüßung, Lob bei jeder neuen Stufe |
-| Einmaleins-Turbo | Ergebnis mit Ziffernfeld eintippen, Kart fährt mit jeder richtigen Antwort; freiwilliger Turbo mit Zeitleiste und Bonus; Gold mit Analogaufgaben (7 · 80) und eigener Hilfe |
-| Dosenwerfen | Stellenwerte bis 1 000 / 100 000 / 1 000 000: Stellentafel, Zahlwort, Ziffernwert, Entbündeln; falsche Dosen aus typischen Fehlern (Null vergessen, wie gesprochen, nicht gebündelt); Hilfe mit Stellenwerttafel |
-| Zahlenstrahl-Seilbahn | Gondel am Seil (Zahlenstrahl mit 20 Abschnitten) an die Zahl ziehen oder ablesen; bis 1 000, 100 000, Ausschnitte mit Nachbartausendern; Hilfe: Wert eines Strichs, Sprünge vom beschrifteten Strich |
-| Gleichgewichts-Waage | Waage als Modell für Gleichheit: fehlende Zahl ergänzen (347 + ? = 500), Terme vergleichen mit <, =, > (398 + 245 und 400 + 243), Platzhalter bei Mal und Geteilt; im Gleichgewicht nur bei genau gleichen Werten; Hilfe: Ergänzen in Schritten, Umkehraufgabe, beide Seiten ausrechnen |
-| Rechendomino | Steine ziehen oder antippen; die Kette legt sich als Schlange (rechts, runter, links) zu einer Figur, mit Feuerwerk am Ende; Kette aus Aufgabe und Ergebnis, halbschriftlich Plus/Minus mit Übertrag, Mal und Geteilt durch Zerlegen; Hilfe zeigt den Rechenweg in Schritten |
-| Rechen-Werkstatt | schriftlich auf Karopapier: Ergebnis Ziffer für Ziffer von rechts nach links, Merkzeile für Überträge; Addition, Subtraktion, Multiplikation mit zweistelligem Faktor (Teilprodukte als Notiz); Hilfe Spalte für Spalte, Minus im Verfahren aus dem Elternbereich |
-| Fehlerdetektiv | fertige Rechnung unter der Lupe: „Kann das stimmen?“ mit Überschlag, dann falsche Ziffer antippen oder „Alles richtig“; eingebaute Fehler: Übertrag vergessen, kleiner von größer, Einmaleins-Fehler |
-| Zahlenrätsel-Tresor | Hinweise (Teilbarkeit, Quersumme, Ziffernbeziehungen, Bereich) führen zu genau einer Zahl, Rädchen am Schloss; Gold: Kombinatorik (wie viele Codes?); Hilfe prüft die eigene Zahl Hinweis für Hinweis bzw. listet alle Codes geordnet |
-| Größenmarkt | Süßigkeitenkasse (passend bezahlen, Rückgeld, Einkauf), Schätz-Bude (Längen, Gewichte, Volumen, Zeiten), Uhr-Karussell (Viertelstunden, Minuten, Zeitspannen), Umrechnungs-Memory (m/cm, kg/g, h/min, € /ct), Achterbahn-Architekt (Streckenstücke, Einheiten, Umfang), Lageplan (Planquadrate A1–E5, Wege beschreiben, Maßstab) |
-| Spiegelzelt | Spiegelkabinett (Kästchen selbst ausmalen, senkrechte/waagerechte/schräge Achse), Würfelnetz-Werkstatt (faltbar? gegenüberliegende Flächen), Labyrinth-Robo (Befehlsfolgen), Formen-Sortierer (Figuren und Körper mit Ecken, Flächeninhalt), Zelt-Dekorateur (Bandornamente fortsetzen, Fehler finden, Drehfolgen), Würfelbauer (Türme zählen, Baupläne, Ansichten von vorne und oben, Quader ergänzen) |
-| Musterbahn | Zahlenfolgen-Zug (plus/minus, mal/geteilt, zwei Regeln), Rechenmauer (3 und 4 Ebenen, rückwärts), Riesenrad-Techniker (Plätze, Division mit Rest, Preistabelle) |
-| Forschergasse | Murmel-Labor (sicher/möglich/unmöglich, wahrscheinlichste Farbe, zwei Tüten vergleichen), Diagramm-Reporter (Strichliste, Säulen- und Balkendiagramm mit Skala), Glücksrad (Chancen nach Feldern, Strichliste und Rad zuordnen, faire Spiele) |
-| Sternenmarkt | Geisterbahn (schriftliche Division wie im Heft, Schritt für Schritt, Rest, Probe), Pizzabäckerei (Stammbrüche, Anteile, gleichwertige Brüche), Hau den Lukas (Zehntel ablesen, Kommazahlen ordnen, Bruch als Dezimalzahl) |
-| Spiel-Buden | Kasse: Münzen und Scheine auf den Tresen legen. Uhr: Zeiger ziehen. Achterbahn: Schienen aus dem Lager legen, die Bahn wächst maßstäblich. Rechenmauer: Stein für Stein bis zur Spitze. Riesenrad: erst rechnen, dann fährt das Rad. Geisterbahn: Division Ziffer für Ziffer, der Wagen fährt in den Tunnel. Pizzabäckerei: selbst schneiden und belegen. Hau den Lukas: Kraft einstellen und zuschlagen. Für Bildschirmleser gibt es weiter Antwortknöpfe |
-| Ränge | Jede geschaffte Stufe ist ein Stern: Neuling, Budenhelfer, Budenprofi, Budenchef, Jahrmarkt-Manager, Jahrmarkt-Direktor, Mathe-Legende; im Menü, im Mathe-Profil und beim Aufstieg nach der Runde |
-| Tagesaufträge | jeden Tag drei Buden aus verschiedenen Gassen (zuerst die Empfehlung aus dem Check); erledigt mit 7 Treffern; 15 Taler und 10 Blöcke je Auftrag, 20 Blöcke Bonus für alle drei; Marke über der Bude auf der Karte |
-| Jahrmarkt-Check | zwölf Aufgaben aus sechs Bereichen ohne Zeitdruck, Ergebnis je Bereich (sicher / fast sicher / üben) und drei empfohlene Buden; gehört wie geplant zum Zusatzpaket |
-| Bauplatz | Blöcke verdienen (einer je Treffer, fünf für eine neue Stufe), frei bauen auf 8 × 8 Feldern in acht Blockarten, Ansicht drehen; gebaut wird im Bauplan mit Zahlen. Bauaufträge: nach Bauplan bauen, Würfelgebäude nachbauen, Quader mit Maßen, Spiegelbau – danach „Wie viele Würfel?“ |
-| Hilfe der neuen Buden | einheitlich in drei Schritten: Grundidee, Rechenweg mit dem Bild der Bude (Lösung markiert), selbst wählen |
 | Dartbude | Bronze, Silber, Gold, Probewurf, Hilfe nach Fehlern, Nochmal-Aufgabe, Rekord, Familien-Bestenliste, Verlaufskurve |
-| Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: zwei Menschenfiguren, Roboter und 6 Tiere, je 3 Farben, Shirt, Extras (Cap, Sonnenbrille, …; Strohhut aus dem Andenkenstand), ohne Fotos |
+| Figur | Baukasten beim Anlegen, auf „Wer spielt?“ und im Mathe-Profil: 6 Tiere, je 3 Fellfarben, Halstuch, Extras (Strohhut aus dem Andenkenstand), ohne Fotos |
 | Buden | vier Dachformen (Markise, Zirkuszelt, Kuppel, Holzgiebel), eigene Farben und ein Motiv je Bude, auch auf dem Rollladen noch nicht gebauter Buden |
 | Lebendige Welt | Buden grau → Licht → Farbe → Fest, Bruno winkt, Katze als Entdeckung, Deko aus dem Andenkenstand sichtbar |
 | Lernprofil | Protokoll jeder Antwort, Fehlerursachen, Einschätzung ab 20 Aufgaben an 2 Tagen, Elternsätze, Verdichtung alter Daten |
-| Elternbereich | Fortschritt je Profil zurücksetzen (Name und Figur bleiben), Elternsperre, Wochenbericht, Lernprofil mit Tipps, Zusatzpaket, Einstellungen, Profile, Sicherung als Text |
+| Elternbereich | Elternsperre, Wochenbericht, Lernprofil mit Tipps, Zusatzpaket, Einstellungen, Profile, Sicherung als Text |
 | Barrierefreiheit | Vorlesen, Schriftgröße, Bewegung reduzieren, Antwortknöpfe für Bildschirmleser, Farben nie allein |
-| Ton | App startet still; Note und Lautsprecher oben schalten Musik und Vorlesen ein, die Wahl bleibt gespeichert |
-| Musik | „Lichter an“ und „Flinkas Walzer“, eigene Kompositionen mit Marimba, Flächen, Bass, Arpeggien und Hall, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
+| Musik | „Flinkas Walzer“, eigene Komposition, erzeugt das Gerät selbst (keine Audiodateien, keine fremden Rechte); beim Rechnen standardmäßig aus |
 | Vorlesen | beste deutsche Offline-Stimme automatisch, Tempo und Stimme im Elternbereich, Probehören |
 | Android | Zurück-Taste führt eine Ebene zurück; auf dem Jahrmarkt zweimal drücken zum Verlassen |
-| Weiterspielen | Wer eine Runde abbricht, kann sie bis zu einem Tag lang an derselben Stelle fortsetzen („Aufgabe x von 10“) oder neu starten, ohne Probewurf |
-| Wochenziel und Frischmacher | Drei Spieltage pro Woche bringen 15 Blöcke; ein Tagesauftrag holt eine Bude zurück, die 10 Tage nicht gespielt wurde |
-| Blitzrechnen | 60 Sekunden Kopfrechnen in drei Stufen zum Aufwärmen, Blöcke für richtige Antworten, Rekord |
-| Knobelzelt | Sachaufgaben in Teilschritten mit Tipp und Rechnung (9 Arten, 3 Stufen), Forscheraufgaben mit vielen Lösungen (Malaufgaben-Jagd, gerade Paare, Minusaufgaben, Mauer-Baumeister, Geschichten-Detektiv), dazu jede Woche ein Rätsel mit zwei Tipps |
-| Abwechslung | Jede Bude merkt sich die letzten 40 Aufgaben und Motive; dieselbe Aufgabe oder dasselbe Bild kommt nicht gleich wieder |
-| Fundbüro | Fehler kommen nach 1, 3 und 7 Tagen als ähnliche Aufgaben wieder (verteiltes Wiederholen), 2 Taler je wiedergefundener Aufgabe |
-| Spieler wechseln | seit 0.14: Figur und Name in der Kopfzeile, ein Tipp öffnet den Wechsel ohne Umweg über den Startbildschirm; mitten in einer Runde erst eine Rückfrage (Spielrunde wird zum Weiterspielen gemerkt); nach mehr als 5 Minuten im Hintergrund fragt die App „Wer spielt jetzt?“ (nur bei mehreren Profilen) |
-| Geschwister-Duell | zwei Profile rechnen nacheinander dieselben zehn Aufgaben; erst Treffer, dann Zeit; Taler für beide |
-| Feiern und Sammelalbum | Gassenfeier, wenn alle Buden einer Gasse Bronze haben, Sommerfest für alle; 45 Sammelkarten (normal, selten, legendär), jede mit einem Mathe-Fakt auf der Rückseite |
-| Bauinsel | Seit 0.14 ist die erste Insel (mit Steg, allen Blöcken und Grundausstattung: Tür, Fenster, Treppe, Zaun, Gartentor, Bett, Tisch, Stuhl, Blumen) frei; an der Brücke steht ein Tor mit Schild „Zusatzpaket“, gekauft wird nur im Elternbereich. Zusatzpaket: drei Inseln mit zwei Brücken (Strandinsel mit Lagune und Düne), Anreise per Fähre (Wegweiser am Eingang) oder Teleporter, zurück mit dem Boot am Steg; Wiese, Strand, See, Hügel, Blumen und Bäume; Tiere (Schaf, Hund, Katze, Huhn) laufen umher; Shop nach Bauen, Wohnen, Garten, Tiere; 16 Bauaufträge auf fünf Bauplätzen, seit 0.19 je auf einer eigenen Auftragsinsel, die man mit dem Ruderboot am Steg erreicht (D und E: Treppe, doppelt so hoch, Rechteck, Farbmuster, Spiegelbild, Quader, Gehege, Sitzgruppe, halb und halb, großes Haus), mit „So geht’s“-Hinweis; Tiere gehen nicht durch Türen und Tore; seit 0.14: Wüsteninsel hinter dem Bauland (vierte Brücke, Dünen, Kakteen, Oase mit Palmen; Kaktus im Topf im Laden), Tag und Nacht (nach 8 Minuten Dämmerung, nach 10 Minuten Nacht mit leuchtenden Lampen und Fenstern, Schlafen im Bett bringt den Morgen), Möbel drehen (Modus „Drehen“ und Dreh-Knopf nach dem Setzen), Zäune und Hecken verbinden sich von selbst (Ecken, Kreuzungen, Anschluss an Mauern, Gartentor stellt sich dazwischen), Stühle, Sessel, Sofa und Bank schauen von selbst zum Tisch, Betten mit dem Kopfende an die Wand, Richtung vor dem Setzen wählbar, ↻-Marken im Modus „Drehen“, Ansicht drehen mit Überblenden um die Bildmitte und Kompass (jede Ansicht wird gemerkt), Übersichtskarte aller Inseln, die Kamera folgt der Figur nicht mehr, wenn man selbst schiebt, Flinka erklärt Neues einmal, Schaukeln, Türen gehen beim Durchgehen auf, Figur wie auf dem Jahrmarkt; die Figur gleitet flüssig, die Kamera folgt ihr, sie, steigt Treppen und geht durch Türen; Blöcke an jede Seite setzen und wieder abbauen, Dächer bauen, Einrichtung aus dem Andenkenstand; im Haus wird die Decke ausgeblendet |
-| Kauf | StoreKit 2 und Google Play Billing (Plugin `@capgo/native-purchases`), Produkt `de.maehlmann.mathejahrmarkt.zusatzpaket`, Käufe wiederherstellen, stille Wiederherstellung beim Start; die Test-APK hat einen gekennzeichneten Testkauf |
-| Eltern-Bericht | PDF mit Woche, Check, Fortschritt je Gasse und Lernprofil, über das Teilen-Menü oder als Download |
-| Tablet | Ab 760 px Breite wird die ganze Oberfläche größer (Faktor 1,2 bzw. 1,4) |
-| Über die App | Impressum, Datenschutzerklärung und Lizenzen der Open-Source-Bausteine ohne Elternsperre (Startbildschirm und Menü) und im Elternbereich; dieselben Texte als Webseiten in `docs/` (GitHub Pages) |
+| Noch nicht | übrige 23 Buden, Jahrmarkt-Check, Abendmarkt, nativer Kauf |
 
 ## App-Symbol und Startbild
 
@@ -101,10 +35,9 @@ npm install
 npm run dev          # Entwicklung im Browser, mit gekennzeichnetem Testkauf
 npm run verify       # Typprüfung, Unit-Tests, Build, Store-Regeln
 npm run e2e          # Ablauftest in Chrome (vorher npm run build), Fotos in e2e-bilder/
-npm run store-bilder # Store-Screenshots für Telefon und iPad (vorher npm run build)
 ```
 
-Node 22 oder neuer. Für `npm run e2e` muss Chrome installiert sein (`CHROME_PFAD` setzen, falls nicht unter `/usr/bin/google-chrome`). `NUR=hoch` oder `NUR=quer` testet nur eine Ausrichtung, `TEIL=2` nur den zweiten Durchgang mit Zusatzpaket, `DROSSEL=4` simuliert ein langsames Gerät.
+Node 22 oder neuer. Für `npm run e2e` muss Chrome installiert sein (`CHROME_PFAD` setzen, falls nicht unter `/usr/bin/google-chrome`).
 
 ## Test-APK für Android
 
@@ -139,7 +72,7 @@ src/
                 Adaptivität, Lernprofil, Fortschritt, Kaufgrenze, Runde, Elternsperre
   services/     Speicher mit Migration, Sicherung, Kauf, Vorlesen, Klang, Haptik
 tests/          Unit-Tests der Domäne und der Services
-scripts/        Store-Regel-Prüfung, Ablauftest im Browser, Store-Screenshots, App-Symbole
+scripts/        Store-Regel-Prüfung, Ablauftest im Browser
 ```
 
 Grundregeln:
@@ -159,34 +92,23 @@ Grundregeln:
 4. Anmelden in `src/buden/index.ts`, `spielbar: true` im Budenregister.
 5. `npm run verify` und `npm run e2e`.
 
-Für Auswahl-Aufgaben mit eigenem Bild reicht `auswahlBude()` aus `src/buden/gemeinsam/auswahlBude.ts`: Generator (mit `auswahlAufgabe()` aus `baukasten.ts`) plus eine Bild-Komponente; Bühne, Antwortknöpfe und Hilfe kommen mit.
-
-## Impressum und Datenschutz im Netz
-
-Die Stores verlangen eine öffentlich erreichbare Datenschutzerklärung. Die Texte stehen an einer Stelle (`src/app/rechtliches.ts`) und erscheinen in der App unter Elternbereich → Über die App. `npm run rechtliches` erzeugt daraus die Seiten in `docs/` (ein Test prüft, dass sie aktuell sind).
-
-Einmalig auf github.com: Repository → Settings → Pages → „Deploy from a branch“, Branch `main`, Ordner `/docs` → Save. Nach ein bis zwei Minuten sind die Seiten erreichbar unter `https://simaehlmann-cloud.github.io/mathe-jahrmarkt/datenschutz.html` und `…/impressum.html`. Diese Adresse kommt in App Store Connect und in die Google Play Console.
-
 ## Store-Regeln für Kinder-Apps
 
 `npm run store-check` prüft den Build automatisch:
 
 - keine Analyse-, Werbe- oder Tracking-Pakete
 - keine Adressen im Bundle außer Dokumentationstexten, Content-Security-Policy ohne externe Verbindungen und ohne `unsafe-eval`
-- kein Testkauf im Produktions-Build (die Test-APK wird mit `VITE_TESTKAUF=1` gebaut, eine Store-Version nie)
+- kein Testkauf im Produktions-Build
 - keine Links nach außen, Kauf nur im Elternbereich hinter der nicht abschaltbaren Elternsperre
 
 ## Vor dem ersten TestFlight-Upload
 
 - [ ] App-Kennung `de.maehlmann.mathejahrmarkt` in `capacitor.config.ts` mit App Store Connect und Play Console abgleichen (lässt sich später nicht ändern)
-- [x] Nativen Kauf anbinden (StoreKit 2, Google Play Billing) in `src/services/kauf.ts`
-- [ ] Produkt `de.maehlmann.mathejahrmarkt.zusatzpaket` in App Store Connect (nicht verbrauchbar, Familienfreigabe) und Play Console anlegen, Kauf mit Sandbox bzw. Lizenz-Testern prüfen
-- [x] App-Symbol und Startbild
+- [ ] Nativen Kauf anbinden (StoreKit 2, Google Play Billing) in `src/services/kauf.ts`, Produkt `…zusatzpaket` anlegen
+- [ ] App-Symbol und Startbild
 - [ ] Datenschutzhinweise der Kinder-Kategorie prüfen; die App sendet keine Daten
-- [x] Apple-Datenschutzmanifest `ios/App/App/PrivacyInfo.xcprivacy`: UserDefaults (CA92.1), Datei-Zeitstempel (C617.1), kein Tracking, keine Daten
-- [ ] Vor jedem Archiv in Xcode `npm run cap:sync`; Build-Nummer (`CURRENT_PROJECT_VERSION`) bei jedem Upload erhöhen – Schema: Version 0.13.0 → 1300
-- [ ] Beim Start wird der Kauf nur still geprüft (`pruefen`); „Käufe wiederherstellen“ (Apple-ID-Anmeldung) gibt es nur im Elternbereich
-- [ ] Android: INTERNET und BILLING werden für Google Play Billing gebraucht
-- [x] Store-Texte, Screenshots und Datenschutzerklärung (Dokument „Mathe-Jahrmarkt: Store-Einträge und Datenschutz“, Bilder mit `npm run store-bilder`)
+- [ ] Apple-Datenschutzmanifest: Nutzung von UserDefaults (Grund CA92.1) über Capacitor Preferences prüfen
+- [ ] Android: Die Berechtigung INTERNET aus der Capacitor-Vorlage ist für die App nicht nötig und kann nach einem Gerätetest entfernt werden
+- [ ] Store-Texte und Screenshots
 
 Die Review-Befunde stehen in [REVIEW.md](REVIEW.md).
