@@ -9,7 +9,7 @@
    * Gemeinsame Bühne für Auswahl-Buden: oben das Bild der Bude, unten die Antwortknöpfe.
    * Das Bild bekommt Aufgabe und Ergebnis (`zustand`), um selbst zu reagieren (z. B. Uhr dreht, Murmel rollt).
    */
-  type BildProps = { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean };
+  type BildProps = { aufgabe: Aufgabe; zustand: '' | 'richtig' | 'falsch'; gewaehlt: number | null; reduziert?: boolean; buehne?: boolean };
   let {
     kontext,
     bild,
@@ -55,7 +55,7 @@
 
 {#if a}
   <div class="buehne-dom" style="background: {hintergrund}">
-    <div class="bild"><Bild aufgabe={a} {zustand} {gewaehlt} reduziert={kontext.reduziert} /></div>
+    <div class="bild"><Bild aufgabe={a} {zustand} {gewaehlt} reduziert={kontext.reduziert} buehne /></div>
     <Wahlknoepfe aufgabe={a} {gesperrt} markiert={gewaehlt} richtig={zustand === 'richtig'} {spalten} onwahl={(w) => !gesperrt && kontext.onAntwort(w)} />
   </div>
 {/if}
