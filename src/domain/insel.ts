@@ -430,6 +430,59 @@ export function inEbene(s: InselStand, x: number, y: number, z: number): number 
 
 const frei = (e: ReturnType<typeof inEbene>): boolean => e === null || e === TUER_OBEN || (typeof e === 'number' && DURCHGANG.has(e));
 
+/** Teile, die wie eine Wand einen Raum begrenzen (Blöcke zählen immer dazu). */
+const WANDARTIG = new Set<number>([101, TUER_OBEN, 102, 104, 105, 115, 123]);
+const istWand = (e: ReturnType<typeof inEbene>): boolean =>
+  e === 'grund' || e === 'baum' || (typeof e === 'number' && (e < 100 || WANDARTIG.has(e)));
+
+/**
+ * Steht die Figur in einem Raum? Ab ihrem Feld werden auf ihrer Ebene alle Felder gesucht, die sie ohne
+ * Wand erreicht (Türen, Fenster, Zäune und Hecken zählen als Wand). Ein Raum ist es nur, wenn diese Suche
+ * ringsum an Wände stößt (kein Weg ins Freie, ans Wasser oder an eine Kante), höchstens 160 Felder groß ist
+ * und entweder ein Dach über der Figur liegt oder die Wände meist höher als eine Ebene sind.
+ * Ein Zaun-Garten oder ein Platz unter einem Baum oder Vordach ist also kein Raum (seit 0.21).
+ * Ergebnis: die Felder des Raums (Index) oder null.
+ */
+export function raumUm(s: InselStand, fx: number, fy: number, fz: number): Set<number> | null {
+  const zellen = new Set<number>([idx(fx, fy)]);
+  const offen: [number, number][] = [[fx, fy]];
+  let waende = 0;
+  let hoheWaende = 0;
+  const gezaehlt = new Set<number>();
+  while (offen.length) {
+    const [x, y] = offen.pop() ?? [fx, fy];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!imFeld(nx, ny)) return null;
+      const n = idx(nx, ny);
+      if (zellen.has(n)) continue;
+      const hier = inEbene(s, nx, ny, fz);
+      const drueber = inEbene(s, nx, ny, fz + 1);
+      if (istWand(hier) || istWand(drueber)) {
+        if (!gezaehlt.has(n)) {
+          gezaehlt.add(n);
+          waende++;
+          if (istWand(drueber)) hoheWaende++;
+        }
+        continue;
+      }
+      // Kein Boden (Wasser, Abgrund): Hier geht es ins Freie
+      const unten = fz === 0 ? 'grund' : inEbene(s, nx, ny, fz - 1);
+      if (hier === 'wasser' || unten === null || unten === 'wasser') return null;
+      if (Math.abs(nx - fx) > 14 || Math.abs(ny - fy) > 14 || zellen.size >= 160) return null;
+      zellen.add(n);
+      offen.push([nx, ny]);
+    }
+  }
+  const i = idx(fx, fy);
+  const h = LANDSCHAFT.hoehe[i] ?? 0;
+  const st = s.stapel[i] ?? [];
+  let dach = false;
+  for (let z = fz + 2; z < h + st.length; z++) if ((st[z - h] ?? LUFT) !== LUFT) dach = true;
+  return dach || (waende > 0 && hoheWaende / waende >= 0.6) ? zellen : null;
+}
+
 /** Höhe der Stapeloberkante (absolut). */
 export const oberkante = (s: InselStand, x: number, y: number): number => (LANDSCHAFT.hoehe[idx(x, y)] ?? 0) + (s.stapel[idx(x, y)]?.length ?? 0);
 

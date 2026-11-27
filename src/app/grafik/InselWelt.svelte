@@ -8,7 +8,7 @@
 <script lang="ts">
   import { BLOCKARTEN } from '../../domain/bau';
   import { untrack } from 'svelte';
-  import { AUFTRAGSINSELN, BOOT, BREITE, BRUECKE, GRUNDSTUECKE, HAUPTWELT, HOEHE, LANDSCHAFT, LUFT, RUDERBOOT, TUER_OBEN, drehbar, imBereich, ruderbootAn, type Bereich, type InselStand } from '../../domain/insel';
+  import { AUFTRAGSINSELN, BOOT, BREITE, BRUECKE, GRUNDSTUECKE, HAUPTWELT, HOEHE, LANDSCHAFT, LUFT, RUDERBOOT, TUER_OBEN, drehbar, imBereich, raumUm, ruderbootAn, type Bereich, type InselStand } from '../../domain/insel';
   import { dunkel, LAMPEN } from './nacht';
   import type { Aussehen } from '../../domain/aussehen';
   import type { FigurId } from '../../domain/profil';
@@ -20,8 +20,9 @@
 
   /**
    * Die Bauinsel in isometrischer Ansicht. Alles wird in Diagonalreihen (x + y) von hinten nach vorne gezeichnet,
-   * die Figur steht in ihrer Reihe. Ist die Figur in einem Haus (etwas über dem Kopf), wird alles ab Kopfhöhe
-   * ausgeblendet und die Wände davor werden durchsichtig.
+   * die Figur steht in ihrer Reihe. Steht die Figur in einem Raum (siehe `raumUm`), wird dessen Dach ausgeblendet
+   * und die Wände vor ihr werden auf eine Ebene gekürzt – wie bei einem Puppenhaus (seit 0.21; vorher wurden
+   * die Wände durchsichtig und auf der ganzen Insel alles ab Kopfhöhe ausgeblendet).
    * `ontippe(x, y, z)`: angetippter Block (z = Ebene des Blocks; bei Boden z = Geländehöhe − 1).
    */
   let {
@@ -137,12 +138,10 @@
   const fx = $derived(stand.figur.x);
   const fy = $derived(stand.figur.y);
   const fz = $derived(stand.figur.z);
-  const istInnen = $derived.by(() => {
-    const i = fy * W + fx;
-    const h = LANDSCHAFT.hoehe[i] ?? 0;
-    const st = stapel[i] ?? [];
-    for (let z = fz + 2; z < h + st.length; z++) if ((st[z - h] ?? LUFT) !== LUFT) return true;
-    return false;
+  /** Felder des Raums, in dem die Figur steht (oder null). */
+  const raum = $derived.by(() => {
+    void stapel;
+    return raumUm(stand, fx, fy, fz);
   });
   const richtungen = $derived(stand.richtung);
   /**
@@ -172,7 +171,7 @@
   const d = (farbe: string): string => dunkel(farbe, lichtStufe);
 
   /** Nur im Haus hängt das Bild von der Figurposition ab (Schnittansicht). */
-  const schnitt = $derived(istInnen ? `${fx},${fy},${fz}` : '');
+  const schnitt = $derived(raum ? `${fx},${fy},${fz}` : '');
 
   /**
    * Seit 0.19 wird nur noch die aktuelle Drehung im Speicher gehalten (vorher alle vier): Auf älteren iPads
@@ -214,9 +213,31 @@
     const L = lichtStufe;
     const dd = (farbe: string): string => dunkel(farbe, L);
     const dunkler = (fl: { punkte: string; farbe: string; seite?: Seite }[]) => (L >= 1 ? fl : fl.map((f) => ({ ...f, farbe: dd(f.farbe) })));
-    const innen = schnitt !== '';
+    const innen = schnitt !== '' && raum !== null;
     const f = { x: sx, y: sy, z: sz };
-    const fReihe = reihe(f.x, f.y);
+    /** Wandring um den Raum (auch über Eck) und die Wandfelder davor, die gekürzt werden. */
+    const ring = new Set<number>();
+    const kuerzen = new Set<number>();
+    if (innen && raum) {
+      for (const c of raum) {
+        const cx = c % W;
+        const cy = Math.floor(c / W);
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+            const n = ny * W + nx;
+            if (raum.has(n)) continue;
+            ring.add(n);
+            // Vorne liegt eine Wand, wenn der Raum (in der aktuellen Drehung) hinter ihr liegt.
+            // Ecken (nur über Eck am Raum) links und rechts liegen in derselben Reihe und werden mitgekürzt.
+            const ueberEck = dx !== 0 && dy !== 0;
+            if (reihe(nx, ny) > reihe(cx, cy) || (ueberEck && reihe(nx, ny) === reihe(cx, cy) && ![[nx - 1, ny], [nx + 1, ny], [nx, ny - 1], [nx, ny + 1]].some(([ax, ay]) => raum.has((ay ?? 0) * W + (ax ?? 0)))))
+              kuerzen.add(n);
+          }
+      }
+    }
     const land = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < W && y < H && LANDSCHAFT.art[y * W + x] !== 'wasser';
     for (let y = BY; y < BY + BH; y++)
       for (let x = BX; x < BX + BW; x++) {
@@ -259,15 +280,16 @@
         (stapel[i] ?? []).forEach((a, k) => {
           const z = h + k;
           if (a === LUFT) return;
-          if (innen && z >= f.z + 2) return;
-          const vorne = innen && rr > fReihe && Math.abs(x - f.x) <= 3 && Math.abs(y - f.y) <= 3 && z >= f.z;
+          // Im Raum: Dach über Raum und Wänden weg, Wände davor auf eine Ebene gekürzt
+          if (innen && z >= f.z + 2 && (raum?.has(i) || ring.has(i))) return;
+          if (innen && z >= f.z + 1 && kuerzen.has(i)) return;
           const block = BLOCKARTEN[a];
           // Offene Tür: nur das aufgeklappte Türblatt an der Seite, der Durchgang ist frei
           const tuerUnten = a === 101 ? z : a === TUER_OBEN ? z - 1 : null;
           if (tuerUnten !== null && offen === `${x},${y},${tuerUnten}`) {
             const wandX = [x - 1, x + 1].some((nx) => nx >= 0 && nx < W && ((stapel[y * W + nx] ?? [])[tuerUnten - (LANDSCHAFT.hoehe[y * W + nx] ?? 0)] ?? LUFT) !== LUFT);
             const blatt = wandX ? quader(x, y, z, x + 0.1, y + 0.85, z + 1, '#9c6634', '#7a4a22', '#8a5a2b') : quader(x, y, z, x + 0.85, y + 0.1, z + 1, '#9c6634', '#7a4a22', '#8a5a2b');
-            liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen: dunkler(blatt), tippbar: true, durchsichtig: vorne, extra: 'tuerauf' });
+            liste[rr]!.push({ schluessel: `s${x},${y},${z}`, x, y, z, flaechen: dunkler(blatt), tippbar: true, durchsichtig: false, extra: 'tuerauf' });
             return;
           }
           const stelle = `${x},${y},${z}`;
@@ -280,7 +302,7 @@
             z,
             flaechen: L >= 1 ? flaechen : flaechen.map((f) => (lampe && f.farbe.startsWith('#ff') ? f : { ...f, farbe: dd(f.farbe) })),
             tippbar: true,
-            durchsichtig: vorne,
+            durchsichtig: false,
             extra: a === 102 ? 'fenster' : a === 101 ? 'tuer' : a === TUER_OBEN ? 'tueroben' : lampe && L < 0.5 ? 'leuchte' : undefined,
             marke: drehMarken && drehbar(a),
           });
